@@ -18,8 +18,8 @@ import serial
 import serial.tools.list_ports
 import threading
 import logging
-import subprocess
-import ssl
+#import subprocess
+#import ssl
 import time  # Required import
 from flask import Flask, Response, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, emit

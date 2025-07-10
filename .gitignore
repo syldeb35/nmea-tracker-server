@@ -6,3 +6,5 @@ CleanUpSources.sh
 nmea-tracker-server.code-workspace
 launch.json
 nmea_server.spec
+cert.pem
+key.pem
