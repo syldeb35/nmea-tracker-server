@@ -1,80 +1,84 @@
 @echo off
+chcp 65001 >nul
 echo ===== NMEA Tracker Server - Build Script =====
 echo.
 
-REM Vérification des prérequis
-echo [0/5] Vérification des prérequis...
+REM Check prerequisites
+echo [0/5] Checking prerequisites...
 if not exist "cert.pem" (
-    echo ❌ ERREUR: cert.pem manquant!
-    echo Placez vos certificats SSL dans le répertoire du projet.
+    echo ERROR: cert.pem missing!
+    echo Place your SSL certificates in the project directory.
     goto :error
 )
 if not exist "key.pem" (
-    echo ❌ ERREUR: key.pem manquant!
-    echo Placez vos certificats SSL dans le répertoire du projet.
+    echo ERROR: key.pem missing!
+    echo Place your SSL certificates in the project directory.
     goto :error
 )
-echo ✅ Certificats SSL trouvés
+echo SSL certificates found
 
-REM Créer le répertoire de build s'il n'existe pas
+REM Create build directory if it doesn't exist
 if not exist "dist" mkdir dist
 if not exist "build" mkdir build
 
-echo [1/5] Nettoyage des anciens builds...
+echo [1/5] Cleaning previous builds...
 if exist "dist\nmea_tracker_server.exe" del "dist\nmea_tracker_server.exe"
 if exist "build" rmdir /s /q "build"
 
-echo [2/5] Installation des dépendances...
+echo [2/5] Installing dependencies...
 pip install -r requirements.txt
 
-echo [3/5] Vérification des templates...
+echo [3/5] Checking templates...
 if not exist "templates\config.html" (
-    echo ❌ ERREUR: templates/config.html manquant!
+    echo ERROR: templates/config.html missing!
     goto :error
 )
 if not exist "templates\index.html" (
-    echo ❌ ERREUR: templates/index.html manquant!
+    echo ERROR: templates/index.html missing!
     goto :error
 )
-echo ✅ Templates trouvés
+echo Templates found
 
-echo [4/5] Création de l'exécutable avec PyInstaller...
+echo [4/5] Creating executable with PyInstaller...
 pyinstaller nmea_server.spec --clean --noconfirm
 
-echo [5/5] Vérification du build...
+echo [5/5] Verifying build...
 if exist "dist\nmea_tracker_server.exe" (
     echo.
-    echo ✅ BUILD RÉUSSI !
+    echo BUILD SUCCESSFUL !
     echo.
-    echo Exécutable créé : dist\nmea_tracker_server.exe
-    echo Taille du fichier :
+    echo Executable created: dist\nmea_tracker_server.exe
+    echo File size:
     for %%I in ("dist\nmea_tracker_server.exe") do echo   %%~zI bytes (~%%~zI / 1024 / 1024 MB)
     echo.
-    echo 📁 Fichiers inclus dans l'exécutable :
-    echo   - Code Python principal
-    echo   - Templates HTML (config.html, index.html, favicon.svg)
-    echo   - Certificats SSL (cert.pem, key.pem)
+    echo Files included in executable:
+    echo   - Main Python code
+    echo   - HTML templates (config.html, index.html, favicon.svg)
+    echo   - SSL certificates (cert.pem, key.pem)
     echo   - Configuration (.env)
-    echo   - Icône personnalisée (icon.ico)
-    echo   - Runtime Python + dépendances
+    echo   - Custom icon (icon.ico)
+    echo   - Python runtime + dependencies
     echo.
-    echo 🚀 Pour tester : cd dist ^&^& nmea_tracker_server.exe
-    echo 🌐 Interface web : https://localhost:5000/config.html
+    echo To test: cd dist ^&^& nmea_tracker_server.exe
+    echo Web interface: https://localhost:5000/config.html
     echo.
+    goto :success
 ) else (
     echo.
-    echo ❌ ÉCHEC DU BUILD
-    echo Vérifiez les erreurs ci-dessus.
+    echo BUILD FAILED
+    echo Check errors above.
     echo.
+    goto :end
 )
 
-echo Appuyez sur une touche pour continuer...
+:success
+echo Press any key to continue...
 pause >nul
 goto :end
 
 :error
 echo.
-echo ❌ BUILD IMPOSSIBLE - Erreur de prérequis
+echo BUILD IMPOSSIBLE - Prerequisites error
 echo.
 pause >nul
 
