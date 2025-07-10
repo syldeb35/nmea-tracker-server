@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <title>Choix de la connexion NMEA</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                background: #f6faff;
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                max-width: 480px;
+                margin: 40px auto;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 2px 12px #0001;
+                padding: 32px 28px 24px 28px;
+            }
+            h2 {
+                color: #1976d2;
+                margin-top: 0;
+            }
+            form label {
+                display: block;
+                margin: 14px 0 6px 0;
+                font-weight: 500;
+            }
+            input[type="text"], input[type="number"], select {
+                padding: 6px 10px;
+                border: 1px solid #b0bec5;
+                border-radius: 5px;
+                font-size: 1em;
+                margin-top: 4px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            input[type="checkbox"] {
+                margin-right: 8px;
+            }
+            button[type="submit"] {
+                background: #1976d2;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 28px;
+                font-size: 1.1em;
+                margin-top: 18px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            button[type="submit"]:hover {
+                background: #1256a3;
+            }
+            hr {
+                border: none;
+                border-top: 1px solid #e0e0e0;
+                margin: 24px 0;
+            }
+            .info-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .info-list li {
+                margin-bottom: 6px;
+                font-size: 1em;
+            }
+            .section-title {
+                margin-bottom: 8px;
+                color: #333;
+                font-size: 1.1em;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Connexion NMEA / AIS</h2>
+            <form method="POST" action="/select_connection">
+                <div class="section-title">Type de connexion :</div>
+                <label><input type="checkbox" name="enable_serial" {% if enable_serial %}checked{% endif %}>Série</label>
+                <label><input type="checkbox" name="enable_udp" {% if enable_udp %}checked{% endif %}>UDP</label>
+                <label><input type="checkbox" name="enable_tcp" {% if enable_tcp %}checked{% endif %}>TCP</label>
+                <label><input type="checkbox" name="enable_debug" {% if enable_debug %}checked{% endif %}>Activer les logs (DEBUG)</label>
+                <hr>
+                <div class="section-title">Paramètres réseau :</div>
+                <label>UDP IP :
+                    <input type="text" name="udp_ip" value="{{ udp_ip }}">
+                </label>
+                <label>UDP Port :
+                    <input type="number" name="udp_port" value="{{ udp_port }}">
+                </label>
+                <label>TCP IP :
+                    <input type="text" name="tcp_ip" value="{{ tcp_ip }}">
+                </label>
+                <label>TCP Port :
+                    <input type="number" name="tcp_port" value="{{ tcp_port }}">
+                </label>
+                <hr>
+                <div class="section-title">Paramètres série :</div>
+                <label>Port série :
+                    <select name="serial_port">
+                        {% for port, desc in serial_ports %}
+                            <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
+                                {{ port }}{% if desc %} ({{ desc }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Baud rate :
+                    <select name="serial_baudrate">
+                        {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}
+                            <option value="{{ br }}" {% if br == serial_baudrate %}selected{% endif %}>{{ br }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit">Valider</button>
+            </form>
+            <hr>
+            <div class="section-title">Informations de connexion :</div>
+            <ul class="info-list">
+                <li>UDP : <code>{{ udp_ip }}:{{ udp_port }}</code></li>
+                <li>TCP : <code>{{ tcp_ip }}:{{ tcp_port }}</code></li>
+            </ul>
+        </div>
+    </body>
+</html>

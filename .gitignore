@@ -1,10 +1,10 @@
-node_modules
-test
 dist
-*.config.js
-nmea-tracker.code-workspace
-.rollup.cache
+node_modules
 server/logs/nmea.log
 server/logs/nmea.log.1
 server/logs/nmea.log.2
 server/logs/nmea.log.3
+*.config.js
+CleanUpSources.sh
+nmea-tracker.code-workspace
+.rollup.cache

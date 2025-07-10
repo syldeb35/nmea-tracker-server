@@ -1,0 +1,44 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+added_files = [
+         ( 'templates/*', 'templates' ),
+         ( 'cert.pem', '.' ),
+         ( 'key.pem', '.' ),
+         ( '.env', '.' ),
+	 ]
+    
+a = Analysis(
+    ['nmea_server.py'],
+    pathex=[],
+    binaries=[],
+    datas=added_files,
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[missing_module],
+    excludes=[],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name='nmea_server',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
