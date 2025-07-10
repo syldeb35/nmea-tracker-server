@@ -1,11 +1,50 @@
-.vscode
-.venv
-build
-dist
-logs
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.manifest
+warn-*.txt
+xref-*.html
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# NMEA Tracker specific
+# Uncomment if you want to exclude SSL certificates
+# cert.pem
+# key.pem
+
+# Development files
 CleanUpSources.sh
 nmea-tracker-server.code-workspace
 launch.json
-nmea_server.spec
-cert.pem
-key.pem
+
+# OS specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.lnk
+
+# Temporary files
+temp/
+.temp/
+*~
