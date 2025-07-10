@@ -1,10 +1,8 @@
+.vscode
+build
 dist
-node_modules
-server/logs/nmea.log
-server/logs/nmea.log.1
-server/logs/nmea.log.2
-server/logs/nmea.log.3
-*.config.js
+logs
 CleanUpSources.sh
-nmea-tracker.code-workspace
-.rollup.cache
+nmea-tracker-server.code-workspace
+launch.json
+nmea_server.spec
