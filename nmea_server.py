@@ -16,6 +16,8 @@ import serial
 import serial.tools.list_ports
 import threading
 import logging
+import signal
+import atexit
 #import subprocess
 #import ssl
 import time  # Required import
@@ -47,6 +49,16 @@ TCP_IP = "0.0.0.0"
 TCP_PORT = 5006
 HTTPS_PORT = 5000
 REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR|MMB|MDA)')
+
+# === PYINSTALLER RESOURCE PATH HELPER ===
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # === ENVIRONMENT CONFIG LOADING ADAPTED TO SYSTEM ===
 # Default serial port according to OS
@@ -82,6 +94,47 @@ app = Flask(__name__)
 # socketio = SocketIO(app, cors_allowed_origins="*")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 CORS(app)  # Allow all origins (wildcard origin *)
+
+# === SHUTDOWN MANAGEMENT ===
+shutdown_event = threading.Event()
+http_server = None
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals (Ctrl+C, SIGTERM, etc.)"""
+    print(f"\n[INFO] Signal {signum} received - shutting down gracefully...")
+    shutdown_event.set()
+    
+    # Stop HTTP server
+    global http_server
+    if http_server:
+        print("[INFO] Stopping HTTP server...")
+        http_server.stop()
+    
+    # Stop all threads
+    serial_stop.set()
+    udp_stop.set()
+    tcp_stop.set()
+    
+    print("[INFO] Shutdown complete.")
+    sys.exit(0)
+
+def cleanup_on_exit():
+    """Cleanup function called on normal exit"""
+    if not shutdown_event.is_set():
+        shutdown_event.set()
+        serial_stop.set()
+        udp_stop.set()
+        tcp_stop.set()
+        print("[INFO] Cleanup completed.")
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Termination
+if not IS_WINDOWS:
+    signal.signal(signal.SIGHUP, signal_handler)   # Hang up (Unix only)
+
+# Register cleanup function
+atexit.register(cleanup_on_exit)
 
 # === SIMPLE BLUETOOTH SERIAL PORT DETECTION ===
 def detect_bluetooth_serial_port():
@@ -156,7 +209,7 @@ def udp_listener(stop_event):
     sock.bind((UDP_IP, UDP_PORT))
     print(f"[UDP] Listening on {UDP_IP}:{UDP_PORT}")
     sock.settimeout(1.0)
-    while not stop_event.is_set():
+    while not stop_event.is_set() and not shutdown_event.is_set():
         try:
             data, addr = sock.recvfrom(1024)
             message = data.decode('utf-8', errors='ignore').strip()
@@ -167,6 +220,10 @@ def udp_listener(stop_event):
                 socketio.emit('nmea_data', message)
         except socket.timeout:
             continue
+        except Exception as e:
+            if not shutdown_event.is_set():
+                print(f"[UDP] Error: {e}")
+            break
     sock.close()
     print("[UDP] Stopped.")
 
@@ -177,13 +234,13 @@ def tcp_listener(stop_event):
     sock.listen(1)
     print(f"[TCP] Listening on {TCP_IP}:{TCP_PORT}")
     sock.settimeout(1.0)
-    while not stop_event.is_set():
+    while not stop_event.is_set() and not shutdown_event.is_set():
         try:
             conn, addr = sock.accept()
             print(f"[TCP] Connection from {addr}")
             with conn:
                 conn.settimeout(1.0)
-                while not stop_event.is_set():
+                while not stop_event.is_set() and not shutdown_event.is_set():
                     try:
                         data = conn.recv(1024)
                         if not data:
@@ -196,8 +253,16 @@ def tcp_listener(stop_event):
                             socketio.emit('nmea_data', message)
                     except socket.timeout:
                         continue
+                    except Exception as e:
+                        if not shutdown_event.is_set():
+                            print(f"[TCP] Connection error: {e}")
+                        break
         except socket.timeout:
             continue
+        except Exception as e:
+            if not shutdown_event.is_set():
+                print(f"[TCP] Error: {e}")
+            break
     sock.close()
     print("[TCP] Stopped.")
 
@@ -246,7 +311,7 @@ def serial_listener(port, baudrate, stop_event):
             buffer = ""
             consecutive_errors = 0
             
-            while not stop_event.is_set():
+            while not stop_event.is_set() and not shutdown_event.is_set():
                 try:
                     # Check if there's pending data
                     if ser.in_waiting > 0:
@@ -338,11 +403,16 @@ def manage_threads():
             tcp_thread = None
 
 def run_flask_app():
+    global http_server
     print(f"[INFO] Starting Flask server on port {HTTPS_PORT}")
     
-    # Absolute paths for certificates
-    cert_path = os.path.abspath('./cert.pem')
-    key_path = os.path.abspath('./key.pem')
+    # Paths for certificates - compatible with PyInstaller
+    cert_path = get_resource_path('cert.pem')
+    key_path = get_resource_path('key.pem')
+    
+    print(f"[DEBUG] Looking for certificates:")
+    print(f"[DEBUG]   cert.pem: {cert_path}")
+    print(f"[DEBUG]   key.pem: {key_path}")
     
     # Check certificate existence
     if os.path.exists(cert_path) and os.path.exists(key_path):
@@ -361,10 +431,14 @@ def run_flask_app():
             )
             print(f"[INFO] HTTPS server active on https://localhost:{HTTPS_PORT}")
             print(f"[INFO] Web interface: https://localhost:{HTTPS_PORT}/config.html")
+            print("[INFO] Press Ctrl+C to stop the server")
             http_server.serve_forever()
+        except KeyboardInterrupt:
+            print("\n[INFO] Keyboard interrupt received")
         except Exception as e:
-            print(f"[ERROR] HTTPS impossible: {e}")
-            run_http_fallback()
+            if not shutdown_event.is_set():
+                print(f"[ERROR] HTTPS impossible: {e}")
+                run_http_fallback()
     else:
         print(f"[INFO] SSL certificates missing - starting HTTP")
         run_http_fallback()
@@ -374,6 +448,7 @@ def run_http_fallback():
     try:
         print(f"[INFO] HTTP server active on http://localhost:{HTTPS_PORT}")
         print(f"[INFO] Web interface: http://localhost:{HTTPS_PORT}/config.html")
+        print("[INFO] Press Ctrl+C to stop the server")
         socketio.run(
             app, 
             host='0.0.0.0', 
@@ -381,8 +456,11 @@ def run_http_fallback():
             debug=False,  # Disable verbose logs
             allow_unsafe_werkzeug=True
         )
+    except KeyboardInterrupt:
+        print("\n[INFO] Keyboard interrupt received")
     except Exception as e:
-        print(f"[ERROR] Cannot start server: {e}")
+        if not shutdown_event.is_set():
+            print(f"[ERROR] Cannot start server: {e}")
 
 def main_thread():
     global SERIAL_PORT, ENABLE_SERIAL
@@ -392,6 +470,9 @@ def main_thread():
     print(f"  - UDP: {ENABLE_UDP} (Port: {UDP_PORT})")
     print(f"  - TCP: {ENABLE_TCP} (Port: {TCP_PORT})")
     print(f"  - Debug: {DEBUG}")
+    print()
+    print("🛑 Pour arrêter le serveur : Ctrl+C (ou Ctrl+Break sur Windows)")
+    print()
     
     # Auto-detection of serial port if necessary
     if ENABLE_SERIAL and (not SERIAL_PORT or SERIAL_PORT == "AUTO"):
@@ -409,9 +490,16 @@ def main_thread():
     # Small pause to let threads start
     time.sleep(0.5)
 
-    # Launch Flask server
-    print(f"[INFO] Launching Flask server on port {HTTPS_PORT}")
-    run_flask_app()
+    try:
+        # Launch Flask server
+        print(f"[INFO] Launching Flask server on port {HTTPS_PORT}")
+        run_flask_app()
+    except KeyboardInterrupt:
+        print("\n[INFO] Shutdown initiated by user")
+    except Exception as e:
+        print(f"[ERROR] Server error: {e}")
+    finally:
+        print("[INFO] Server stopped.")
 
 
 # === FLASK ROUTES ===
