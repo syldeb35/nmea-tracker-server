@@ -8,6 +8,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [1.0.0] - 2025-07-10
 
 ### ✨ Ajouté
+
 - **Serveur NMEA/AIS** temps réel multi-source (Série, UDP, TCP)
 - **Interface web moderne** avec carte interactive Leaflet.js
 - **Décodeur NMEA** pour formats GGA, RMC, GLL, VTG, HDT
@@ -21,6 +22,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Support multi-plateforme** (Windows, Linux, macOS)
 
 ### 🎨 Interface
+
 - **Carte temps réel** avec tracking GPS et historique
 - **Favicon SVG** personnalisé pour l'application web
 - **Design responsive** adaptatif mobile/desktop
@@ -28,6 +30,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Icône application** professionnelle (compas maritime)
 
 ### 🔧 Technique
+
 - **Flask + SocketIO** pour le backend
 - **gevent** pour les performances réseau
 - **PySerial** avec gestion avancée des erreurs
@@ -36,12 +39,14 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Scripts de build** automatisés
 
 ### 📦 Distribution
+
 - **Scripts de compilation** Windows/Unix
 - **Tests automatisés** de l'exécutable
 - **Documentation complète** (README, BUILD_README)
 - **Icône multi-résolution** pour Windows
 
 ### 🔒 Sécurité
+
 - **Certificats SSL** pour HTTPS
 - **Fallback HTTP** automatique
 - **Gestion des erreurs** robuste
@@ -50,6 +55,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### 🔮 Planifié
+
 - Interface d'authentification
 - Graphiques historiques des données
 - Support multi-langues
@@ -61,6 +67,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 **Format des versions :** [Majeur.Mineur.Patch]
+
 - **Majeur** : Changements incompatibles de l'API
 - **Mineur** : Nouvelles fonctionnalités rétrocompatibles
 - **Patch** : Corrections de bugs rétrocompatibles
