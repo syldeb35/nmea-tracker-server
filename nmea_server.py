@@ -3,9 +3,7 @@
 # -*- coding: utf-8 -*-
 # NMEA Server for Windy Plugin
 
-""" import eventlet
-eventlet.monkey_patch(thread=False)
-import eventlet.wsgi """
+
 # To avoid thread issues with Flask-SocketIO
 from gevent import monkey
 monkey.patch_all()
@@ -304,21 +302,6 @@ def serial_listener(port, baudrate, stop_event):
     
     print("[SERIAL] Stopped.")
 
-# """ Previous version of serial_listener, less efficient
-""" def serial_listener(port, baudrate, stop_event):
-    try:
-        with serial.Serial(port, baudrate, timeout=1) as ser:
-            print(f"[SERIAL] Listening on {port} @ {baudrate} bps")
-            while not stop_event.is_set():
-                line = ser.readline().decode('utf-8', errors='ignore').strip()
-                if not REJECTED_PATTERN.match(line):
-                    if DEBUG:
-                        print(f"[NMEA][SERIAL] {line}")
-                    nmea_logger.info(f"[SERIAL] {line}")
-                    socketio.emit('nmea_data', line)
-    except serial.SerialException as e:
-        print(f"[ERROR][SERIAL] Cannot open port {port}: {e}")
-    print("[SERIAL] Stopped.") """
 
 # === THREAD MANAGEMENT FUNCTION ===
 def manage_threads():
@@ -488,33 +471,7 @@ def config():
 
 if __name__ == '__main__':
     main_thread()
-    # Automatic detection if no serial port defined
-    """ if ENABLE_SERIAL:
-        if not SERIAL_PORT:
-            SERIAL_PORT = detect_bluetooth_serial_port() """
-    # manage_threads()
-    # Flask server in HTTPS (requires cert.pem and key.pem)
-    #app.run(host='0.0.0.0', port=HTTPS_PORT, ssl_context=('cert.pem', 'key.pem'))
-    #socketio.run(app, host='0.0.0.0', port=HTTPS_PORT, ssl_context=('cert.pem', 'key.pem'), server='eventlet')
     
-    """ # Manual SSL configuration
-    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_ctx.load_cert_chain(certfile='cert.pem', keyfile='key.pem') """
-
-    """ listener = eventlet.listen(('0.0.0.0', HTTPS_PORT))
-    wrapped_socket = eventlet.wrap_ssl(listener, certfile='cert.pem', keyfile='key.pem', server_side=True) """
-
     print(f"[INFO] SocketIO async mode: {socketio.async_mode}")
-    
-    """ try:
-        # Start Flask server in a separate thread
-        flask_thread = threading.Thread(target=run_flask_app)
-        flask_thread.daemon = True  # Allows thread to close with main application
-        flask_thread.start()
-    except ssl.SSLError as e:
-        if "sslv3 alert certificate unknown" in str(e).lower():
-            # Silence these specific SSL errors
-            pass
-        else:
-            raise """
+
     print(f"[HTTPS] Secure WebSocket server on https://0.0.0.0:{HTTPS_PORT}")
