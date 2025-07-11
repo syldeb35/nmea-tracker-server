@@ -1,5 +1,5 @@
 # GitHub Actions pour build cross-platform
-name: Build Cross-Platform
+name: Build Cross-Platform Executables
 
 on:
   push:
@@ -11,28 +11,56 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false  # Continue même si un job échoue
       matrix:
         include:
           - os: ubuntu-latest
             arch: linux
             ext: ""
+            separator: ":"
           - os: windows-latest
             arch: windows
             ext: ".exe"
+            separator: ";"
           - os: macos-latest
             arch: macos
             ext: ""
+            separator: ":"
           - os: macos-13  # Intel Mac
             arch: macos-intel
             ext: ""
+            separator: ":"
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+    
+    - name: Verify project structure
+      run: |
+        echo "=== Project Structure ==="
+        ls -la
+        echo "=== Templates directory ==="
+        ls -la templates/ || echo "Templates directory not found"
+        echo "=== Python files ==="
+        ls -la *.py || echo "No Python files found"
+    
+    - name: Create missing files if needed
+      run: |
+        echo "=== Creating missing SSL certificates ==="
+        if [ ! -f "cert.pem" ]; then
+          echo "Creating dummy cert.pem"
+          echo "# Dummy certificate for build" > cert.pem
+        fi
+        if [ ! -f "key.pem" ]; then
+          echo "Creating dummy key.pem"
+          echo "# Dummy key for build" > key.pem
+        fi
+      shell: bash
     
     - name: Install dependencies
       run: |
@@ -40,17 +68,41 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
-    - name: Build executable
+    - name: Build executable (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         pyinstaller --onefile \
-          --name nmea_tracker_server_${{ matrix.arch }} \
-          --add-data "templates:templates" \
-          --add-data "cert.pem:." \
-          --add-data "key.pem:." \
+          --name "nmea_tracker_server_${{ matrix.arch }}" \
+          --add-data "templates${{ matrix.separator }}templates" \
+          --add-data "cert.pem${{ matrix.separator }}." \
+          --add-data "key.pem${{ matrix.separator }}." \
+          --clean \
+          --noconfirm \
           nmea_server.py
     
+    - name: Build executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        pyinstaller --onefile --name "nmea_tracker_server_${{ matrix.arch }}" --add-data "templates${{ matrix.separator }}templates" --add-data "cert.pem${{ matrix.separator }}." --add-data "key.pem${{ matrix.separator }}." --clean --noconfirm nmea_server.py
+      shell: cmd
+    
+    - name: Verify build
+      run: |
+        echo "=== Build verification ==="
+        ls -la dist/ || dir dist\
+        file_name="nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
+        if [ -f "dist/$file_name" ]; then
+          echo "✅ Build successful: $file_name"
+          ls -lh "dist/$file_name" || dir "dist\$file_name"
+        else
+          echo "❌ Build failed: $file_name not found"
+          exit 1
+        fi
+      shell: bash
+    
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nmea_tracker_server_${{ matrix.arch }}
         path: dist/nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}
+        retention-days: 30

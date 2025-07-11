@@ -1,0 +1,88 @@
+name: Build Python Distribution
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-python-dist:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test Python script
+      run: |
+        python -c "import nmea_server; print('✅ Python script imports successfully')"
+    
+    - name: Create Python distribution
+      run: |
+        chmod +x scripts/common/create_python_distribution.sh
+        ./scripts/common/create_python_distribution.sh
+    
+    - name: Verify distribution
+      run: |
+        echo "=== Distribution files ==="
+        ls -la dist/
+        echo "=== Archive contents ==="
+        unzip -l dist/nmea_tracker_server_python_portable.zip
+    
+    - name: Upload Python distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-portable-distribution
+        path: |
+          dist/nmea_tracker_server_python_portable.zip
+          dist/nmea_tracker_server_python_portable.tar.gz
+        retention-days: 90
+
+  test-cross-platform:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test import and syntax
+      run: |
+        python -c "import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')"
+    
+    - name: Test templates
+      run: |
+        python -c "
+        from pathlib import Path
+        templates = Path('templates')
+        assert templates.exists(), 'Templates directory missing'
+        assert (templates / 'index.html').exists(), 'index.html missing'
+        assert (templates / 'config.html').exists(), 'config.html missing'
+        print('✅ Templates verification passed')
+        "

@@ -1,24 +1,49 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+from pathlib import Path
+
 block_cipher = None
+
+# Fonction pour vérifier et ajouter des fichiers optionnels
+def add_optional_file(file_path, dest_dir):
+    """Ajoute un fichier seulement s'il existe"""
+    if os.path.exists(file_path):
+        return (file_path, dest_dir)
+    else:
+        print(f"⚠️  Fichier optionnel manquant: {file_path}")
+        return None
+
+# Liste des fichiers de données avec vérification
+datas = [
+    ('templates/config.html', 'templates'),
+    ('templates/index.html', 'templates'),
+    ('templates/favicon.svg', 'templates'),
+]
+
+# Ajout des fichiers optionnels
+optional_files = [
+    ('cert.pem', '.'),
+    ('key.pem', '.'),
+    ('.env', '.'),
+]
+
+for file_path, dest_dir in optional_files:
+    optional_file = add_optional_file(file_path, dest_dir)
+    if optional_file:
+        datas.append(optional_file)
 
 a = Analysis(
     ['nmea_server.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('templates/config.html', 'templates'),
-        ('templates/index.html', 'templates'),
-        ('templates/favicon.svg', 'templates'),
-        ('cert.pem', '.'),
-        ('key.pem', '.'),
-        ('.env', '.'),
-    ],
+    datas=datas,
     hiddenimports=[
         'gevent',
         'gevent.socket',
         'gevent.ssl',
         'gevent.pywsgi',
+        'gevent.monkey',
         'flask',
         'flask_socketio',
         'flask_cors',
@@ -27,11 +52,29 @@ a = Analysis(
         'engineio.async_drivers.gevent',
         'socketio',
         'pkg_resources.py2_warn',
+        'dotenv',
+        'logging.handlers',
+        'platform',
+        'ssl',
+        'socket',
+        'threading',
+        'time',
+        'os',
+        'sys',
+        're',
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'tkinter',
+        'matplotlib',
+        'numpy',
+        'scipy',
+        'pandas',
+        'PIL',
+        'cv2',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
