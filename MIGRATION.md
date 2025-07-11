@@ -5,7 +5,8 @@ Cette note documente la migration des scripts de build et installation vers une 
 ## 📋 Changements effectués
 
 ### Structure précédente (racine du projet)
-```
+
+```text
 nmea-tracker-server/
 ├── build_unix.sh
 ├── setup.sh  
@@ -16,7 +17,8 @@ nmea-tracker-server/
 ```
 
 ### Nouvelle structure (organisée par OS)
-```
+
+```text
 nmea-tracker-server/
 ├── run.sh                    # 🆕 Script principal avec menu
 ├── scripts/
@@ -41,6 +43,7 @@ nmea-tracker-server/
 ## 🚀 Migration d'utilisation
 
 ### Avant (anciens scripts)
+
 ```bash
 # Installation
 ./setup.sh
@@ -61,12 +64,14 @@ nmea-tracker-server/
 ### Après (nouveaux scripts)
 
 #### Option 1: Menu interactif (recommandé)
+
 ```bash
 ./run.sh
 # Puis choisir l'option souhaitée dans le menu
 ```
 
 #### Option 2: Scripts directs par OS
+
 ```bash
 # Linux
 ./scripts/linux/setup.sh
@@ -89,21 +94,25 @@ scripts\windows\test.bat
 ## ✨ Avantages de la nouvelle organisation
 
 ### 🗂️ **Organisation claire**
+
 - Scripts regroupés logiquement par OS
 - Évite l'encombrement de la racine du projet
 - Maintenance facilitée
 
 ### 🌐 **Support multi-OS amélioré**
+
 - Scripts spécialisés pour chaque plateforme
 - Gestion des spécificités OS (permissions, chemins, etc.)
 - Instructions adaptées par système
 
 ### 🎯 **Expérience utilisateur**
+
 - Menu interactif guidé avec `./run.sh`
 - Détection automatique de l'OS
 - Messages d'erreur plus clairs
 
 ### 🔧 **Robustesse technique**
+
 - Gestion des chemins relatifs améliorée
 - Activation automatique des environnements virtuels
 - Meilleure gestion des erreurs
@@ -118,6 +127,7 @@ scripts\windows\test.bat
 ## 🔄 Compatibilité
 
 ### Scripts supprimés de la racine
+
 - `build_unix.sh` → `scripts/linux/build.sh`
 - `setup.sh` → `scripts/linux/setup.sh`
 - `check_requirements.sh` → `scripts/linux/check_requirements.sh`
@@ -125,6 +135,7 @@ scripts\windows\test.bat
 - `diagnose.sh` → `scripts/linux/diagnose.sh`
 
 ### Nouveaux scripts
+
 - `run.sh` - Menu principal interactif
 - `scripts/windows/*.bat` - Support Windows complet
 - `scripts/macos/*.sh` - Support macOS spécialisé

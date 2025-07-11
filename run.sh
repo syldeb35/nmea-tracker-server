@@ -43,6 +43,7 @@ else
     echo "   5. diagnose.sh - Diagnostic complet"
     echo "   6. create_python_distribution.sh - Distribution Python portable"
     echo "   7. cross_platform_info.sh - Info build cross-platform"
+    echo "   8. test_github_actions.sh - Test workflows GitHub Actions"
     echo
     
     # Menu interactif
@@ -54,6 +55,7 @@ else
     echo "   [5] Diagnostic complet"
     echo "   [6] Créer distribution Python portable (cross-platform)"
     echo "   [7] Info build cross-platform (macOS/Windows)"
+    echo "   [8] Tester workflows GitHub Actions"
     echo "   [q] Quitter"
     echo
     
@@ -87,6 +89,10 @@ else
         7)
             echo "Informations sur le build cross-platform..."
             ./scripts/common/cross_platform_info.sh
+            ;;
+        8)
+            echo "Test des workflows GitHub Actions..."
+            ./scripts/common/test_github_actions.sh
             ;;
         q|Q)
             echo "Au revoir !"

@@ -74,7 +74,7 @@ jobs:
     
     - name: Test import and syntax
       run: |
-        python -c "import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')"
+        python -c "import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0])"
     
     - name: Test templates
       run: |
