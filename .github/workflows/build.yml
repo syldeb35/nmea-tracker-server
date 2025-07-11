@@ -40,7 +40,8 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Verify project structure
+    - name: Verify project structure (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         echo "=== Project Structure ==="
         ls -la
@@ -49,7 +50,19 @@ jobs:
         echo "=== Python files ==="
         ls -la *.py || echo "No Python files found"
     
-    - name: Create missing files if needed
+    - name: Verify project structure (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "=== Project Structure ==="
+        Get-ChildItem -Force
+        echo "=== Templates directory ==="
+        if (Test-Path "templates") { Get-ChildItem templates -Force } else { echo "Templates directory not found" }
+        echo "=== Python files ==="
+        if (Get-ChildItem "*.py" -ErrorAction SilentlyContinue) { Get-ChildItem "*.py" } else { echo "No Python files found" }
+      shell: pwsh
+    
+    - name: Create missing files if needed (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         echo "=== Creating missing SSL certificates ==="
         if [ ! -f "cert.pem" ]; then
@@ -61,6 +74,20 @@ jobs:
           echo "# Dummy key for build" > key.pem
         fi
       shell: bash
+    
+    - name: Create missing files if needed (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "=== Creating missing SSL certificates ==="
+        if (-not (Test-Path "cert.pem")) {
+          echo "Creating dummy cert.pem"
+          "# Dummy certificate for build" | Out-File -FilePath "cert.pem" -Encoding UTF8
+        }
+        if (-not (Test-Path "key.pem")) {
+          echo "Creating dummy key.pem"
+          "# Dummy key for build" | Out-File -FilePath "key.pem" -Encoding UTF8
+        }
+      shell: pwsh
     
     - name: Install dependencies
       run: |
@@ -86,23 +113,74 @@ jobs:
         pyinstaller --onefile --name "nmea_tracker_server_${{ matrix.arch }}" --add-data "templates${{ matrix.separator }}templates" --add-data "cert.pem${{ matrix.separator }}." --add-data "key.pem${{ matrix.separator }}." --clean --noconfirm nmea_server.py
       shell: cmd
     
-    - name: Verify build
+    - name: Verify build (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         echo "=== Build verification ==="
-        ls -la dist/ || dir dist\
-        file_name="nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
-        if [ -f "dist/$file_name" ]; then
-          echo "✅ Build successful: $file_name"
-          ls -lh "dist/$file_name" || dir "dist\$file_name"
+        ls -la dist/
+        
+        # Construct filename based on matrix values
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          file_name="nmea_tracker_server_linux"
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          file_name="nmea_tracker_server_macos-intel"
         else
-          echo "❌ Build failed: $file_name not found"
+          file_name="nmea_tracker_server_unknown"
+        fi
+        
+        echo "Looking for file: $file_name"
+        if [ -f "dist/$file_name" ]; then
+          echo "[OK] Build successful: $file_name"
+          ls -lh "dist/$file_name"
+        else
+          echo "[FAIL] Build failed: $file_name not found"
+          echo "Available files in dist/:"
+          ls -la dist/
           exit 1
         fi
       shell: bash
     
-    - name: Upload artifacts
+    - name: Verify build (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "=== Build verification ==="
+        Get-ChildItem dist
+        
+        # Construct filename for Windows
+        $file_name = "nmea_tracker_server_windows.exe"
+        
+        Write-Output "Looking for file: $file_name"
+        if (Test-Path "dist\$file_name") {
+          Write-Output "[OK] Build successful: $file_name"
+          Get-ChildItem "dist\$file_name"
+        } else {
+          Write-Output "[FAIL] Build failed: $file_name not found"
+          Write-Output "Available files in dist/:"
+          Get-ChildItem dist
+          exit 1
+        }
+      shell: pwsh
+    
+    - name: Upload artifacts (Linux)
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_${{ matrix.arch }}
-        path: dist/nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}
+        name: nmea_tracker_server_linux
+        path: dist/nmea_tracker_server_linux
+        retention-days: 30
+    
+    - name: Upload artifacts (macOS)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea_tracker_server_macos-intel
+        path: dist/nmea_tracker_server_macos-intel
+        retention-days: 30
+    
+    - name: Upload artifacts (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea_tracker_server_windows
+        path: dist/nmea_tracker_server_windows.exe
         retention-days: 30

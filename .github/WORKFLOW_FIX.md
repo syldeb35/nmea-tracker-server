@@ -139,3 +139,61 @@ python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.versio
 - [x] Tests validés localement
 - [x] Documentation créée
 - [ ] Validation sur GitHub Actions (à faire après push)
+
+---
+
+## 🔧 Correction Build Verification macOS/Linux
+
+### ❌ Problème rencontré
+
+**Erreur de build verification macOS :**
+```
+file_name="nmea_tracker_server_macos-intel"
+❌ Build failed:  not found
+```
+
+**Cause :** Interpolation incorrecte des variables GitHub Actions dans la construction du nom de fichier.
+
+**Code problématique :**
+```yaml
+file_name="nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
+```
+
+L'interpolation `${{ matrix.arch }}${{ matrix.ext }}` ne fonctionnait pas correctement dans le contexte bash, créant des noms de fichiers vides ou incorrects.
+
+### ✅ Solution appliquée
+
+**Remplacement par logique conditionnelle explicite :**
+
+```yaml
+# Construct filename based on matrix values
+if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+  file_name="nmea_tracker_server_linux"
+elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+  file_name="nmea_tracker_server_macos-intel"
+else
+  file_name="nmea_tracker_server_unknown"
+fi
+```
+
+**Améliorations apportées :**
+
+1. **Logique conditionnelle claire** basée sur `matrix.os`
+2. **Noms de fichiers explicites** pour chaque plateforme
+3. **Gestion d'erreur** avec affichage des fichiers disponibles
+4. **Debug amélioré** avec `echo "Looking for file: $file_name"`
+5. **Upload artifacts séparés** par plateforme pour éviter les conflits
+
+### 📁 Fichiers modifiés
+
+- `.github/workflows/build.yml` - Sections build verification et upload artifacts
+- `scripts/common/test_filename_logic.sh` - Script de test de la logique de nommage
+
+### 🧪 Tests de validation
+
+Script créé : `scripts/common/test_filename_logic.sh`
+
+**Résultats :**
+- ✅ Linux: `nmea_tracker_server_linux`
+- ✅ macOS: `nmea_tracker_server_macos-intel` 
+- ✅ Windows: `nmea_tracker_server_windows.exe`

@@ -44,6 +44,8 @@ else
     echo "   6. create_python_distribution.sh - Distribution Python portable"
     echo "   7. cross_platform_info.sh - Info build cross-platform"
     echo "   8. test_github_actions.sh - Test workflows GitHub Actions"
+    echo "   9. test_crossplatform_build.sh - Test build cross-platform"
+    echo "   10. validate_project.sh - Validation finale du projet"
     echo
     
     # Menu interactif
@@ -56,6 +58,8 @@ else
     echo "   [6] Créer distribution Python portable (cross-platform)"
     echo "   [7] Info build cross-platform (macOS/Windows)"
     echo "   [8] Tester workflows GitHub Actions"
+    echo "   [9] Tester build cross-platform"
+    echo "   [10] Validation finale du projet"
     echo "   [q] Quitter"
     echo
     
@@ -93,6 +97,14 @@ else
         8)
             echo "Test des workflows GitHub Actions..."
             ./scripts/common/test_github_actions.sh
+            ;;
+        9)
+            echo "Test du build cross-platform..."
+            ./scripts/common/test_crossplatform_build.sh
+            ;;
+        10)
+            echo "Validation finale du projet..."
+            ./scripts/common/validate_project.sh
             ;;
         q|Q)
             echo "Au revoir !"
