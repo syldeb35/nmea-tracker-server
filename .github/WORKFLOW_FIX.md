@@ -3,7 +3,8 @@
 ## ❌ Problème rencontré
 
 **Erreur 1 - Syntaxe f-string :**
-```
+
+```vhdl
 Run python -c "import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')"
   File "<string>", line 1
     import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')
@@ -13,7 +14,8 @@ Error: Process completed with exit code 1.
 ```
 
 **Erreur 2 - Encodage Windows :**
-```
+
+```python
 UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
 [INFO] Windows mode detected - stderr not redirected
 Error: Process completed with exit code 1.
@@ -155,6 +157,7 @@ file_name="nmea_tracker_server_macos-intel"
 **Cause :** Interpolation incorrecte des variables GitHub Actions dans la construction du nom de fichier.
 
 **Code problématique :**
+
 ```yaml
 file_name="nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
 ```
@@ -194,6 +197,7 @@ fi
 Script créé : `scripts/common/test_filename_logic.sh`
 
 **Résultats :**
+
 - ✅ Linux: `nmea_tracker_server_linux`
 - ✅ macOS: `nmea_tracker_server_macos-intel` 
 - ✅ Windows: `nmea_tracker_server_windows.exe`
@@ -205,7 +209,8 @@ Script créé : `scripts/common/test_filename_logic.sh`
 ### ⚠️ Notification rencontrée
 
 **Notice pip macOS Python 3.8 :**
-```
+
+```text
 [notice] A new release of pip is available: 21.1.1 -> 25.0.1
 [notice] To update, run: python3.8 -m pip install --upgrade pip
 ```
@@ -250,6 +255,7 @@ Script créé : `scripts/common/test_filename_logic.sh`
 Script créé : `scripts/common/test_pip_quiet.sh`
 
 **Commandes testées :**
+
 - ✅ `python -m pip install --upgrade pip --quiet`
 - ✅ `pip install -r requirements.txt --quiet`  
 - ✅ `pip install pyinstaller --quiet`
@@ -257,3 +263,88 @@ Script créé : `scripts/common/test_pip_quiet.sh`
 ### 💡 Résultat attendu
 
 Les workflows GitHub Actions auront maintenant des logs plus propres sans les notifications pip, tout en conservant la même fonctionnalité.
+
+---
+
+## 🔧 Correction Build Verification macOS - Logique Matrix.arch
+
+### ❌ Problème persistant
+
+**Erreur build verification macOS (après première correction) :**
+```bash
+Looking for file: nmea_tracker_server_macos-intel
+[FAIL] Build failed: nmea_tracker_server_macos-intel not found
+Available files in dist/:
+-rwxr-xr-x   1 runner  staff  18317216 Jul 11 13:01 nmea_tracker_server_macos
+```
+
+**Cause racine :** Incohérence entre le nom de fichier généré par PyInstaller et celui attendu par le script de vérification.
+
+- **PyInstaller génère :** `nmea_tracker_server_${{ matrix.arch }}` → `nmea_tracker_server_macos`
+- **Script cherche :** Logique conditionnelle incorrecte → `nmea_tracker_server_macos-intel`
+
+### ✅ Solution définitive
+
+**Simplification avec utilisation directe de matrix.arch :**
+
+```yaml
+# AVANT (logique conditionnelle complexe et incorrecte)
+if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+  file_name="nmea_tracker_server_linux"
+elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+  file_name="nmea_tracker_server_macos-intel"  # ❌ INCORRECT
+else
+  file_name="nmea_tracker_server_unknown"
+fi
+
+# APRÈS (utilisation directe de matrix.arch)
+file_name="nmea_tracker_server_${{ matrix.arch }}"
+```
+
+**Matrice GitHub Actions :**
+```yaml
+matrix:
+  include:
+    - os: ubuntu-latest
+      arch: linux
+    - os: windows-latest  
+      arch: windows
+      ext: ".exe"
+    - os: macos-latest
+      arch: macos           # ✅ génère nmea_tracker_server_macos
+    - os: macos-13
+      arch: macos-intel     # ✅ génère nmea_tracker_server_macos-intel
+```
+
+### 📁 Corrections appliquées
+
+**Fichiers modifiés :**
+- `.github/workflows/build.yml` - Logique de vérification simplifiée
+- `scripts/common/test_matrix_arch.sh` - Script de validation de la nouvelle logique
+
+**Sections corrigées :**
+
+1. **Build verification Unix/Linux/macOS** - Utilise `${{ matrix.arch }}` directement
+2. **Build verification Windows** - Utilise `${{ matrix.arch }}${{ matrix.ext }}`
+3. **Upload artifacts** - Noms basés sur `matrix.arch` avec conditions élargies pour macOS
+
+### 🧪 Validation
+
+Script créé : `scripts/common/test_matrix_arch.sh`
+
+**Tests de cohérence :**
+- ✅ `ubuntu-latest` → `nmea_tracker_server_linux`
+- ✅ `windows-latest` → `nmea_tracker_server_windows.exe`
+- ✅ `macos-latest` → `nmea_tracker_server_macos`
+- ✅ `macos-13` → `nmea_tracker_server_macos-intel`
+
+### 💡 Leçons apprises
+
+1. **Utiliser les variables de matrice directement** plutôt que des conditions complexes
+2. **Vérifier la cohérence** entre PyInstaller `--name` et scripts de vérification
+3. **Tester localement** la logique de nommage avant déploiement
+4. **Simplifier** plutôt que complexifier la logique
+
+### 🚀 Résultat attendu
+
+Les builds macOS devraient maintenant réussir car le script de vérification cherchera le bon nom de fichier généré par PyInstaller.

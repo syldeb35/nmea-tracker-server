@@ -124,14 +124,8 @@ jobs:
         echo "=== Build verification ==="
         ls -la dist/
         
-        # Construct filename based on matrix values
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          file_name="nmea_tracker_server_linux"
-        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-          file_name="nmea_tracker_server_macos-intel"
-        else
-          file_name="nmea_tracker_server_unknown"
-        fi
+        # Construct filename based on actual matrix arch value
+        file_name="nmea_tracker_server_${{ matrix.arch }}"
         
         echo "Looking for file: $file_name"
         if [ -f "dist/$file_name" ]; then
@@ -151,8 +145,8 @@ jobs:
         echo "=== Build verification ==="
         Get-ChildItem dist
         
-        # Construct filename for Windows
-        $file_name = "nmea_tracker_server_windows.exe"
+        # Construct filename for Windows using matrix values
+        $file_name = "nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
         
         Write-Output "Looking for file: $file_name"
         if (Test-Path "dist\$file_name") {
@@ -170,22 +164,22 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_linux
-        path: dist/nmea_tracker_server_linux
+        name: nmea_tracker_server_${{ matrix.arch }}
+        path: dist/nmea_tracker_server_${{ matrix.arch }}
         retention-days: 30
     
     - name: Upload artifacts (macOS)
-      if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_macos-intel
-        path: dist/nmea_tracker_server_macos-intel
+        name: nmea_tracker_server_${{ matrix.arch }}
+        path: dist/nmea_tracker_server_${{ matrix.arch }}
         retention-days: 30
     
     - name: Upload artifacts (Windows)
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_windows
-        path: dist/nmea_tracker_server_windows.exe
+        name: nmea_tracker_server_${{ matrix.arch }}
+        path: dist/nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}
         retention-days: 30

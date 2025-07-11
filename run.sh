@@ -47,6 +47,7 @@ else
     echo "   9. test_crossplatform_build.sh - Test build cross-platform"
     echo "   10. validate_project.sh - Validation finale du projet"
     echo "   11. test_pip_quiet.sh - Test configuration pip silencieuse"
+    echo "   12. test_matrix_arch.sh - Test logique matrix.arch corrigée"
     echo
     
     # Menu interactif
@@ -62,6 +63,7 @@ else
     echo "   [9] Tester build cross-platform"
     echo "   [10] Validation finale du projet"
     echo "   [11] Tester configuration pip silencieuse"
+    echo "   [12] Tester logique matrix.arch corrigée"
     echo "   [q] Quitter"
     echo
     
@@ -111,6 +113,10 @@ else
         11)
             echo "Test configuration pip silencieuse..."
             ./scripts/common/test_pip_quiet.sh
+            ;;
+        12)
+            echo "Test logique matrix.arch corrigée..."
+            ./scripts/common/test_matrix_arch.sh
             ;;
         q|Q)
             echo "Au revoir !"
