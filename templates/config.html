@@ -110,7 +110,7 @@
                 <label>Serial port:
                     <select name="serial_port">
                         {% for port, desc in serial_ports %}
-                            <option value="{{ port }}" {% if port = serial_port %}selected{% endif %}>
+                            <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
                                 {{ port }}{% if desc %} ({{ desc }}){% endif %}
                             </option>
                         {% endfor %}
@@ -119,7 +119,7 @@
                 <label>Baud rate:
                     <select name="serial_baudrate">
                         {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}
-                            <option value="{{ br }}" {% if br = serial_baudrate %}selected{% endif %}>{{ br }}</option>
+                            <option value="{{ br }}" {% if br == serial_baudrate %}selected{% endif %}>{{ br }}</option>
                         {% endfor %}
                     </select>
                 </label>

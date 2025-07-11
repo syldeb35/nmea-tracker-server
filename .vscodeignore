@@ -1,0 +1,39 @@
+# Répertoires Python à ignorer
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Répertoires de build
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Répertoires Node.js (si présents)
+node_modules/
+npm-debug.log*
+
+# Répertoires Git
+.git/
