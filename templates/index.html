@@ -15,6 +15,7 @@
             --highlight-gga: #00bcd4;
             --highlight-rmc: #4caf50;
             --highlight-gll: #ff9800;
+            --highlight-ais: #e91e63;
             --border-color: #333;
         }
 
@@ -78,6 +79,10 @@
             border-left-color: var(--highlight-gll);
             background-color: rgba(255, 152, 0, 0.1);
         }
+        .ais {
+            border-left-color: var(--highlight-ais);
+            background-color: rgba(233, 30, 99, 0.1);
+        }
         .defaut {
             border-left: 5px solid #555;
             background-color: #1a1a1a;
@@ -89,6 +94,13 @@
             border: none;
             background-color: #1a1a1a;
             color: var(--text-color);
+        }
+        
+        /* ✅ Style pour les icônes de navires AIS */
+        .ship-icon {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
         @media screen and (max-width: 600px) {
@@ -128,6 +140,20 @@
             <p class="defaut" id="cap"></p>
             <p class="defaut" id="heading"></p>
         </div>
+        <!-- ✅ Section AIS -->
+        <div class="NMEA">
+            <h2>Données AIS (Navires à proximité)</h2>
+            <div class="CalculResult">
+                <p class="defaut" id="ais-mmsi"></p>
+                <p class="defaut" id="ais-nom"></p>
+                <p class="defaut" id="ais-position"></p>
+                <p class="defaut" id="ais-vitesse"></p>
+                <p class="defaut" id="ais-cap"></p>
+                <p class="defaut" id="ais-type"></p>
+                <p class="defaut" id="ais-destination"></p>
+                <p class="defaut" id="ais-eta"></p>
+            </div>
+        </div>
         <!-- ✅ Carte Leaflet -->
         <div class="NMEA">
             <h2>Position sur la carte</h2>
@@ -146,6 +172,16 @@
         const pVitesse = document.getElementById('vitesse');
         const pCap = document.getElementById('cap');
         const pHeading = document.getElementById('heading');
+        
+        // ✅ Éléments AIS
+        const pAisMmsi = document.getElementById('ais-mmsi');
+        const pAisNom = document.getElementById('ais-nom');
+        const pAisPosition = document.getElementById('ais-position');
+        const pAisVitesse = document.getElementById('ais-vitesse');
+        const pAisCap = document.getElementById('ais-cap');
+        const pAisType = document.getElementById('ais-type');
+        const pAisDestination = document.getElementById('ais-destination');
+        const pAisEta = document.getElementById('ais-eta');
         
         // ✅ Initialiser la carte Leaflet
         let map = L.map('map').setView([48.0, 1.0], 6);  // Position et zoom par défaut
@@ -217,7 +253,7 @@
                     time: heure[0] + `h ` + heure[1] + `m ` + heure[2] + `s `,
                     lat: convertDMtoDMS_Lat(parseFloat(parts[3]), parts[4]),
                     lon: convertDMtoDMS_Lon(parseFloat(parts[5]), parts[6]),
-                    speed: (parseFloat(parts[7]) * 1.852).toFixed(2) + " km/h",
+                    speed: parseFloat(parts[7]).toFixed(2) + " knots <small(" + (parseFloat(parts[7]) * 1.852).toFixed(2) + " km/h)</small>",
                     date: jour[0] + `/` + jour[1] + `/20` + jour[2]
                 };
             }
@@ -253,8 +289,145 @@
                     heading: parts[1] + "° True"
                 };
             }
-            /* To Do: Parser MDA, MMB, XDR, HDG, HDT
             
+            // ✅ AIS Parsers
+            // Fonction de décodage 6-bit ASCII pour AIS
+            function decode6BitAscii(data, start, length) {
+                const chars = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_ !\"#$%&'()*+,-./0123456789:;<=>?";
+                let result = "";
+                for (let i = start; i < start + length && i < data.length; i += 6) {
+                    const charCode = parseInt(data.substr(i, 6), 2);
+                    if (charCode < chars.length && charCode !== 0) {
+                        result += chars[charCode];
+                    }
+                }
+                return result.trim();
+            }
+            
+            // Fonction pour décoder les données AIS encapsulées
+            function decodeAisPayload(payload) {
+                // Décodage 6-bit vers binaire
+                let binaryData = "";
+                for (let i = 0; i < payload.length; i++) {
+                    let char = payload.charCodeAt(i);
+                    if (char >= 48 && char <= 87) { // '0' à 'W'
+                        char -= 48;
+                    } else if (char >= 96 && char <= 119) { // '`' à 'w'  
+                        char -= 56;
+                    } else {
+                        continue;
+                    }
+                    binaryData += char.toString(2).padStart(6, '0');
+                }
+                return binaryData;
+            }
+            
+            // Parser principal AIS
+            function parseAIS(parts) {
+                try {
+                    // Structure trame AIS: !AIVDM,1,1,,B,payload,0*checksum
+                    if (parts.length < 6) return null;
+                    
+                    const payload = parts[5];
+                    const binaryData = decodeAisPayload(payload);
+                    
+                    if (binaryData.length < 8) return null;
+                    
+                    // Type de message (bits 0-5)
+                    const messageType = parseInt(binaryData.substr(0, 6), 2);
+                    
+                    // MMSI (bits 8-37)
+                    const mmsi = parseInt(binaryData.substr(8, 30), 2);
+                    
+                    let result = {
+                        messageType: messageType,
+                        mmsi: mmsi.toString()
+                    };
+                    
+                    // Type 1, 2, 3: Position Report
+                    if (messageType >= 1 && messageType <= 3 && binaryData.length >= 168) {
+                        const navStatus = parseInt(binaryData.substr(38, 4), 2);
+                        const rot = parseInt(binaryData.substr(42, 8), 2);
+                        const sog = parseInt(binaryData.substr(50, 10), 2) / 10;
+                        const lon = parseInt(binaryData.substr(61, 28), 2);
+                        const lat = parseInt(binaryData.substr(89, 27), 2);
+                        const cog = parseInt(binaryData.substr(116, 12), 2) / 10;
+                        const heading = parseInt(binaryData.substr(128, 9), 2);
+                        
+                        // Conversion coordonnées
+                        const longitude = (lon > 134217727) ? (lon - 268435456) / 600000 : lon / 600000;
+                        const latitude = (lat > 67108863) ? (lat - 134217728) / 600000 : lat / 600000;
+                        
+                        result.latitude = latitude.toFixed(6);
+                        result.longitude = longitude.toFixed(6);
+                        result.sog = sog.toFixed(1);
+                        result.cog = cog.toFixed(1);
+                        result.heading = heading !== 511 ? heading.toString() : "N/A";
+                        result.status = getNavStatus(navStatus);
+                    }
+                    
+                    // Type 5: Static and Voyage Related Data
+                    if (messageType === 5 && binaryData.length >= 424) {
+                        const vesselName = decode6BitAscii(binaryData, 112, 120).replace(/@/g, '');
+                        const shipType = parseInt(binaryData.substr(232, 8), 2);
+                        const destination = decode6BitAscii(binaryData, 302, 120).replace(/@/g, '');
+                        const etaMonth = parseInt(binaryData.substr(274, 4), 2);
+                        const etaDay = parseInt(binaryData.substr(278, 5), 2);
+                        const etaHour = parseInt(binaryData.substr(283, 5), 2);
+                        const etaMinute = parseInt(binaryData.substr(288, 6), 2);
+                        
+                        result.vesselName = vesselName;
+                        result.shipType = getShipType(shipType);
+                        result.destination = destination;
+                        if (etaMonth > 0 && etaDay > 0) {
+                            result.eta = `${etaDay}/${etaMonth} ${etaHour}:${etaMinute.toString().padStart(2, '0')}`;
+                        }
+                    }
+                    
+                    return result;
+                } catch (error) {
+                    console.log("Erreur parsing AIS:", error);
+                    return null;
+                }
+            }
+            
+            // Fonction utilitaire pour le statut de navigation
+            function getNavStatus(status) {
+                const statuses = [
+                    "Under way using engine",
+                    "At anchor",
+                    "Not under command",
+                    "Restricted manoeuvrability",
+                    "Constrained by her draught",
+                    "Moored",
+                    "Aground",
+                    "Engaged in fishing",
+                    "Under way sailing",
+                    "Reserved for HSC",
+                    "Reserved for WIG",
+                    "Reserved",
+                    "Reserved",
+                    "Reserved",
+                    "AIS-SART",
+                    "Undefined"
+                ];
+                return statuses[status] || "Unknown";
+            }
+            
+            // Fonction utilitaire pour le type de navire
+            function getShipType(type) {
+                if (type >= 20 && type <= 29) return "Wing in ground";
+                if (type >= 30 && type <= 39) return "Fishing";
+                if (type >= 40 && type <= 49) return "Tug";
+                if (type >= 50 && type <= 59) return "Medical";
+                if (type >= 60 && type <= 69) return "Passenger";
+                if (type >= 70 && type <= 79) return "Cargo";
+                if (type >= 80 && type <= 89) return "Tanker";
+                if (type >= 90 && type <= 99) return "Other";
+                return "Unknown";
+            }
+            /* To Do: Parser MDA, MMB, XDR, HDG
+            ✅ AIS support ajouté (AIVDM/AIVDO)
             */
             var myDegLat = new Intl.NumberFormat('en-US', { 
                 minimumIntegerDigits: 2, 
@@ -273,7 +446,7 @@
             
             function clearHighlightClasses(...elements) {
                 elements.forEach(el => {
-                    el.classList.remove('gga', 'rmc', 'gll', 'defaut');
+                    el.classList.remove('gga', 'rmc', 'gll', 'ais', 'defaut');
                 });
             }
                         
@@ -332,6 +505,81 @@
                 const parsed = parseHDT(parts);
                 if (parsed) {
                     document.getElementById('heading').textContent = "Cap : " + parsed.heading;
+                }
+                } else if (data.substring(1,6) === 'AIVDM' || data.substring(1,6) === 'AIVDO') {
+                // ✅ Traitement AIS
+                clearHighlightClasses(pAisMmsi, pAisNom, pAisPosition, pAisVitesse, pAisCap, pAisType, pAisDestination, pAisEta);
+                pAisMmsi.classList.add('ais');
+                pAisNom.classList.add('ais');
+                pAisPosition.classList.add('ais');
+                pAisVitesse.classList.add('ais');
+                pAisCap.classList.add('ais');
+                pAisType.classList.add('ais');
+                pAisDestination.classList.add('ais');
+                pAisEta.classList.add('ais');
+                
+                const parsed = parseAIS(parts);
+                if (parsed) {
+                    pAisMmsi.textContent = "MMSI : " + parsed.mmsi;
+                    
+                    if (parsed.vesselName) {
+                        pAisNom.textContent = "Navire : " + parsed.vesselName;
+                    }
+                    
+                    if (parsed.latitude && parsed.longitude) {
+                        pAisPosition.textContent = `Position : ${parsed.latitude}°, ${parsed.longitude}°`;
+                        
+                        // ✅ Afficher le navire sur la carte
+                        const lat = parseFloat(parsed.latitude);
+                        const lon = parseFloat(parsed.longitude);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const shipIcon = L.divIcon({
+                                className: 'ship-icon',
+                                html: `<div style="background: #e91e63; color: white; border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: bold;">${parsed.mmsi.slice(-4)}</div>`,
+                                iconSize: [50, 20],
+                                iconAnchor: [25, 10]
+                            });
+                            
+                            // Supprimer les anciens marqueurs de navires pour ce MMSI
+                            map.eachLayer(layer => {
+                                if (layer.options && layer.options.mmsi === parsed.mmsi) {
+                                    map.removeLayer(layer);
+                                }
+                            });
+                            
+                            // Ajouter nouveau marqueur
+                            L.marker([lat, lon], { 
+                                icon: shipIcon, 
+                                mmsi: parsed.mmsi 
+                            }).addTo(map).bindPopup(`
+                                <b>MMSI:</b> ${parsed.mmsi}<br>
+                                ${parsed.vesselName ? `<b>Nom:</b> ${parsed.vesselName}<br>` : ''}
+                                ${parsed.sog ? `<b>Vitesse:</b> ${parsed.sog} nœuds<br>` : ''}
+                                ${parsed.cog ? `<b>Route:</b> ${parsed.cog}°<br>` : ''}
+                                ${parsed.status ? `<b>Statut:</b> ${parsed.status}` : ''}
+                            `);
+                        }
+                    }
+                    
+                    if (parsed.sog) {
+                        pAisVitesse.textContent = "Vitesse AIS : " + parsed.sog + " nœuds (" + (parsed.sog * 1.852).toFixed(1) + " km/h)";
+                    }
+                    
+                    if (parsed.cog) {
+                        pAisCap.textContent = "Route AIS : " + parsed.cog + "°";
+                    }
+                    
+                    if (parsed.shipType) {
+                        pAisType.textContent = "Type : " + parsed.shipType;
+                    }
+                    
+                    if (parsed.destination) {
+                        pAisDestination.textContent = "Destination : " + parsed.destination;
+                    }
+                    
+                    if (parsed.eta) {
+                        pAisEta.textContent = "ETA : " + parsed.eta;
+                    }
                 }
                 };
         });
