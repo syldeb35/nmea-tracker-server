@@ -46,6 +46,7 @@ else
     echo "   8. test_github_actions.sh - Test workflows GitHub Actions"
     echo "   9. test_crossplatform_build.sh - Test build cross-platform"
     echo "   10. validate_project.sh - Validation finale du projet"
+    echo "   11. test_pip_quiet.sh - Test configuration pip silencieuse"
     echo
     
     # Menu interactif
@@ -60,6 +61,7 @@ else
     echo "   [8] Tester workflows GitHub Actions"
     echo "   [9] Tester build cross-platform"
     echo "   [10] Validation finale du projet"
+    echo "   [11] Tester configuration pip silencieuse"
     echo "   [q] Quitter"
     echo
     
@@ -105,6 +107,10 @@ else
         10)
             echo "Validation finale du projet..."
             ./scripts/common/validate_project.sh
+            ;;
+        11)
+            echo "Test configuration pip silencieuse..."
+            ./scripts/common/test_pip_quiet.sh
             ;;
         q|Q)
             echo "Au revoir !"

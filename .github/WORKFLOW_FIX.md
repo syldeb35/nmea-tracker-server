@@ -197,3 +197,63 @@ Script créé : `scripts/common/test_filename_logic.sh`
 - ✅ Linux: `nmea_tracker_server_linux`
 - ✅ macOS: `nmea_tracker_server_macos-intel` 
 - ✅ Windows: `nmea_tracker_server_windows.exe`
+
+---
+
+## 🔇 Suppression Notifications Pip
+
+### ⚠️ Notification rencontrée
+
+**Notice pip macOS Python 3.8 :**
+```
+[notice] A new release of pip is available: 21.1.1 -> 25.0.1
+[notice] To update, run: python3.8 -m pip install --upgrade pip
+```
+
+**Impact :** Bien que non critique, ces notifications polluent les logs des workflows GitHub Actions.
+
+### ✅ Solution appliquée
+
+**Ajout du flag --quiet aux commandes pip :**
+
+```yaml
+# AVANT
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pyinstaller
+
+# APRÈS  
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip --quiet
+    pip install -r requirements.txt --quiet
+    pip install pyinstaller --quiet
+```
+
+**Améliorations :**
+
+1. **Logs plus propres** dans GitHub Actions
+2. **Suppression des notices** "A new release of pip is available"
+3. **Même fonctionnalité** mais moins de verbosité
+4. **Cohérence** entre tous les workflows
+
+### 📁 Fichiers modifiés
+
+- `.github/workflows/build.yml` - Ajout --quiet à toutes les commandes pip
+- `.github/workflows/test-python.yml` - Ajout --quiet à toutes les commandes pip
+- `scripts/common/test_pip_quiet.sh` - Script de validation
+
+### 🧪 Test de validation
+
+Script créé : `scripts/common/test_pip_quiet.sh`
+
+**Commandes testées :**
+- ✅ `python -m pip install --upgrade pip --quiet`
+- ✅ `pip install -r requirements.txt --quiet`  
+- ✅ `pip install pyinstaller --quiet`
+
+### 💡 Résultat attendu
+
+Les workflows GitHub Actions auront maintenant des logs plus propres sans les notifications pip, tout en conservant la même fonctionnalité.
