@@ -48,6 +48,7 @@ else
     echo "   10. validate_project.sh - Validation finale du projet"
     echo "   11. test_pip_quiet.sh - Test configuration pip silencieuse"
     echo "   12. test_matrix_arch.sh - Test logique matrix.arch corrigée"
+    echo "   13. test_build_spec.sh - Test build local avec .spec amélioré"
     echo
     
     # Menu interactif
@@ -64,6 +65,7 @@ else
     echo "   [10] Validation finale du projet"
     echo "   [11] Tester configuration pip silencieuse"
     echo "   [12] Tester logique matrix.arch corrigée"
+    echo "   [13] Tester build local avec .spec amélioré"
     echo "   [q] Quitter"
     echo
     
@@ -117,6 +119,10 @@ else
         12)
             echo "Test logique matrix.arch corrigée..."
             ./scripts/common/test_matrix_arch.sh
+            ;;
+        13)
+            echo "Test build local avec .spec amélioré..."
+            ./scripts/common/test_build_spec.sh
             ;;
         q|Q)
             echo "Au revoir !"

@@ -103,20 +103,27 @@ jobs:
     - name: Build executable (Unix)
       if: matrix.os != 'windows-latest'
       run: |
-        pyinstaller --onefile \
-          --name "nmea_tracker_server_${{ matrix.arch }}" \
-          --add-data "templates${{ matrix.separator }}templates" \
-          --add-data "cert.pem${{ matrix.separator }}." \
-          --add-data "key.pem${{ matrix.separator }}." \
-          --clean \
-          --noconfirm \
-          nmea_server.py
+        # Créer un fichier .spec personnalisé pour cette plateforme
+        cp nmea_server.spec "nmea_tracker_server_${{ matrix.arch }}.spec"
+        
+        # Modifier le nom de l'exécutable dans le .spec
+        sed -i "s/name='nmea_tracker_server'/name='nmea_tracker_server_${{ matrix.arch }}'/" "nmea_tracker_server_${{ matrix.arch }}.spec"
+        
+        # Build avec le fichier .spec
+        pyinstaller "nmea_tracker_server_${{ matrix.arch }}.spec"
     
     - name: Build executable (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --onefile --name "nmea_tracker_server_${{ matrix.arch }}" --add-data "templates${{ matrix.separator }}templates" --add-data "cert.pem${{ matrix.separator }}." --add-data "key.pem${{ matrix.separator }}." --clean --noconfirm nmea_server.py
-      shell: cmd
+        # Créer un fichier .spec personnalisé pour Windows
+        copy nmea_server.spec "nmea_tracker_server_${{ matrix.arch }}.spec"
+        
+        # Modifier le nom de l'exécutable dans le .spec (PowerShell)
+        (Get-Content "nmea_tracker_server_${{ matrix.arch }}.spec") -replace "name='nmea_tracker_server'", "name='nmea_tracker_server_${{ matrix.arch }}'" | Set-Content "nmea_tracker_server_${{ matrix.arch }}.spec"
+        
+        # Build avec le fichier .spec
+        pyinstaller "nmea_tracker_server_${{ matrix.arch }}.spec"
+      shell: pwsh
     
     - name: Verify build (Unix)
       if: matrix.os != 'windows-latest'
