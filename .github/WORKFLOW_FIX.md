@@ -142,7 +142,7 @@ python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.versio
 - [x] Documentation créée
 - [ ] Validation sur GitHub Actions (à faire après push)
 
----
+======================================================================================
 
 ## 🔧 Correction Build Verification macOS/Linux
 

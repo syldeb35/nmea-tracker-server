@@ -460,11 +460,11 @@
                 const parsed = parseRMC(parts);
                 if (parsed) {
                     // Mise à jour des champs texte...
-                    pDate.textContent = "Date : " + parsed.date;
-                    pHeure.textContent = "Heure UTC : " + parsed.time;
-                    pLat.textContent = "Latitude : " + parsed.lat;
-                    pLong.textContent = "Longitude : " + parsed.lon;
-                    pVitesse.textContent = "Vitesse : " + parsed.speed;
+                    pDate.innerHTML = "Date : " + parsed.date;
+                    pHeure.innerHTML = "Heure UTC : " + parsed.time;
+                    pLat.innerHTML = "Latitude : " + parsed.lat;
+                    pLong.innerHTML = "Longitude : " + parsed.lon;
+                    pVitesse.innerHTML = "Vitesse : " + parsed.speed;
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 3, 4, 5, 6); // lat, latDir, lon, lonDir
                 }
@@ -476,10 +476,10 @@
                 pAlt.classList.add('gga');
                 const parsed = parseGGA(parts);
                 if (parsed) {
-                    pHeure.textContent = "Heure UTC : " + parsed.time;
-                    pLat.textContent = "Latitude : " + parsed.lat;
-                    pLong.textContent = "Longitude : " + parsed.lon;
-                    pAlt.textContent = "Altitude : " + parsed.alt;
+                    pHeure.innerHTML = "Heure UTC : " + parsed.time;
+                    pLat.innerHTML = "Latitude : " + parsed.lat;
+                    pLong.innerHTML = "Longitude : " + parsed.lon;
+                    pAlt.innerHTML = "Altitude : " + parsed.alt;
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 2, 3, 4, 5);
                 }
@@ -490,9 +490,9 @@
                 pLong.classList.add('gll');
                 const parsed = parseGLL(parts);
                 if (parsed) {
-                    pHeure.textContent = "Heure UTC : " + parsed.time;
-                    pLat.textContent = "Latitude : " + parsed.lat;
-                    pLong.textContent = "Longitude : " + parsed.lon;
+                    pHeure.innerHTML = "Heure UTC : " + parsed.time;
+                    pLat.innerHTML = "Latitude : " + parsed.lat;
+                    pLong.innerHTML = "Longitude : " + parsed.lon;
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 1, 2, 3, 4);
                 }
