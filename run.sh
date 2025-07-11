@@ -41,6 +41,8 @@ else
     echo "   3. build.sh - Compilation de l'exécutable"
     echo "   4. test.sh - Test de l'exécutable"
     echo "   5. diagnose.sh - Diagnostic complet"
+    echo "   6. create_python_distribution.sh - Distribution Python portable"
+    echo "   7. cross_platform_info.sh - Info build cross-platform"
     echo
     
     # Menu interactif
@@ -50,6 +52,8 @@ else
     echo "   [3] Compiler l'exécutable"
     echo "   [4] Tester l'exécutable"
     echo "   [5] Diagnostic complet"
+    echo "   [6] Créer distribution Python portable (cross-platform)"
+    echo "   [7] Info build cross-platform (macOS/Windows)"
     echo "   [q] Quitter"
     echo
     
@@ -75,6 +79,14 @@ else
         5)
             echo "Diagnostic complet..."
             ./scripts/$OS/diagnose.sh
+            ;;
+        6)
+            echo "Création de la distribution Python portable..."
+            ./scripts/common/create_python_distribution.sh
+            ;;
+        7)
+            echo "Informations sur le build cross-platform..."
+            ./scripts/common/cross_platform_info.sh
             ;;
         q|Q)
             echo "Au revoir !"
