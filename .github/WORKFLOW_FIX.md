@@ -2,7 +2,8 @@
 
 ## ❌ Problème rencontré
 
-```python
+**Erreur 1 - Syntaxe f-string :**
+```
 Run python -c "import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')"
   File "<string>", line 1
     import nmea_server; print(f'✅ Success on Python {python.__import__('sys').version}')
@@ -11,25 +12,36 @@ SyntaxError: f-string: unmatched '('
 Error: Process completed with exit code 1.
 ```
 
+**Erreur 2 - Encodage Windows :**
+```
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+[INFO] Windows mode detected - stderr not redirected
+Error: Process completed with exit code 1.
+```
+
 ## 🔍 Analyse du problème
 
-**Cause :** Guillemets imbriqués incorrects dans une f-string Python
+**Cause 1 :** Guillemets imbriqués incorrects dans une f-string Python
+**Cause 2 :** Emoji Unicode ✅ (`\u2705`) incompatible avec l'encodage Windows `cp1252`
 
-**Problème spécifique :**
+**Problèmes spécifiques :**
 
 ```python
-# ❌ INCORRECT
+# ❌ INCORRECT - Problème 1: Guillemets imbriqués
 print(f'✅ Success on Python {python.__import__('sys').version}')
 #                                                    ^ guillemets simples imbriqués
+
+# ❌ INCORRECT - Problème 2: Emoji incompatible Windows
+print('✅ Success on Python ...')  # ✅ = \u2705 non supporté par cp1252
 ```
 
 ## ✅ Solution appliquée
 
-**Correction :**
+**Correction complète :**
 
 ```python
-# ✅ CORRECT
-import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0])
+# ✅ CORRECT - Sans f-string + sans emoji
+import nmea_server, sys; print('[OK] Success on Python ' + sys.version.split()[0])
 ```
 
 **Changements :**
@@ -38,6 +50,7 @@ import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0]
 2. Utilisation de concaténation de strings simple
 3. Import direct de `sys` au lieu de `__import__`
 4. Extraction de la version avec `.split()[0]`
+5. **Remplacement de l'emoji ✅ par [OK] pour compatibilité Windows**
 
 ## 📁 Fichier modifié
 
@@ -57,8 +70,10 @@ import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0]
 ```yaml
 - name: Test import and syntax
   run: |
-    python -c "import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0])"
+    python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.version.split()[0])"
 ```
+
+**Note :** Tous les emojis ✅ ont été remplacés par `[OK]` pour éviter les problèmes d'encodage sur Windows.
 
 ## ✅ Tests de validation
 
@@ -102,6 +117,8 @@ git push
 2. Utiliser le script `test_github_actions.sh` avant chaque push
 3. Éviter les f-strings complexes dans les workflows YAML
 4. Privilégier la concaténation simple ou les méthodes `.format()`
+5. **Éviter les emojis Unicode dans les workflows pour la compatibilité Windows**
+6. **Utiliser des caractères ASCII simples : [OK], [FAIL], etc.**
 
 ## 🔧 Outils de debug
 
@@ -112,7 +129,7 @@ git push
 ./scripts/common/test_github_actions.sh
 
 # Test spécifique
-python -c "import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0])"
+python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.version.split()[0])"
 ```
 
 ## ✅ Statut

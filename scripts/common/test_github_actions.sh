@@ -37,13 +37,13 @@ echo
 run_test "Import nmea_server" \
     "python3 -c 'import nmea_server; print(\"OK\")'"
 
-# Test 2: Import avec version Python (syntaxe corrigée)
+# Test 2: Import avec version Python (syntaxe corrigée, sans emoji)
 run_test "Import avec version Python" \
-    "python3 -c 'import nmea_server, sys; print(\"✅ Success on Python \" + sys.version.split()[0])'"
+    "python3 -c 'import nmea_server, sys; print(\"[OK] Success on Python \" + sys.version.split()[0])'"
 
-# Test 3: Vérification templates
+# Test 3: Vérification templates (sans emoji)
 run_test "Vérification des templates" \
-    "python3 -c 'from pathlib import Path; templates = Path(\"templates\"); assert templates.exists(); assert (templates / \"index.html\").exists(); assert (templates / \"config.html\").exists(); print(\"✅ Templates verification passed\")'"
+    "python3 -c 'from pathlib import Path; templates = Path(\"templates\"); assert templates.exists(); assert (templates / \"index.html\").exists(); assert (templates / \"config.html\").exists(); print(\"[OK] Templates verification passed\")'"
 
 # Test 4: Installation des dépendances
 run_test "Test requirements.txt" \

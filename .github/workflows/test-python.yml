@@ -27,7 +27,7 @@ jobs:
     
     - name: Test Python script
       run: |
-        python -c "import nmea_server; print('✅ Python script imports successfully')"
+        python -c "import nmea_server; print('[OK] Python script imports successfully')"
     
     - name: Create Python distribution
       run: |
@@ -74,7 +74,7 @@ jobs:
     
     - name: Test import and syntax
       run: |
-        python -c "import nmea_server, sys; print('✅ Success on Python ' + sys.version.split()[0])"
+        python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.version.split()[0])"
     
     - name: Test templates
       run: |
@@ -84,5 +84,5 @@ jobs:
         assert templates.exists(), 'Templates directory missing'
         assert (templates / 'index.html').exists(), 'index.html missing'
         assert (templates / 'config.html').exists(), 'config.html missing'
-        print('✅ Templates verification passed')
+        print('[OK] Templates verification passed')
         "
