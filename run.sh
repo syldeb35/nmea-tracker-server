@@ -49,6 +49,7 @@ else
     echo "   11. test_pip_quiet.sh - Test configuration pip silencieuse"
     echo "   12. test_matrix_arch.sh - Test logique matrix.arch corrigée"
     echo "   13. test_build_spec.sh - Test build local avec .spec amélioré"
+    echo "   14. test_macos_workflow.sh - Test simulation workflow macOS"
     echo
     
     # Menu interactif
@@ -66,6 +67,7 @@ else
     echo "   [11] Tester configuration pip silencieuse"
     echo "   [12] Tester logique matrix.arch corrigée"
     echo "   [13] Tester build local avec .spec amélioré"
+    echo "   [14] Tester simulation workflow macOS (fix sed/compatibilité)"
     echo "   [q] Quitter"
     echo
     
@@ -123,6 +125,10 @@ else
         13)
             echo "Test build local avec .spec amélioré..."
             ./scripts/common/test_build_spec.sh
+            ;;
+        14)
+            echo "Test simulation workflow macOS..."
+            ./scripts/common/test_macos_workflow.sh
             ;;
         q|Q)
             echo "Au revoir !"

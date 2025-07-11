@@ -106,8 +106,8 @@ jobs:
         # Créer un fichier .spec personnalisé pour cette plateforme
         cp nmea_server.spec "nmea_tracker_server_${{ matrix.arch }}.spec"
         
-        # Modifier le nom de l'exécutable dans le .spec
-        sed -i "s/name='nmea_tracker_server'/name='nmea_tracker_server_${{ matrix.arch }}'/" "nmea_tracker_server_${{ matrix.arch }}.spec"
+        # Modifier le nom de l'exécutable dans le .spec (compatible macOS/Linux)
+        python3 scripts/common/modify_spec.py "nmea_tracker_server_${{ matrix.arch }}.spec" "${{ matrix.arch }}"
         
         # Build avec le fichier .spec
         pyinstaller "nmea_tracker_server_${{ matrix.arch }}.spec"
