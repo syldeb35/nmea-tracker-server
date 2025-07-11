@@ -41,15 +41,10 @@ else
     echo "   3. build.sh - Compilation de l'exécutable"
     echo "   4. test.sh - Test de l'exécutable"
     echo "   5. diagnose.sh - Diagnostic complet"
-    echo "   6. create_python_distribution.sh - Distribution Python portable"
-    echo "   7. cross_platform_info.sh - Info build cross-platform"
-    echo "   8. test_github_actions.sh - Test workflows GitHub Actions"
-    echo "   9. test_crossplatform_build.sh - Test build cross-platform"
-    echo "   10. validate_project.sh - Validation finale du projet"
-    echo "   11. test_pip_quiet.sh - Test configuration pip silencieuse"
-    echo "   12. test_matrix_arch.sh - Test logique matrix.arch corrigée"
-    echo "   13. test_build_spec.sh - Test build local avec .spec amélioré"
-    echo "   14. test_macos_workflow.sh - Test simulation workflow macOS"
+    echo "   6. validate_project.sh - Validation finale du projet"
+    echo "   7. test_build_spec.sh - Test build local avec .spec amélioré"
+    echo "   8. test_macos_workflow.sh - Test simulation workflow macOS"
+    echo "   9. diagnose_macos.sh - Diagnostic problèmes macOS"
     echo
     
     # Menu interactif
@@ -59,15 +54,10 @@ else
     echo "   [3] Compiler l'exécutable"
     echo "   [4] Tester l'exécutable"
     echo "   [5] Diagnostic complet"
-    echo "   [6] Créer distribution Python portable (cross-platform)"
-    echo "   [7] Info build cross-platform (macOS/Windows)"
-    echo "   [8] Tester workflows GitHub Actions"
-    echo "   [9] Tester build cross-platform"
-    echo "   [10] Validation finale du projet"
-    echo "   [11] Tester configuration pip silencieuse"
-    echo "   [12] Tester logique matrix.arch corrigée"
-    echo "   [13] Tester build local avec .spec amélioré"
-    echo "   [14] Tester simulation workflow macOS (fix sed/compatibilité)"
+    echo "   [6] Validation finale du projet"
+    echo "   [7] Tester build local avec .spec amélioré"
+    echo "   [8] Tester simulation workflow macOS"
+    echo "   [9] Diagnostic problèmes macOS"
     echo "   [q] Quitter"
     echo
     
@@ -95,40 +85,20 @@ else
             ./scripts/$OS/diagnose.sh
             ;;
         6)
-            echo "Création de la distribution Python portable..."
-            ./scripts/common/create_python_distribution.sh
-            ;;
-        7)
-            echo "Informations sur le build cross-platform..."
-            ./scripts/common/cross_platform_info.sh
-            ;;
-        8)
-            echo "Test des workflows GitHub Actions..."
-            ./scripts/common/test_github_actions.sh
-            ;;
-        9)
-            echo "Test du build cross-platform..."
-            ./scripts/common/test_crossplatform_build.sh
-            ;;
-        10)
             echo "Validation finale du projet..."
             ./scripts/common/validate_project.sh
             ;;
-        11)
-            echo "Test configuration pip silencieuse..."
-            ./scripts/common/test_pip_quiet.sh
-            ;;
-        12)
-            echo "Test logique matrix.arch corrigée..."
-            ./scripts/common/test_matrix_arch.sh
-            ;;
-        13)
+        7)
             echo "Test build local avec .spec amélioré..."
             ./scripts/common/test_build_spec.sh
             ;;
-        14)
+        8)
             echo "Test simulation workflow macOS..."
             ./scripts/common/test_macos_workflow.sh
+            ;;
+        9)
+            echo "Diagnostic problèmes macOS..."
+            ./scripts/common/diagnose_macos.sh
             ;;
         q|Q)
             echo "Au revoir !"
