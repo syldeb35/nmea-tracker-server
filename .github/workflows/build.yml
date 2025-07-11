@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# GitHub Actions pour créer des exécutables multi-plateformes
 # GitHub Actions pour build cross-platform
 name: Build Cross-Platform Executables
 
