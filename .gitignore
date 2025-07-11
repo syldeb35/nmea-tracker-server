@@ -48,3 +48,14 @@ Desktop.ini
 temp/
 .temp/
 *~
+
+# Backup files
+*_BACKUP.*
+*_CLEAN.*
+
+# Build artifacts
+dist/
+build/
+*.exe
+nmea_tracker_server
+nmea_tracker_server.exe

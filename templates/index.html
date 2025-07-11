@@ -253,7 +253,7 @@
                     time: heure[0] + `h ` + heure[1] + `m ` + heure[2] + `s `,
                     lat: convertDMtoDMS_Lat(parseFloat(parts[3]), parts[4]),
                     lon: convertDMtoDMS_Lon(parseFloat(parts[5]), parts[6]),
-                    speed: parseFloat(parts[7]).toFixed(2) + " knots <small(" + (parseFloat(parts[7]) * 1.852).toFixed(2) + " km/h)</small>",
+                    speed: parseFloat(parts[7]).toFixed(2) + " knots <small>(" + (parseFloat(parts[7]) * 1.852).toFixed(2) + " km/h)</small>",
                     date: jour[0] + `/` + jour[1] + `/20` + jour[2]
                 };
             }

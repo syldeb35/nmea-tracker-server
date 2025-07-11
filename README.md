@@ -43,18 +43,37 @@
 
 ### Option 1: Exécutable (Recommandé)
 
+**Méthode rapide avec menu interactif :**
+
 ```bash
-# Windows
-build_windows.bat
-
-# Linux/macOS
-./build_unix.sh
-
-# Test
-./test_executable.sh  # ou test_executable.bat
+# Script principal avec menu (Linux/macOS)
+./run.sh
 ```
 
-### Option 2: Installation Python
+**Méthode manuelle par OS :**
+
+```bash
+# Linux
+./scripts/linux/setup.sh        # Installation
+./scripts/linux/build.sh        # Compilation
+
+# Windows  
+scripts\windows\setup.bat       # Installation
+scripts\windows\build.bat       # Compilation
+
+# macOS
+./scripts/macos/setup.sh        # Installation
+./scripts/macos/build.sh        # Compilation
+```
+
+**Scripts disponibles:**
+
+- 📁 `scripts/linux/` - Scripts pour Linux (Ubuntu, Debian, CentOS, etc.)
+- 📁 `scripts/windows/` - Scripts pour Windows (.bat)
+- 📁 `scripts/macos/` - Scripts pour macOS
+- 🚀 `run.sh` - Menu interactif principal (Linux/macOS)
+
+### Option 2: Installation Python manuelle
 
 ```bash
 # Cloner le repository

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Choix de la connexion NMEA</title>
+        <title>NMEA Connection Setup</title>
         <link rel="icon" type="image/svg+xml" href="favicon.svg">
         <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMTk3NmQyO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMjU2YTM7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNSIgZmlsbD0idXJsKCNncmFkMSkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHBhdGggZD0iTTE2IDYgTDIwIDE0IEwxNiAxMiBMMTIgMTQgWiIgZmlsbD0iI2ZmZiIvPgogIDxwYXRoIGQ9Ik04IDE4IEwyNCAxOCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMCAyMiBMMjIgMjIiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMjYiIHI9IjEuNSIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4K">
         <style>
@@ -80,49 +80,53 @@
     </head>
     <body>
         <div class="container">
-            <h2>Connexion NMEA / AIS</h2>
+            <h2>NMEA / AIS Connection</h2>
             <form method="POST" action="/select_connection">
-                <div class="section-title">Type de connexion :</div>
-                <label><input type="checkbox" name="enable_serial" {% if enable_serial %}checked{% endif %}>Série</label>
+                <div class="section-title">Connection type:</div>
+                <p>Choose the connection(s) type(s) you want to enable:</p>
+                <label><input type="checkbox" name="enable_serial" {% if enable_serial %}checked{% endif %}>Serial</label>
                 <label><input type="checkbox" name="enable_udp" {% if enable_udp %}checked{% endif %}>UDP</label>
                 <label><input type="checkbox" name="enable_tcp" {% if enable_tcp %}checked{% endif %}>TCP</label>
-                <label><input type="checkbox" name="enable_debug" {% if enable_debug %}checked{% endif %}>Activer les logs (DEBUG)</label>
+                <label><input type="checkbox" name="enable_debug" {% if enable_debug %}checked{% endif %}>Enable logging (DEBUG)</label>
                 <hr>
-                <div class="section-title">Paramètres réseau :</div>
-                <label>UDP IP :
+                <div class="section-title">Network settings:</div>
+                <p>Configure the network settings for the connection:</p>
+                <i>Note: You can leave the fields blank to use the default settings.</i>
+                <label>UDP IP:
                     <input type="text" name="udp_ip" value="{{ udp_ip }}">
                 </label>
-                <label>UDP Port :
+                <label>UDP Port:
                     <input type="number" name="udp_port" value="{{ udp_port }}">
                 </label>
-                <label>TCP IP :
+                <label>TCP IP:
                     <input type="text" name="tcp_ip" value="{{ tcp_ip }}">
                 </label>
-                <label>TCP Port :
+                <label>TCP Port:
                     <input type="number" name="tcp_port" value="{{ tcp_port }}">
                 </label>
                 <hr>
-                <div class="section-title">Paramètres série :</div>
-                <label>Port série :
+                <div class="section-title">Serial settings:</div>
+                <p>Configure the serial settings for the connection:</p>
+                <label>Serial port:
                     <select name="serial_port">
                         {% for port, desc in serial_ports %}
-                            <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
+                            <option value="{{ port }}" {% if port = serial_port %}selected{% endif %}>
                                 {{ port }}{% if desc %} ({{ desc }}){% endif %}
                             </option>
                         {% endfor %}
                     </select>
                 </label>
-                <label>Baud rate :
+                <label>Baud rate:
                     <select name="serial_baudrate">
                         {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}
-                            <option value="{{ br }}" {% if br == serial_baudrate %}selected{% endif %}>{{ br }}</option>
+                            <option value="{{ br }}" {% if br = serial_baudrate %}selected{% endif %}>{{ br }}</option>
                         {% endfor %}
                     </select>
                 </label>
-                <button type="submit">Valider</button>
+                <button type="submit">Apply</button>
             </form>
             <hr>
-            <div class="section-title">Informations de connexion :</div>
+            <div class="section-title">Connection information:</div>
             <ul class="info-list">
                 <li>UDP : <code>{{ udp_ip }}:{{ udp_port }}</code></li>
                 <li>TCP : <code>{{ tcp_ip }}:{{ tcp_port }}</code></li>
