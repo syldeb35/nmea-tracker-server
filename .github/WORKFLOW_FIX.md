@@ -149,7 +149,8 @@ python -c "import nmea_server, sys; print('[OK] Success on Python ' + sys.versio
 ### ❌ Problème rencontré
 
 **Erreur de build verification macOS :**
-```
+
+```text
 file_name="nmea_tracker_server_macos-intel"
 ❌ Build failed:  not found
 ```
@@ -199,7 +200,7 @@ Script créé : `scripts/common/test_filename_logic.sh`
 **Résultats :**
 
 - ✅ Linux: `nmea_tracker_server_linux`
-- ✅ macOS: `nmea_tracker_server_macos-intel` 
+- ✅ macOS: `nmea_tracker_server_macos-intel`
 - ✅ Windows: `nmea_tracker_server_windows.exe`
 
 ---
@@ -271,6 +272,7 @@ Les workflows GitHub Actions auront maintenant des logs plus propres sans les no
 ### ❌ Problème persistant
 
 **Erreur build verification macOS (après première correction) :**
+
 ```bash
 Looking for file: nmea_tracker_server_macos-intel
 [FAIL] Build failed: nmea_tracker_server_macos-intel not found
@@ -302,6 +304,7 @@ file_name="nmea_tracker_server_${{ matrix.arch }}"
 ```
 
 **Matrice GitHub Actions :**
+
 ```yaml
 matrix:
   include:
@@ -319,6 +322,7 @@ matrix:
 ### 📁 Corrections appliquées
 
 **Fichiers modifiés :**
+
 - `.github/workflows/build.yml` - Logique de vérification simplifiée
 - `scripts/common/test_matrix_arch.sh` - Script de validation de la nouvelle logique
 
@@ -333,6 +337,7 @@ matrix:
 Script créé : `scripts/common/test_matrix_arch.sh`
 
 **Tests de cohérence :**
+
 - ✅ `ubuntu-latest` → `nmea_tracker_server_linux`
 - ✅ `windows-latest` → `nmea_tracker_server_windows.exe`
 - ✅ `macos-latest` → `nmea_tracker_server_macos`

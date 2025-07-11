@@ -5,10 +5,12 @@
 Les scripts suivants ont été supprimés car ils sont devenus obsolètes après la résolution des problèmes :
 
 ### ❌ Scripts de Diagnostic Résolus
+
 - `diagnose_executable.sh` - Problème PyInstaller résolu avec .spec amélioré
 - `cross_platform_info.sh` - Informations maintenant connues et documentées
 
 ### ❌ Scripts de Test de Problèmes Résolus  
+
 - `test_filename_logic.sh` - Problème de nommage de fichier résolu
 - `test_github_actions.sh` - Workflows GitHub Actions fonctionnels
 - `test_crossplatform_build.sh` - Problèmes cross-platform résolus
@@ -18,19 +20,23 @@ Les scripts suivants ont été supprimés car ils sont devenus obsolètes après
 - `test_workflow.sh` - Ancien test remplacé
 
 ### ❌ Scripts Non Utilisés
+
 - `create_python_distribution.sh` - Fonctionnalité non utilisée
 
 ### ❌ Fichiers de Documentation Obsolètes
+
 - `scripts/README_BACKUP.md` - Backup obsolète
 - `scripts/README_CLEAN.md` - Version de nettoyage obsolète
 
 ## ✅ Scripts Conservés (Essentiels)
 
 ### 🔧 Scripts de Production
+
 - `modify_spec.py` - **CRITIQUE** : Utilisé dans GitHub Actions pour compatibilité macOS
 - `validate_project.sh` - Validation finale du projet
 
 ### 🧪 Scripts de Test et Diagnostic
+
 - `test_build_spec.sh` - Test local PyInstaller avec .spec amélioré
 - `test_macos_workflow.sh` - Simulation workflow macOS
 - `diagnose_macos.sh` - Diagnostic problèmes macOS
@@ -52,7 +58,7 @@ Les scripts suivants ont été supprimés car ils sont devenus obsolètes après
 
 ## 📋 Structure Finale
 
-```
+```text
 scripts/
 ├── README.md
 ├── common/
@@ -79,6 +85,7 @@ scripts/
 **APRÈS** : 9 options essentielles
 
 Options conservées :
+
 1. Installation complète
 2. Vérifier prérequis  
 3. Compiler exécutable

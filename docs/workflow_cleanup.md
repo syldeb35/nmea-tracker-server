@@ -12,9 +12,10 @@
 4. **Simplicité** : Focus sur l'essentiel
 
 ### 📋 Ce que faisait ce workflow
+
 - Testait l'import Python du script principal
 - Créait une distribution Python portable (.zip et .tar.gz)
-- Uploadait les artefacts pour téléchargement
+- Téléversait les artefacts pour téléchargement
 
 ### ✅ Alternatives Disponibles
 
@@ -37,12 +38,14 @@
 **Fichier conservé :** `.github/workflows/build.yml`
 
 ### 🎯 Responsabilités
+
 - Build cross-platform des exécutables PyInstaller
 - Tests sur Linux, Windows, macOS (y compris Intel)
 - Upload des artefacts binaires
 - Compatibilité macOS résolue avec `modify_spec.py`
 
 ### 🚀 Déclencheurs
+
 - Tags `v*` (pour releases)
 - Déclenchement manuel (`workflow_dispatch`)
 
@@ -56,9 +59,9 @@
 
 ## 🎉 Résultat Final
 
-```
+```text
 .github/workflows/
 └── build.yml          ← Seul workflow restant (essentiel)
 ```
 
-**GitHub Actions maintenant optimisé pour l'essentiel : production d'exécutables cross-platform fiables ! 🚀**
+## GitHub Actions maintenant optimisé pour l'essentiel : production d'exécutables cross-platform fiables ! 🚀

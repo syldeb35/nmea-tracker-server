@@ -32,8 +32,10 @@
 ### 🔧 Corrections Techniques Récentes
 
 #### GitHub Actions Workflow (.github/workflows/build.yml)
+
 - **Problème**: Erreurs PowerShell avec commandes Unix (ls -la)
 - **Solution**: Séparation conditionnelle Unix/Windows
+
   ```yaml
   # Unix/Linux/macOS
   - name: Verify executable (Unix)
@@ -49,16 +51,20 @@
   ```
 
 #### Gestion Encodage Unicode
+
 - **Problème**: Emojis incompatibles avec Windows cp1252
 - **Solution**: Remplacement par équivalents ASCII
+
   ```python
   # Avant: print("🔍 Test...")
   # Après: print("[TEST] Test...")
   ```
 
 #### Syntaxe Python Cross-Platform
+
 - **Problème**: f-strings avec quotes imbriquées
 - **Solution**: Simplification des chaînes formatées
+
   ```python
   # Avant: f"Test {variable['key']}"
   # Après: f"Test {variable_key}"
@@ -67,7 +73,8 @@
 ### 🚀 État Actuel
 
 #### Structure Projet Optimisée
-```
+
+```text
 nmea-tracker-server/
 ├── scripts/
 │   ├── linux/          # Scripts spécifiques Linux
@@ -81,12 +88,14 @@ nmea-tracker-server/
 ```
 
 #### Menu Principal Unifié (run.sh)
+
 - Interface interactive claire
 - 9 options disponibles incluant tests
 - Support pour tous les types de builds
 - Validation cross-platform intégrée
 
 #### Scripts de Test Complets
+
 1. `test_github_actions.sh` - Validation workflows
 2. `test_crossplatform_build.sh` - Test compatibilité OS
 3. `test_windows_compat.sh` - Simulation PowerShell
@@ -95,7 +104,9 @@ nmea-tracker-server/
 ### 📋 Actions Recommandées
 
 #### Immédiat
+
 1. **Valider sur GitHub**: Commit + push pour tester workflows
+
    ```bash
    git add .
    git commit -m "Fix cross-platform workflow PowerShell compatibility"
@@ -103,17 +114,20 @@ nmea-tracker-server/
    ```
 
 2. **Créer tag release**: Déclencher build complet
+
    ```bash
    git tag v1.2.0
    git push origin v1.2.0
    ```
 
 #### Court Terme
+
 - Surveiller builds GitHub Actions sur les 3 plateformes
 - Tester exécutables générés sur chaque OS
 - Documenter processus de release
 
 #### Long Terme
+
 - Tests automatisés plus étendus
 - Support d'autres formats NMEA
 - Interface web responsive

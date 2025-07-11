@@ -5,6 +5,7 @@
 ### ✅ **Corrections Appliquées avec Succès**
 
 #### 1. **Correction Build Verification macOS/Linux**
+
 - **Problème** : Variable `file_name` vide lors de la vérification du build
 - **Cause** : Interpolation défaillante de `${{ matrix.arch }}${{ matrix.ext }}`
 - **Solution** : Logique conditionnelle explicite basée sur `matrix.os`
@@ -22,11 +23,13 @@ fi
 ```
 
 #### 2. **Amélioration Upload Artifacts**
+
 - **Séparation par plateforme** pour éviter les conflits
 - **Noms d'artifacts distincts** : `nmea_tracker_server_linux`, `nmea_tracker_server_macos-intel`, `nmea_tracker_server_windows`
 - **Chemins de fichiers corrects** pour chaque OS
 
 #### 3. **Debug et Logging Améliorés**
+
 - Affichage du nom de fichier recherché : `echo "Looking for file: $file_name"`
 - Listage des fichiers disponibles en cas d'échec
 - Messages d'erreur plus explicites
