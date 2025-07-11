@@ -25,25 +25,25 @@ build_windows.bat
 
 1. **Installer PyInstaller :**
 
-```bash
-pip install pyinstaller
-```
+   ```bash
+   pip install pyinstaller
+   ```
 
 2. **Installer les dépendances :**
 
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 3. **Créer l'exécutable :**
 
-```bash
-pyinstaller nmea_server.spec --clean --noconfirm
-```
+   ```bash
+   pyinstaller nmea_server.spec --clean --noconfirm
+   ```
 
 ## 📁 Structure après le build
 
-```bash
+```text
 dist/
 ├── nmea_tracker_server.exe    # Exécutable principal (Windows)
 ├── nmea_tracker_server        # Exécutable principal (Linux/macOS)
@@ -107,22 +107,24 @@ L'application utilise une icône personnalisée (`icon.ico`) représentant :
 ### Créer une nouvelle icône
 
 1. Modifiez le fichier `icon.svg` selon vos préférences
+
 2. Exécutez le script de conversion :
 
-```bash
-python create_icon.py
-```
+   ```bash
+   python create_icon.py
+   ```
 
 3. L'icône `icon.ico` sera automatiquement mise à jour
 
 ### Ajouter une icône personnalisée
 
 1. Créez un fichier `.ico` (ex: `mon_icone.ico`)
+
 2. Modifiez `nmea_server.spec` :
 
-```python
-icon='mon_icone.ico'
-```
+   ```python
+   icon='mon_icone.ico'
+   ```
 
 ### Modifier les fichiers inclus
 

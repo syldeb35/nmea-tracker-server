@@ -10,26 +10,30 @@
 
 ## 🌟 Fonctionnalités
 
-### 📡 **Réception de données NMEA**
+### 📡 Réception de données NMEA
+
 - ✅ **Série (Bluetooth/USB)** - Connexion directe aux récepteurs GPS
 - ✅ **UDP** - Réception réseau de données NMEA
 - ✅ **TCP** - Connexion TCP pour flux de données
 - ✅ **Auto-détection** des ports série Bluetooth
 
-### 🗺️ **Interface web temps réel**
+### 🗺️ Interface web temps réel
+
 - ✅ **Carte interactive** avec Leaflet.js
 - ✅ **Tracking GPS** en temps réel avec historique
 - ✅ **Décodage NMEA** (GGA, RMC, GLL, VTG, HDT)
 - ✅ **WebSocket** pour mise à jour instantanée
 - ✅ **Design responsive** adaptatif mobile/desktop
 
-### 🔧 **Configuration avancée**
+### 🔧 Configuration avancée
+
 - ✅ **Interface de configuration** web intuitive
 - ✅ **Serveur HTTPS** avec certificats SSL
 - ✅ **Logging rotatif** des trames NMEA
 - ✅ **Multi-plateforme** (Windows, Linux, macOS)
 
-### 📦 **Distribution**
+### 📦 Distribution
+
 - ✅ **Exécutable autonome** (PyInstaller)
 - ✅ **Aucune installation** requise sur la machine cible
 - ✅ **Icône personnalisée** professionnelle
@@ -38,6 +42,7 @@
 ## 🚀 Installation rapide
 
 ### Option 1: Exécutable (Recommandé)
+
 ```bash
 # Windows
 build_windows.bat
@@ -50,6 +55,7 @@ build_windows.bat
 ```
 
 ### Option 2: Installation Python
+
 ```bash
 # Cloner le repository
 git clone https://github.com/VOTRE_USERNAME/nmea-tracker-server.git
@@ -65,8 +71,8 @@ python nmea_server.py
 ## 🌐 Utilisation
 
 1. **Démarrage** : Lancez l'exécutable ou `python nmea_server.py`
-2. **Configuration** : Ouvrez https://localhost:5000/config.html
-3. **Visualisation** : Accédez à https://localhost:5000/ pour voir les données en temps réel
+2. **Configuration** : Ouvrez `https://localhost:5000/config.html`
+3. **Visualisation** : Accédez à `https://localhost:5000/` pour voir les données en temps réel
 4. **Arrêt** : Utilisez `Ctrl+C` pour un arrêt propre
 
 ### 📱 Interface web
@@ -81,24 +87,28 @@ python nmea_server.py
 ### Connexions supportées
 
 #### 📻 Port série (Bluetooth/USB)
-```
+
+```text
 Port : Auto-détection ou manuel (ex: COM3, /dev/rfcomm0)
 Vitesse : 4800, 9600, 19200, 38400, 57600, 115200 bps
 ```
 
 #### 🌐 Réseau UDP
-```
+
+```text
 IP : 0.0.0.0 (écoute sur toutes les interfaces)
 Port : 5005 (par défaut)
 ```
 
 #### 🔗 Réseau TCP
-```
+
+```text
 IP : 0.0.0.0 (écoute sur toutes les interfaces)  
 Port : 5006 (par défaut)
 ```
 
 ### Variables d'environnement (.env)
+
 ```bash
 DEBUG=False
 ENABLE_SERIAL=True
@@ -121,7 +131,8 @@ SERIAL_BAUDRATE=4800
 ## 🛠️ Développement
 
 ### Structure du projet
-```
+
+```text
 nmea-tracker-server/
 ├── 📄 nmea_server.py          # Serveur principal
 ├── 📄 nmea_server.spec        # Configuration PyInstaller
@@ -136,6 +147,7 @@ nmea-tracker-server/
 ```
 
 ### Compilation
+
 ```bash
 # Installation PyInstaller
 pip install pyinstaller
@@ -149,6 +161,7 @@ dist/nmea_tracker_server      # Linux/macOS
 ```
 
 ### Technologies utilisées
+
 - **Backend** : Python 3.8+, Flask, SocketIO, gevent
 - **Frontend** : HTML5, JavaScript ES6, Leaflet.js
 - **Réseau** : WebSocket, HTTP/HTTPS, UDP/TCP
@@ -157,6 +170,7 @@ dist/nmea_tracker_server      # Linux/macOS
 ## 🐛 Résolution de problèmes
 
 ### Port série non détecté
+
 ```bash
 # Linux : Permissions
 sudo usermod -a -G dialout $USER
@@ -167,6 +181,7 @@ sudo chmod 666 /dev/ttyUSB0
 ```
 
 ### Erreur "Address already in use"
+
 ```bash
 # Tuer le processus existant
 sudo lsof -i :5000        # Linux/macOS
@@ -177,6 +192,7 @@ HTTPS_PORT = 5001
 ```
 
 ### Certificats SSL manquants
+
 L'application fonctionne automatiquement en HTTP si les certificats HTTPS sont absents.
 
 ## 📈 Roadmap
@@ -191,7 +207,7 @@ L'application fonctionne automatiquement en HTTP si les certificats HTTPS sont a
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! 
+Les contributions sont les bienvenues !
 
 1. **Fork** le projet
 2. **Créez** votre branche feature (`git checkout -b feature/amazing-feature`)
@@ -200,6 +216,7 @@ Les contributions sont les bienvenues !
 5. **Ouvrez** une Pull Request
 
 ### Guidelines
+
 - Code en **Python 3.8+**
 - **Tests** pour les nouvelles fonctionnalités
 - **Documentation** mise à jour
@@ -223,15 +240,13 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 ## 📞 Support
 
 - 🐛 **Issues** : [GitHub Issues](https://github.com/VOTRE_USERNAME/nmea-tracker-server/issues)
-- 📧 **Email** : votre.email@example.com
+- 📧 **Email** : [votre.email@example.com](mailto:votre.email@example.com)
 - 💬 **Discussions** : [GitHub Discussions](https://github.com/VOTRE_USERNAME/nmea-tracker-server/discussions)
 
 ---
 
-<div align="center">
+## ⭐ Support le projet
 
-**⭐ Si ce projet vous aide, n'hésitez pas à lui donner une étoile ! ⭐**
+Si ce projet vous aide, n'hésitez pas à lui donner une étoile !
 
 [![GitHub stars](https://img.shields.io/github/stars/VOTRE_USERNAME/nmea-tracker-server.svg?style=social&label=Star)](https://github.com/VOTRE_USERNAME/nmea-tracker-server)
-
-</div>
