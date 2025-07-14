@@ -642,33 +642,34 @@ def select_connection():
 def config():
     return render_template('./index.html') #, allowed_types=", ".join(ALLOWED_SENTENCE_TYPES))
 
-# === BLUETOOTH GPS AUTO-MANAGEMENT ===
-class BluetoothGPSManager:
-    """
-    Gestionnaire automatique pour GPS Bluetooth avec auto-découverte et connexion
-    """
-    def __init__(self):
-        self.target_mac = None  # Adresse MAC du GPS trouvé
-        self.target_channel = None  # Canal SPP trouvé
-        self.rfcomm_device = 0  # Numéro du device rfcomm (0 = /dev/rfcomm0)
-        self.is_connected = False
-        self.last_scan_time = 0
-        self.scan_interval = 60  # Scan toutes les minutes
-        self.connection_timeout = 10  # Timeout de connexion
+if __name__ == '__main__':
+    # === BLUETOOTH GPS AUTO-MANAGEMENT ===
+    class BluetoothGPSManager:
+        """
+        Gestionnaire automatique pour GPS Bluetooth avec auto-découverte et connexion
+        """
+        def __init__(self):
+            self.target_mac = None  # Adresse MAC du GPS trouvé
+            self.target_channel = None  # Canal SPP trouvé
+            self.rfcomm_device = 0  # Numéro du device rfcomm (0 = /dev/rfcomm0)
+            self.is_connected = False
+            self.last_scan_time = 0
+            self.scan_interval = 60  # Scan toutes les minutes
+            self.connection_timeout = 10  # Timeout de connexion
+            
+        def run_command(self, cmd, timeout=10):
+            """Exécute une commande shell avec timeout"""
+            try:
+                result = subprocess.run(cmd, shell=True, capture_output=True, 
+                                      text=True, timeout=timeout)
+                return result.returncode == 0, result.stdout, result.stderr
+            except subprocess.TimeoutExpired:
+                print(f"[BLUETOOTH] Commande timeout: {cmd}")
+                return False, "", "Timeout"
+            except Exception as e:
+                print(f"[BLUETOOTH] Erreur commande: {e}")
+                return False, "", str(e)
         
-    def run_command(self, cmd, timeout=10):
-        """Exécute une commande shell avec timeout"""
-        try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, 
-                                  text=True, timeout=timeout)
-            return result.returncode == 0, result.stdout, result.stderr
-        except subprocess.TimeoutExpired:
-            print(f"[BLUETOOTH] Commande timeout: {cmd}")
-            return False, "", "Timeout"
-        except Exception as e:
-            print(f"[BLUETOOTH] Erreur commande: {e}")
-            return False, "", str(e)
-    
     def scan_bluetooth_devices(self):
         """Scan des appareils Bluetooth à proximité"""
         print("[BLUETOOTH] Scan des appareils Bluetooth...")
@@ -715,67 +716,67 @@ class BluetoothGPSManager:
         
         print(f"[BLUETOOTH] {len(devices)} appareil(s) détecté(s)")
         return devices
-    
-    def find_spp_channel(self, mac_address):
-        """Trouve le canal SPP pour un appareil donné"""
-        print(f"[BLUETOOTH] Recherche canal SPP pour {mac_address}...")
         
-        success, stdout, stderr = self.run_command(f"sdptool browse {mac_address}", 10)
-        if not success:
-            print(f"[BLUETOOTH] Échec browse: {stderr}")
-            return None
-        
-        # Chercher le canal SPP dans la sortie
-        lines = stdout.split('\n')
-        in_spp_service = False
-        
-        for i, line in enumerate(lines):
-            if 'Serial Port' in line or 'SPP' in line:
-                in_spp_service = True
-                print(f"[BLUETOOTH] Service Serial Port trouvé")
-            elif in_spp_service and 'Channel:' in line:
-                try:
-                    channel = int(line.split('Channel:')[1].strip())
-                    print(f"[BLUETOOTH] Canal SPP trouvé: {channel}")
-                    return channel
-                except (ValueError, IndexError):
-                    continue
-            elif in_spp_service and line.strip() == "":
-                in_spp_service = False
-        
-        print("[BLUETOOTH] Aucun canal SPP trouvé")
-        return None
-    
-    def setup_rfcomm(self, mac_address, channel):
-        """Configure la connexion rfcomm"""
-        print(f"[BLUETOOTH] Configuration rfcomm{self.rfcomm_device} -> {mac_address}:{channel}")
-        
-        # Libérer d'abord le device rfcomm s'il existe
-        self.cleanup_rfcomm()
-        
-        # Créer la nouvelle connexion
-        cmd = f"sudo rfcomm bind {self.rfcomm_device} {mac_address} {channel}"
-        success, stdout, stderr = self.run_command(cmd, 10)
-        
-        if success:
-            # Vérifier que le device est créé
-            rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
-            if os.path.exists(rfcomm_path):
-                print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
-                return rfcomm_path
-            else:
-                print(f"[BLUETOOTH] Device {rfcomm_path} non créé")
+        def find_spp_channel(self, mac_address):
+            """Trouve le canal SPP pour un appareil donné"""
+            print(f"[BLUETOOTH] Recherche canal SPP pour {mac_address}...")
+            
+            success, stdout, stderr = self.run_command(f"sdptool browse {mac_address}", 10)
+            if not success:
+                print(f"[BLUETOOTH] Échec browse: {stderr}")
                 return None
-        else:
-            print(f"[BLUETOOTH] Échec configuration rfcomm: {stderr}")
+            
+            # Chercher le canal SPP dans la sortie
+            lines = stdout.split('\n')
+            in_spp_service = False
+            
+            for i, line in enumerate(lines):
+                if 'Serial Port' in line or 'SPP' in line:
+                    in_spp_service = True
+                    print(f"[BLUETOOTH] Service Serial Port trouvé")
+                elif in_spp_service and 'Channel:' in line:
+                    try:
+                        channel = int(line.split('Channel:')[1].strip())
+                        print(f"[BLUETOOTH] Canal SPP trouvé: {channel}")
+                        return channel
+                    except (ValueError, IndexError):
+                        continue
+                elif in_spp_service and line.strip() == "":
+                    in_spp_service = False
+            
+            print("[BLUETOOTH] Aucun canal SPP trouvé")
             return None
-    
-    def cleanup_rfcomm(self):
-        """Nettoie la connexion rfcomm"""
-        cmd = f"sudo rfcomm release {self.rfcomm_device}"
-        success, stdout, stderr = self.run_command(cmd, 5)
-        if success:
-            print(f"[BLUETOOTH] rfcomm{self.rfcomm_device} libéré")
+        
+        def setup_rfcomm(self, mac_address, channel):
+            """Configure la connexion rfcomm"""
+            print(f"[BLUETOOTH] Configuration rfcomm{self.rfcomm_device} -> {mac_address}:{channel}")
+            
+            # Libérer d'abord le device rfcomm s'il existe
+            self.cleanup_rfcomm()
+            
+            # Créer la nouvelle connexion
+            cmd = f"sudo rfcomm bind {self.rfcomm_device} {mac_address} {channel}"
+            success, stdout, stderr = self.run_command(cmd, 10)
+            
+            if success:
+                # Vérifier que le device est créé
+                rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
+                if os.path.exists(rfcomm_path):
+                    print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
+                    return rfcomm_path
+                else:
+                    print(f"[BLUETOOTH] Device {rfcomm_path} non créé")
+                    return None
+            else:
+                print(f"[BLUETOOTH] Échec configuration rfcomm: {stderr}")
+                return None
+        
+        def cleanup_rfcomm(self):
+            """Nettoie la connexion rfcomm"""
+            cmd = f"sudo rfcomm release {self.rfcomm_device}"
+            success, stdout, stderr = self.run_command(cmd, 5)
+            if success:
+                print(f"[BLUETOOTH] rfcomm{self.rfcomm_device} libéré")
         
     def test_gps_connection(self, port_path):
         """Test si le port GPS fonctionne en lisant quelques trames"""
@@ -811,48 +812,48 @@ class BluetoothGPSManager:
         except Exception as e:
             print(f"[BLUETOOTH] Erreur test connexion: {e}")
             return False
-    
-    def auto_discover_and_connect(self):
-        """Découverte automatique et connexion au GPS Bluetooth"""
-        if not IS_LINUX:
-            print("[BLUETOOTH] Auto-découverte disponible uniquement sur Linux")
-            return None
-            
-        print("[BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===")
         
-        # Scan des appareils
-        devices = self.scan_bluetooth_devices()
-        if not devices:
-            print("[BLUETOOTH] Aucun appareil trouvé")
-            return None
-        
-        # Tester chaque appareil pour GPS/SPP
-        for mac, name in devices:
-            print(f"[BLUETOOTH] Test appareil: {name} ({mac})")
-            
-            # Chercher le canal SPP
-            channel = self.find_spp_channel(mac)
-            if channel is None:
-                continue
+        def auto_discover_and_connect(self):
+            """Découverte automatique et connexion au GPS Bluetooth"""
+            if not IS_LINUX:
+                print("[BLUETOOTH] Auto-découverte disponible uniquement sur Linux")
+                return None
                 
-            # Essayer de configurer rfcomm
-            rfcomm_path = self.setup_rfcomm(mac, channel)
-            if rfcomm_path is None:
-                continue
+            print("[BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===")
+            
+            # Scan des appareils
+            devices = self.scan_bluetooth_devices()
+            if not devices:
+                print("[BLUETOOTH] Aucun appareil trouvé")
+                return None
+            
+            # Tester chaque appareil pour GPS/SPP
+            for mac, name in devices:
+                print(f"[BLUETOOTH] Test appareil: {name} ({mac})")
                 
-            # Tester la connexion GPS
-            if self.test_gps_connection(rfcomm_path):
-                print(f"[BLUETOOTH] ✅ GPS trouvé: {name} ({mac}) sur canal {channel}")
-                self.target_mac = mac
-                self.target_channel = channel
-                self.is_connected = True
-                return rfcomm_path
-            else:
-                print(f"[BLUETOOTH] ❌ Pas de GPS: {name}")
-                self.cleanup_rfcomm()
-        
-        print("[BLUETOOTH] Aucun GPS Bluetooth trouvé")
-        return None
+                # Chercher le canal SPP
+                channel = self.find_spp_channel(mac)
+                if channel is None:
+                    continue
+                    
+                # Essayer de configurer rfcomm
+                rfcomm_path = self.setup_rfcomm(mac, channel)
+                if rfcomm_path is None:
+                    continue
+                    
+                # Tester la connexion GPS
+                if self.test_gps_connection(rfcomm_path):
+                    print(f"[BLUETOOTH] ✅ GPS trouvé: {name} ({mac}) sur canal {channel}")
+                    self.target_mac = mac
+                    self.target_channel = channel
+                    self.is_connected = True
+                    return rfcomm_path
+                else:
+                    print(f"[BLUETOOTH] ❌ Pas de GPS: {name}")
+                    self.cleanup_rfcomm()
+            
+            print("[BLUETOOTH] Aucun GPS Bluetooth trouvé")
+            return None
     
     def detect_existing_rfcomm(self):
         """Détecte si un rfcomm est déjà configuré et fonctionnel"""
@@ -872,34 +873,34 @@ class BluetoothGPSManager:
                 print(f"[BLUETOOTH] ❌ {rfcomm_path} ne répond pas comme un GPS")
         
         return None
-    
-    def check_connection_status(self):
-        """Vérifie l'état de la connexion actuelle"""
-        if not self.is_connected:
-            return False
-            
-        rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
         
-        # Vérifier que le device existe
-        if not os.path.exists(rfcomm_path):
-            print("[BLUETOOTH] Device rfcomm disparu")
+        def check_connection_status(self):
+            """Vérifie l'état de la connexion actuelle"""
+            if not self.is_connected:
+                return False
+                
+            rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
+            
+            # Vérifier que le device existe
+            if not os.path.exists(rfcomm_path):
+                print("[BLUETOOTH] Device rfcomm disparu")
+                self.is_connected = False
+                return False
+            
+            # Test rapide de communication
+            try:
+                with serial.Serial(rfcomm_path, 4800, timeout=1) as ser:
+                    # Essayer de lire une trame
+                    line = ser.readline().decode('ascii', errors='ignore').strip()
+                    if line:
+                        return True
+            except:
+                pass
+                
+            print("[BLUETOOTH] Connexion GPS perdue")
             self.is_connected = False
             return False
         
-        # Test rapide de communication
-        try:
-            with serial.Serial(rfcomm_path, 4800, timeout=1) as ser:
-                # Essayer de lire une trame
-                line = ser.readline().decode('ascii', errors='ignore').strip()
-                if line:
-                    return True
-        except:
-            pass
-            
-        print("[BLUETOOTH] Connexion GPS perdue")
-        self.is_connected = False
-        return False
-    
     def maintain_connection(self):
         """Maintient la connexion GPS (appelé périodiquement)"""
         current_time = time.time()
@@ -928,10 +929,10 @@ class BluetoothGPSManager:
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()
 
-# Instance globale du gestionnaire Bluetooth
-bluetooth_manager = BluetoothGPSManager()
+    # Instance globale du gestionnaire Bluetooth
+    bluetooth_manager = BluetoothGPSManager()
 
-if __name__ == '__main__':
     main_thread()
+    
     print(f"[INFO] SocketIO async mode: {socketio.async_mode}")
     print(f"[HTTPS] Secure WebSocket server on https://0.0.0.0:{HTTPS_PORT}")
