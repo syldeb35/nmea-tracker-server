@@ -109,6 +109,9 @@
                 <p>Configure the serial settings for the connection:</p>
                 <label>Serial port:
                     <select name="serial_port">
+                        <option value="AUTO" {% if serial_port == "AUTO" %}selected{% endif %}>
+                            AUTO - Bluetooth GPS Auto-Discovery (Linux only)
+                        </option>
                         {% for port, desc in serial_ports %}
                             <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
                                 {{ port }}{% if desc %} ({{ desc }}){% endif %}
@@ -116,6 +119,13 @@
                         {% endfor %}
                     </select>
                 </label>
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; font-size: 0.9em;">
+                    <strong>🔵 AUTO Mode (Linux):</strong> Automatically scans for Bluetooth GPS devices every minute.
+                    <br>• Automatically discovers GPS devices via Bluetooth scan
+                    <br>• Creates rfcomm connection automatically (requires sudo permissions)
+                    <br>• Reconnects automatically if connection is lost
+                    <br>• No manual sdptool/rfcomm commands needed
+                </div>
                 <label>Baud rate:
                     <select name="serial_baudrate">
                         {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}

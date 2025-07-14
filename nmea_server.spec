@@ -69,6 +69,10 @@ a = Analysis(
         'serial.tools.list_ports',
         'serial.serialutil',
         
+        # Bluetooth et subprocess pour Linux
+        'subprocess',
+        'subprocess.run',
+        
         # Modules système
         'pkg_resources.py2_warn',
         'dotenv',

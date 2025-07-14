@@ -18,7 +18,7 @@ import threading
 import logging
 import signal
 import atexit
-#import subprocess
+import subprocess
 #import ssl
 import time  # Required import
 from flask import Flask, Response, render_template, request, redirect, url_for
@@ -139,24 +139,33 @@ atexit.register(cleanup_on_exit)
 # === SIMPLE BLUETOOTH SERIAL PORT DETECTION ===
 def detect_bluetooth_serial_port():
     """
-    Attempts to automatically detect an active Bluetooth serial port.
-    Compatible with Windows, macOS, Linux.
+    Détection automatique et connexion GPS Bluetooth.
+    Utilise le gestionnaire Bluetooth pour découverte et connexion automatiques.
+    Compatible avec Windows, macOS, Linux.
     Returns the port name (e.g. /dev/rfcomm0 or COM4), or None.
     """
-    print("[AUTO-DETECT] Searching for serial ports...")
+    # Sur Linux, utiliser le gestionnaire Bluetooth automatique
+    if IS_LINUX:
+        print("[AUTO-DETECT] Utilisation du gestionnaire Bluetooth automatique...")
+        auto_port = bluetooth_manager.maintain_connection()
+        if auto_port:
+            return auto_port
+    
+    # Fallback: méthode traditionnelle par énumération des ports
+    print("[AUTO-DETECT] Recherche traditionnelle des ports série...")
     ports = list(serial.tools.list_ports.comports())
     
     if not ports:
-        print("[AUTO-DETECT] No serial ports detected")
+        print("[AUTO-DETECT] Aucun port série détecté")
         return None
     
-    print(f"[AUTO-DETECT] {len(ports)} serial port(s) found:")
+    print(f"[AUTO-DETECT] {len(ports)} port(s) série trouvé(s):")
     for port in ports:
         print(f"  - {port.device}: {port.description}")
     
-    # Patterns adapted according to OS
+    # Patterns adaptés selon l'OS
     if IS_WINDOWS:
-        # Broader search on Windows
+        # Recherche plus large sur Windows
         bt_patterns = [
             re.compile(r"bluetooth", re.IGNORECASE),
             re.compile(r"bt", re.IGNORECASE),
@@ -178,15 +187,16 @@ def detect_bluetooth_serial_port():
 
         for pattern in bt_patterns:
             if pattern.search(port_name) or pattern.search(desc) or pattern.search(hwid):
-                print(f"[AUTO-DETECT] Serial port detected: {port_name} ({desc})")
+                print(f"[AUTO-DETECT] Port série détecté: {port_name} ({desc})")
                 return port_name
-    # If nothing found, return first available port on Windows
+    
+    # Si rien trouvé, retourner le premier port disponible sur Windows
     if IS_WINDOWS and ports:
         first_port = ports[0].device
-        print(f"[AUTO-DETECT] No Bluetooth port, using first port: {first_port}")
+        print(f"[AUTO-DETECT] Aucun port Bluetooth, utilisation du premier port: {first_port}")
         return first_port
     
-    print("[AUTO-DETECT] No Bluetooth serial port detected.")
+    print("[AUTO-DETECT] Aucun port série Bluetooth détecté.")
     return None
 
 def list_serial_ports():
@@ -199,9 +209,11 @@ def list_serial_ports():
 serial_thread = None
 udp_thread = None
 tcp_thread = None
+bluetooth_monitor_thread = None
 serial_stop = threading.Event()
 udp_stop = threading.Event()
 tcp_stop = threading.Event()
+bluetooth_monitor_stop = threading.Event()
 
 # === MODIFIED FUNCTIONS TO SUPPORT STOPPING ===
 def udp_listener(stop_event):
@@ -367,10 +379,63 @@ def serial_listener(port, baudrate, stop_event):
     
     print("[SERIAL] Stopped.")
 
+def bluetooth_monitor(stop_event):
+    """
+    Thread de surveillance Bluetooth qui maintient la connexion GPS automatiquement
+    """
+    print("[BLUETOOTH-MONITOR] Démarrage de la surveillance Bluetooth...")
+    
+    while not stop_event.is_set() and not shutdown_event.is_set():
+        try:
+            if ENABLE_SERIAL and IS_LINUX:
+                # Vérifier et maintenir la connexion Bluetooth
+                port = bluetooth_manager.maintain_connection()
+                if port:
+                    # Mettre à jour le port série global si nécessaire
+                    global SERIAL_PORT
+                    if SERIAL_PORT != port:
+                        print(f"[BLUETOOTH-MONITOR] Mise à jour port série: {port}")
+                        SERIAL_PORT = port
+                        
+                        # Redémarrer le thread série avec le nouveau port
+                        if serial_thread and serial_thread.is_alive():
+                            print("[BLUETOOTH-MONITOR] Redémarrage thread série...")
+                            serial_stop.set()
+                            time.sleep(1)  # Laisser le temps au thread de s'arrêter
+                            serial_stop.clear()
+            
+            # Attendre 60 secondes avant la prochaine vérification
+            for _ in range(600):  # 60 secondes en incréments de 0.1s
+                if stop_event.is_set():
+                    break
+                time.sleep(0.1)
+                
+        except Exception as e:
+            print(f"[BLUETOOTH-MONITOR] Erreur: {e}")
+            time.sleep(10)  # Pause plus longue en cas d'erreur
+    
+    # Nettoyer la connexion rfcomm en sortie
+    if IS_LINUX:
+        bluetooth_manager.cleanup_rfcomm()
+    
+    print("[BLUETOOTH-MONITOR] Arrêt de la surveillance Bluetooth.")
 
 # === THREAD MANAGEMENT FUNCTION ===
 def manage_threads():
-    global serial_thread, udp_thread, tcp_thread
+    global serial_thread, udp_thread, tcp_thread, bluetooth_monitor_thread
+    
+    # BLUETOOTH MONITOR (uniquement sur Linux)
+    if IS_LINUX and ENABLE_SERIAL:
+        if bluetooth_monitor_thread is None or not bluetooth_monitor_thread.is_alive():
+            bluetooth_monitor_stop.clear()
+            bluetooth_monitor_thread = threading.Thread(target=bluetooth_monitor, args=(bluetooth_monitor_stop,), daemon=True)
+            bluetooth_monitor_thread.start()
+            print("[BLUETOOTH-MONITOR] Thread de surveillance démarré")
+    else:
+        if bluetooth_monitor_thread and bluetooth_monitor_thread.is_alive():
+            bluetooth_monitor_stop.set()
+            bluetooth_monitor_thread = None
+    
     # SERIAL
     if ENABLE_SERIAL:
         if serial_thread is None or not serial_thread.is_alive():
@@ -502,7 +567,241 @@ def main_thread():
         print("[INFO] Server stopped.")
 
 
-# === FLASK ROUTES ===
+# === BLUETOOTH GPS AUTO-MANAGEMENT ===
+class BluetoothGPSManager:
+    """
+    Gestionnaire automatique pour GPS Bluetooth avec auto-découverte et connexion
+    """
+    def __init__(self):
+        self.target_mac = None  # Adresse MAC du GPS trouvé
+        self.target_channel = None  # Canal SPP trouvé
+        self.rfcomm_device = 0  # Numéro du device rfcomm (0 = /dev/rfcomm0)
+        self.is_connected = False
+        self.last_scan_time = 0
+        self.scan_interval = 60  # Scan toutes les minutes
+        self.connection_timeout = 10  # Timeout de connexion
+        
+    def run_command(self, cmd, timeout=10):
+        """Exécute une commande shell avec timeout"""
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, 
+                                  text=True, timeout=timeout)
+            return result.returncode == 0, result.stdout, result.stderr
+        except subprocess.TimeoutExpired:
+            print(f"[BLUETOOTH] Commande timeout: {cmd}")
+            return False, "", "Timeout"
+        except Exception as e:
+            print(f"[BLUETOOTH] Erreur commande: {e}")
+            return False, "", str(e)
+    
+    def scan_bluetooth_devices(self):
+        """Scan des appareils Bluetooth à proximité"""
+        print("[BLUETOOTH] Scan des appareils Bluetooth...")
+        
+        # Vérifier que Bluetooth est activé
+        success, stdout, stderr = self.run_command("hciconfig hci0 up", 5)
+        if not success:
+            print("[BLUETOOTH] Impossible d'activer Bluetooth")
+            return []
+        
+        # Scan des appareils
+        success, stdout, stderr = self.run_command("hcitool scan", 15)
+        if not success:
+            print(f"[BLUETOOTH] Échec du scan: {stderr}")
+            return []
+        
+        devices = []
+        for line in stdout.split('\n'):
+            line = line.strip()
+            if ':' in line and len(line.split()) >= 2:
+                parts = line.split('\t', 1)
+                if len(parts) == 2:
+                    mac = parts[0].strip()
+                    name = parts[1].strip()
+                    devices.append((mac, name))
+                    print(f"[BLUETOOTH] Trouvé: {mac} - {name}")
+        
+        return devices
+    
+    def find_spp_channel(self, mac_address):
+        """Trouve le canal SPP pour un appareil donné"""
+        print(f"[BLUETOOTH] Recherche canal SPP pour {mac_address}...")
+        
+        success, stdout, stderr = self.run_command(f"sdptool browse {mac_address}", 10)
+        if not success:
+            print(f"[BLUETOOTH] Échec browse: {stderr}")
+            return None
+        
+        # Chercher le canal SPP dans la sortie
+        lines = stdout.split('\n')
+        in_spp_service = False
+        
+        for i, line in enumerate(lines):
+            if 'Serial Port' in line or 'SPP' in line:
+                in_spp_service = True
+                print(f"[BLUETOOTH] Service Serial Port trouvé")
+            elif in_spp_service and 'Channel:' in line:
+                try:
+                    channel = int(line.split('Channel:')[1].strip())
+                    print(f"[BLUETOOTH] Canal SPP trouvé: {channel}")
+                    return channel
+                except (ValueError, IndexError):
+                    continue
+            elif in_spp_service and line.strip() == "":
+                in_spp_service = False
+        
+        print("[BLUETOOTH] Aucun canal SPP trouvé")
+        return None
+    
+    def setup_rfcomm(self, mac_address, channel):
+        """Configure la connexion rfcomm"""
+        print(f"[BLUETOOTH] Configuration rfcomm{self.rfcomm_device} -> {mac_address}:{channel}")
+        
+        # Libérer d'abord le device rfcomm s'il existe
+        self.cleanup_rfcomm()
+        
+        # Créer la nouvelle connexion
+        cmd = f"sudo rfcomm bind {self.rfcomm_device} {mac_address} {channel}"
+        success, stdout, stderr = self.run_command(cmd, 10)
+        
+        if success:
+            # Vérifier que le device est créé
+            rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
+            if os.path.exists(rfcomm_path):
+                print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
+                return rfcomm_path
+            else:
+                print(f"[BLUETOOTH] Device {rfcomm_path} non créé")
+                return None
+        else:
+            print(f"[BLUETOOTH] Échec configuration rfcomm: {stderr}")
+            return None
+    
+    def cleanup_rfcomm(self):
+        """Nettoie la connexion rfcomm"""
+        cmd = f"sudo rfcomm release {self.rfcomm_device}"
+        success, stdout, stderr = self.run_command(cmd, 5)
+        if success:
+            print(f"[BLUETOOTH] rfcomm{self.rfcomm_device} libéré")
+        
+    def test_gps_connection(self, port_path):
+        """Test si le port GPS fonctionne en lisant quelques trames"""
+        print(f"[BLUETOOTH] Test connexion GPS sur {port_path}")
+        
+        try:
+            with serial.Serial(port_path, 4800, timeout=2) as ser:
+                # Attendre quelques trames
+                for i in range(10):  # Max 10 tentatives = 20 secondes
+                    try:
+                        line = ser.readline().decode('ascii', errors='ignore').strip()
+                        if line.startswith('$GP') or line.startswith('$GN') or line.startswith('!AI'):
+                            print(f"[BLUETOOTH] Trame NMEA reçue: {line[:50]}...")
+                            return True
+                    except:
+                        continue
+                        
+            print("[BLUETOOTH] Aucune trame NMEA reçue")
+            return False
+            
+        except Exception as e:
+            print(f"[BLUETOOTH] Erreur test connexion: {e}")
+            return False
+    
+    def auto_discover_and_connect(self):
+        """Découverte automatique et connexion au GPS Bluetooth"""
+        if not IS_LINUX:
+            print("[BLUETOOTH] Auto-découverte disponible uniquement sur Linux")
+            return None
+            
+        print("[BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===")
+        
+        # Scan des appareils
+        devices = self.scan_bluetooth_devices()
+        if not devices:
+            print("[BLUETOOTH] Aucun appareil trouvé")
+            return None
+        
+        # Tester chaque appareil pour GPS/SPP
+        for mac, name in devices:
+            print(f"[BLUETOOTH] Test appareil: {name} ({mac})")
+            
+            # Chercher le canal SPP
+            channel = self.find_spp_channel(mac)
+            if channel is None:
+                continue
+                
+            # Essayer de configurer rfcomm
+            rfcomm_path = self.setup_rfcomm(mac, channel)
+            if rfcomm_path is None:
+                continue
+                
+            # Tester la connexion GPS
+            if self.test_gps_connection(rfcomm_path):
+                print(f"[BLUETOOTH] ✅ GPS trouvé: {name} ({mac}) sur canal {channel}")
+                self.target_mac = mac
+                self.target_channel = channel
+                self.is_connected = True
+                return rfcomm_path
+            else:
+                print(f"[BLUETOOTH] ❌ Pas de GPS: {name}")
+                self.cleanup_rfcomm()
+        
+        print("[BLUETOOTH] Aucun GPS Bluetooth trouvé")
+        return None
+    
+    def check_connection_status(self):
+        """Vérifie l'état de la connexion actuelle"""
+        if not self.is_connected:
+            return False
+            
+        rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
+        
+        # Vérifier que le device existe
+        if not os.path.exists(rfcomm_path):
+            print("[BLUETOOTH] Device rfcomm disparu")
+            self.is_connected = False
+            return False
+        
+        # Test rapide de communication
+        try:
+            with serial.Serial(rfcomm_path, 4800, timeout=1) as ser:
+                # Essayer de lire une trame
+                line = ser.readline().decode('ascii', errors='ignore').strip()
+                if line:
+                    return True
+        except:
+            pass
+            
+        print("[BLUETOOTH] Connexion GPS perdue")
+        self.is_connected = False
+        return False
+    
+    def maintain_connection(self):
+        """Maintient la connexion GPS (appelé périodiquement)"""
+        current_time = time.time()
+        
+        # Vérifier si c'est le moment de scanner
+        if current_time - self.last_scan_time < self.scan_interval:
+            return None
+            
+        self.last_scan_time = current_time
+        
+        # Si connecté, vérifier l'état
+        if self.is_connected:
+            if self.check_connection_status():
+                print("[BLUETOOTH] Connexion GPS OK")
+                return f"/dev/rfcomm{self.rfcomm_device}"
+            else:
+                print("[BLUETOOTH] Reconnexion nécessaire")
+                self.cleanup_rfcomm()
+        
+        # Tentative de (re)connexion
+        return self.auto_discover_and_connect()
+
+# Instance globale du gestionnaire Bluetooth
+bluetooth_manager = BluetoothGPSManager()
+
+# === EXISTING FUNCTIONS ===
 @app.route('/config.html', methods=['GET'])
 def home():
     serial_ports = list_serial_ports()
