@@ -62,7 +62,7 @@ def get_resource_path(relative_path):
 
 # === ENVIRONMENT CONFIG LOADING ADAPTED TO SYSTEM ===
 # Default serial port according to OS
-DEFAULT_SERIAL_PORT = "COM5" if IS_WINDOWS else "/dev/rfcomm0"
+DEFAULT_SERIAL_PORT = "COM5" if IS_WINDOWS else "AUTO"
 SERIAL_PORT = os.getenv("SERIAL_PORT", DEFAULT_SERIAL_PORT).strip()
 SERIAL_BAUDRATE = int(os.getenv("SERIAL_BAUDRATE", 4800))
 ENABLE_SERIAL = os.getenv("ENABLE_SERIAL", "True").lower() == "true"
@@ -384,7 +384,7 @@ def bluetooth_monitor(stop_event):
     """
     Thread de surveillance Bluetooth qui maintient la connexion GPS automatiquement
     """
-    global bluetooth_manager
+    global bluetooth_manager, serial_thread
     print("[BLUETOOTH-MONITOR] Démarrage de la surveillance Bluetooth...")
     
     check_counter = 0
@@ -402,16 +402,39 @@ def bluetooth_monitor(stop_event):
                 if port:
                     # Mettre à jour le port série global si nécessaire
                     global SERIAL_PORT
-                    if SERIAL_PORT != port:
-                        print(f"[BLUETOOTH-MONITOR] Mise à jour port série: {port}")
-                        SERIAL_PORT = port
+                    current_port = SERIAL_PORT if SERIAL_PORT != "AUTO" else None
+                    
+                    if current_port != port:
+                        print(f"[BLUETOOTH-MONITOR] Nouvelle connexion GPS: {port}")
                         
-                        # Redémarrer le thread série avec le nouveau port
+                        # Arrêter le thread série existant s'il y en a un
                         if serial_thread and serial_thread.is_alive():
-                            print("[BLUETOOTH-MONITOR] Redémarrage thread série...")
+                            print("[BLUETOOTH-MONITOR] Arrêt du thread série existant...")
                             serial_stop.set()
-                            time.sleep(1)  # Laisser le temps au thread de s'arrêter
-                            serial_stop.clear()
+                            serial_thread.join(timeout=2)
+                        
+                        # Attendre un peu pour s'assurer que le port est libéré
+                        print("[BLUETOOTH-MONITOR] Attente libération du port...")
+                        time.sleep(5)
+                        
+                        # Démarrer le nouveau thread série
+                        print(f"[BLUETOOTH-MONITOR] Démarrage thread série sur {port}...")
+                        serial_stop.clear()
+                        serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
+                        serial_thread.start()
+                        
+                        # Mettre à jour la variable globale pour l'interface web
+                        if SERIAL_PORT == "AUTO":
+                            # Ne pas changer SERIAL_PORT pour garder le mode AUTO
+                            pass
+                        else:
+                            SERIAL_PORT = port
+                elif SERIAL_PORT == "AUTO":
+                    # En mode AUTO, arrêter le thread série s'il n'y a plus de connexion
+                    if serial_thread and serial_thread.is_alive():
+                        print("[BLUETOOTH-MONITOR] Aucune connexion GPS - arrêt du thread série")
+                        serial_stop.set()
+                        serial_thread.join(timeout=2)
             
             # Attendre 60 secondes avant la prochaine vérification
             for _ in range(600):  # 60 secondes en incréments de 0.1s
@@ -445,28 +468,26 @@ def manage_threads():
             bluetooth_monitor_stop.set()
             bluetooth_monitor_thread = None
     
-    # SERIAL
+    # SERIAL - seulement si ce n'est pas AUTO ou si AUTO est résolu
     if ENABLE_SERIAL:
-        if serial_thread is None or not serial_thread.is_alive():
-            # Résoudre le port série si nécessaire
-            actual_port = SERIAL_PORT
-            if SERIAL_PORT == "AUTO":
-                print("[AUTO-DETECT] Résolution du port AUTO...")
-                detected_port = detect_bluetooth_serial_port()
-                if detected_port:
-                    actual_port = detected_port
-                    print(f"[AUTO-DETECT] Port résolu: {actual_port}")
-                else:
-                    print("[AUTO-DETECT] Aucun port détecté - thread série non démarré")
-                    return  # Ne pas démarrer le thread série
-            
-            serial_stop.clear()
-            serial_thread = threading.Thread(target=serial_listener, args=(actual_port, SERIAL_BAUDRATE, serial_stop), daemon=True)
-            serial_thread.start()
+        actual_port = SERIAL_PORT
+        
+        # Si mode AUTO, ne démarrer le thread série que si une connexion Bluetooth est établie
+        if SERIAL_PORT == "AUTO":
+            # Ne pas démarrer le thread série maintenant - le bluetooth monitor s'en chargera
+            print("[AUTO-DETECT] Mode AUTO - attente de la découverte Bluetooth...")
+            return
+        else:
+            # Port spécifique fourni
+            if serial_thread is None or not serial_thread.is_alive():
+                serial_stop.clear()
+                serial_thread = threading.Thread(target=serial_listener, args=(actual_port, SERIAL_BAUDRATE, serial_stop), daemon=True)
+                serial_thread.start()
     else:
         if serial_thread and serial_thread.is_alive():
             serial_stop.set()
             serial_thread = None
+            
     # UDP
     if ENABLE_UDP:
         if udp_thread is None or not udp_thread.is_alive():
@@ -758,14 +779,18 @@ class BluetoothGPSManager:
         success, stdout, stderr = self.run_command(cmd, 10)
         
         if success:
-            # Vérifier que le device est créé
+            # Attendre que le device soit créé et stabilisé
             rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
-            if os.path.exists(rfcomm_path):
-                print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
-                return rfcomm_path
-            else:
-                print(f"[BLUETOOTH] Device {rfcomm_path} non créé")
-                return None
+            for i in range(10):  # Attendre jusqu'à 5 secondes
+                if os.path.exists(rfcomm_path):
+                    # Attendre encore un peu pour la stabilisation
+                    time.sleep(2)
+                    print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
+                    return rfcomm_path
+                time.sleep(0.5)
+            
+            print(f"[BLUETOOTH] Device {rfcomm_path} non créé après timeout")
+            return None
         else:
             print(f"[BLUETOOTH] Échec configuration rfcomm: {stderr}")
             return None
@@ -784,33 +809,47 @@ class BluetoothGPSManager:
         # Attendre un peu que le device soit prêt
         time.sleep(2)
         
+        ser = None
         try:
-            with serial.Serial(port_path, 4800, timeout=3) as ser:
-                print("[BLUETOOTH] Port ouvert, lecture des données...")
-                # Attendre quelques trames (jusqu'à 30 secondes)
-                for i in range(30):  # Max 30 tentatives = 90 secondes
-                    try:
-                        line = ser.readline().decode('ascii', errors='ignore').strip()
-                        if line:
-                            print(f"[BLUETOOTH] Données reçues: {line[:80]}...")
-                            # Vérifier si c'est une trame NMEA GPS valide
-                            if (line.startswith('$GP') or line.startswith('$GN') or 
-                                line.startswith('!AI') or line.startswith('$GL')):
-                                print(f"[BLUETOOTH] ✓ Trame NMEA GPS valide détectée")
-                                return True
-                            elif line.startswith('$'):
-                                print(f"[BLUETOOTH] Trame NMEA détectée (autre): {line[:50]}")
-                                # Continuer à chercher des trames GPS spécifiques
-                    except Exception as e:
-                        print(f"[BLUETOOTH] Erreur lecture: {e}")
-                        continue
-                        
+            # Test rapide avec gestion explicite de la fermeture
+            ser = serial.Serial(port_path, 4800, timeout=5)
+            print("[BLUETOOTH] Port ouvert, lecture des données...")
+            
+            # Test plus court - juste 10 secondes max
+            for i in range(10):  # Max 10 tentatives = 50 secondes
+                try:
+                    line = ser.readline().decode('ascii', errors='ignore').strip()
+                    if line:
+                        print(f"[BLUETOOTH] Données reçues: {line[:80]}...")
+                        # Vérifier si c'est une trame NMEA GPS valide
+                        if (line.startswith('$GP') or line.startswith('$GN') or 
+                            line.startswith('!AI') or line.startswith('$GL')):
+                            print(f"[BLUETOOTH] ✓ Trame NMEA GPS valide détectée")
+                            # Fermer proprement le port et attendre
+                            ser.close()
+                            time.sleep(3)  # Attendre 3 secondes pour que le port soit libéré
+                            return True
+                        elif line.startswith('$'):
+                            print(f"[BLUETOOTH] Trame NMEA détectée (autre): {line[:50]}")
+                            # Continuer à chercher des trames GPS spécifiques
+                except Exception as e:
+                    print(f"[BLUETOOTH] Erreur lecture: {e}")
+                    continue
+            
             print("[BLUETOOTH] Aucune trame NMEA GPS valide reçue")
             return False
             
         except Exception as e:
             print(f"[BLUETOOTH] Erreur test connexion: {e}")
             return False
+        finally:
+            # S'assurer que le port est fermé dans tous les cas
+            if ser and ser.is_open:
+                try:
+                    ser.close()
+                    time.sleep(3)  # Attendre que le port soit vraiment libéré
+                except:
+                    pass
     
     def auto_discover_and_connect(self):
         """Découverte automatique et connexion au GPS Bluetooth"""
@@ -886,15 +925,15 @@ class BluetoothGPSManager:
             self.is_connected = False
             return False
         
-        # Test rapide de communication
+        # Test plus léger - juste vérifier que le fichier est accessible
         try:
-            with serial.Serial(rfcomm_path, 4800, timeout=1) as ser:
-                # Essayer de lire une trame
-                line = ser.readline().decode('ascii', errors='ignore').strip()
-                if line:
-                    return True
-        except:
-            pass
+            # Au lieu d'ouvrir le port série, juste vérifier l'accès au fichier
+            import stat
+            st = os.stat(rfcomm_path)
+            if stat.S_ISCHR(st.st_mode):  # Vérifier que c'est un device caractère
+                return True
+        except Exception as e:
+            print(f"[BLUETOOTH] Erreur vérification device: {e}")
             
         print("[BLUETOOTH] Connexion GPS perdue")
         self.is_connected = False
@@ -904,15 +943,17 @@ class BluetoothGPSManager:
         """Maintient la connexion GPS (appelé périodiquement)"""
         current_time = time.time()
         
-        # Si connecté, vérifier l'état d'abord
+        # Si connecté, vérifier l'état moins fréquemment
         if self.is_connected:
             if self.check_connection_status():
-                # Connexion OK, pas besoin de rescanner immédiatement
+                # Connexion OK, pas besoin de rescanner
                 return f"/dev/rfcomm{self.rfcomm_device}"
             else:
                 print("[BLUETOOTH] Reconnexion nécessaire")
                 self.cleanup_rfcomm()
                 self.is_connected = False
+                # Attendre un peu avant de reconnecter
+                time.sleep(5)
         
         # Vérifier d'abord s'il y a une connexion rfcomm existante
         existing_connection = self.detect_existing_rfcomm()
@@ -924,6 +965,7 @@ class BluetoothGPSManager:
             return None
             
         self.last_scan_time = current_time
+        print("[BLUETOOTH] Tentative de reconnexion automatique...")
         
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()

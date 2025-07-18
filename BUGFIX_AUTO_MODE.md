@@ -4,18 +4,20 @@
 
 Le serveur tentait d'ouvrir directement le port "AUTO" comme nom de fichier au lieu de déclencher la détection automatique :
 
-```
+```text
 [ERROR][SERIAL] Cannot open port AUTO: [Errno 2] No such file or directory: 'AUTO'
 ```
 
 ## 🔧 Solution appliquée
 
 ### 1. **Repositionnement de la classe BluetoothGPSManager**
+
 - **Problème** : La classe était définie APRÈS son utilisation dans `detect_bluetooth_serial_port()`
 - **Solution** : Déplacée après la configuration des logs et avant son utilisation
 
 ### 2. **Correction de la logique AUTO dans manage_threads()**
-- **Problème** : Le thread série était lancé directement avec `SERIAL_PORT="AUTO"` 
+
+- **Problème** : Le thread série était lancé directement avec `SERIAL_PORT="AUTO"`
 - **Solution** : Ajout de la résolution du port avant lancement du thread
 
 ```python
@@ -60,8 +62,9 @@ python3 nmea_server.py
 
 ## 🎯 Fonctionnement attendu
 
-### Avec GPS Bluetooth disponible :
-```
+### Avec GPS Bluetooth disponible
+
+```text
 [AUTO-DETECT] Résolution du port AUTO...
 [AUTO-DETECT] Utilisation du gestionnaire Bluetooth automatique...
 [BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===
@@ -71,8 +74,9 @@ python3 nmea_server.py
 [SERIAL] Listener starting on /dev/rfcomm0 @ 4800 bps
 ```
 
-### Sans GPS Bluetooth :
-```
+### Sans GPS Bluetooth
+
+```text
 [AUTO-DETECT] Résolution du port AUTO...
 [AUTO-DETECT] Recherche traditionnelle des ports série...
 [AUTO-DETECT] Aucun port série Bluetooth détecté.
