@@ -114,6 +114,7 @@ def signal_handler(signum, frame):
     serial_stop.set()
     udp_stop.set()
     tcp_stop.set()
+    bluetooth_monitor_stop.set()
     
     print("[INFO] Shutdown complete.")
     sys.exit(0)
@@ -125,6 +126,7 @@ def cleanup_on_exit():
         serial_stop.set()
         udp_stop.set()
         tcp_stop.set()
+        bluetooth_monitor_stop.set()
         print("[INFO] Cleanup completed.")
 
 # Register signal handlers
@@ -404,8 +406,9 @@ def bluetooth_monitor(stop_event):
                     global SERIAL_PORT
                     current_port = SERIAL_PORT if SERIAL_PORT != "AUTO" else None
                     
-                    if current_port != port:
-                        print(f"[BLUETOOTH-MONITOR] Nouvelle connexion GPS: {port}")
+                    # En mode AUTO, toujours vérifier si le thread série tourne
+                    if SERIAL_PORT == "AUTO" or current_port != port:
+                        print(f"[BLUETOOTH-MONITOR] Connexion GPS détectée: {port}")
                         
                         # Arrêter le thread série existant s'il y en a un
                         if serial_thread and serial_thread.is_alive():
@@ -423,12 +426,15 @@ def bluetooth_monitor(stop_event):
                         serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                         serial_thread.start()
                         
-                        # Mettre à jour la variable globale pour l'interface web
-                        if SERIAL_PORT == "AUTO":
-                            # Ne pas changer SERIAL_PORT pour garder le mode AUTO
-                            pass
-                        else:
+                        # Mettre à jour la variable globale pour l'interface web (seulement si pas en mode AUTO)
+                        if SERIAL_PORT != "AUTO":
                             SERIAL_PORT = port
+                    elif not (serial_thread and serial_thread.is_alive()):
+                        # Le port n'a pas changé mais le thread série n'est pas actif
+                        print(f"[BLUETOOTH-MONITOR] Redémarrage thread série sur {port}...")
+                        serial_stop.clear()
+                        serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
+                        serial_thread.start()
                 elif SERIAL_PORT == "AUTO":
                     # En mode AUTO, arrêter le thread série s'il n'y a plus de connexion
                     if serial_thread and serial_thread.is_alive():
@@ -476,10 +482,10 @@ def manage_threads():
         if SERIAL_PORT == "AUTO":
             # Ne pas démarrer le thread série maintenant - le bluetooth monitor s'en chargera
             print("[AUTO-DETECT] Mode AUTO - attente de la découverte Bluetooth...")
-            return
         else:
-            # Port spécifique fourni
+            # Port spécifique fourni - démarrer le thread série
             if serial_thread is None or not serial_thread.is_alive():
+                print(f"[THREAD-MANAGER] Démarrage thread série sur {actual_port}")
                 serial_stop.clear()
                 serial_thread = threading.Thread(target=serial_listener, args=(actual_port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                 serial_thread.start()
@@ -570,7 +576,7 @@ def run_http_fallback():
             print(f"[ERROR] Cannot start server: {e}")
 
 def main_thread():
-    global SERIAL_PORT, ENABLE_SERIAL
+    global SERIAL_PORT, ENABLE_SERIAL, serial_thread
     print("[INFO] Starting NMEA server...")
     print(f"[INFO] Configuration:")
     print(f"  - Serial: {ENABLE_SERIAL} (Port: {SERIAL_PORT})")
@@ -587,6 +593,13 @@ def main_thread():
         if detected_port:
             SERIAL_PORT = detected_port
             print(f"[INFO] Serial port auto-detected: {SERIAL_PORT}")
+            
+            # Démarrer immédiatement le thread série si un port est détecté
+            if serial_thread is None or not serial_thread.is_alive():
+                print(f"[INFO] Starting serial thread on detected port: {SERIAL_PORT}")
+                serial_stop.clear()
+                serial_thread = threading.Thread(target=serial_listener, args=(SERIAL_PORT, SERIAL_BAUDRATE, serial_stop), daemon=True)
+                serial_thread.start()
         else:
             print("[INFO] No serial port detected - serial function disabled")
             ENABLE_SERIAL = False
