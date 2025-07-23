@@ -76,6 +76,19 @@ print(f"[INFO] Default serial port: {SERIAL_PORT}")
 # Disable HTTP logs (werkzeug). Hides GET / POST requests (DEBUG, ERROR, WARNING)
 # logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
+# Disable SSL error logs on Windows to avoid certificate warnings
+if IS_WINDOWS:
+    import logging
+    # Suppress SSL errors and gevent SSL warnings
+    logging.getLogger('gevent.ssl').setLevel(logging.CRITICAL)
+    logging.getLogger('ssl').setLevel(logging.CRITICAL)
+    # Suppress certificate verification warnings if urllib3 is available
+    try:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    except ImportError:
+        pass  # urllib3 not available, ignore
+
 # Logger for NMEA frames only
 nmea_logger = logging.getLogger("nmea")
 nmea_logger.setLevel(logging.INFO)
@@ -515,6 +528,79 @@ def manage_threads():
             tcp_stop.set()
             tcp_thread = None
 
+def create_self_signed_cert():
+    """Create a self-signed certificate for HTTPS on Windows if needed"""
+    try:
+        # Try to create self-signed certificates if they don't exist
+        import datetime
+        import ipaddress
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives import serialization
+        
+        cert_path = get_resource_path('cert.pem')
+        key_path = get_resource_path('key.pem')
+        
+        print("[SSL] Génération de certificats SSL auto-signés...")
+        
+        # Generate private key
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        
+        # Create certificate
+        subject = issuer = x509.Name([
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "FR"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "France"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, "Local"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "NMEA Server"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "localhost"),
+        ])
+        
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.datetime.utcnow()
+        ).not_valid_after(
+            datetime.datetime.utcnow() + datetime.timedelta(days=365)
+        ).add_extension(
+            x509.SubjectAlternativeName([
+                x509.DNSName("localhost"),
+                x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+            ]),
+            critical=False,
+        ).sign(private_key, hashes.SHA256())
+        
+        # Write certificate and key
+        with open(cert_path, "wb") as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        with open(key_path, "wb") as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        print("[SSL] Certificats SSL créés avec succès")
+        return True
+        
+    except ImportError:
+        print("[SSL] Module cryptography non disponible - pas de génération de certificat")
+        return False
+    except Exception as e:
+        print(f"[SSL] Erreur lors de la création du certificat: {e}")
+        return False
+
 def run_flask_app():
     global http_server
     print(f"[INFO] Starting Flask server on port {HTTPS_PORT}")
@@ -527,30 +613,70 @@ def run_flask_app():
     print(f"[DEBUG]   cert.pem: {cert_path}")
     print(f"[DEBUG]   key.pem: {key_path}")
     
+    # Create certificates if they don't exist on Windows
+    if IS_WINDOWS and not (os.path.exists(cert_path) and os.path.exists(key_path)):
+        print("[INFO] Certificats SSL manquants sur Windows - tentative de création...")
+        create_self_signed_cert()
+    
     # Check certificate existence
     if os.path.exists(cert_path) and os.path.exists(key_path):
         print("[INFO] SSL certificates found - starting HTTPS")
         try:
             # Suppress verbose SSL logs
             import logging
-            logging.getLogger('gevent.ssl').setLevel(logging.WARNING)
+            logging.getLogger('gevent.ssl').setLevel(logging.ERROR)  # Plus strict pour masquer les erreurs SSL
             
-            http_server = WSGIServer(
-                ('0.0.0.0', HTTPS_PORT), 
-                app, 
-                keyfile=key_path, 
-                certfile=cert_path,
-                log=None  # Suppress SSL logs
-            )
+            # Configuration SSL plus robuste pour Windows
+            ssl_context = None
+            if IS_WINDOWS:
+                try:
+                    import ssl
+                    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                    ssl_context.load_cert_chain(cert_path, key_path)
+                    # Paramètres SSL plus tolérants pour Windows
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+                    print("[INFO] Configuration SSL Windows activée")
+                except Exception as ssl_error:
+                    print(f"[WARNING] Impossible de configurer SSL context: {ssl_error}")
+                    ssl_context = None
+            
+            if ssl_context:
+                # Utilisation du contexte SSL personnalisé
+                http_server = WSGIServer(
+                    ('0.0.0.0', HTTPS_PORT), 
+                    app,
+                    ssl_context=ssl_context,
+                    log=None,  # Suppress SSL logs
+                    error_log=None  # Suppress error logs
+                )
+            else:
+                # Fallback : méthode traditionnelle
+                http_server = WSGIServer(
+                    ('0.0.0.0', HTTPS_PORT), 
+                    app, 
+                    keyfile=key_path, 
+                    certfile=cert_path,
+                    log=None,  # Suppress SSL logs
+                    error_log=None  # Suppress error logs
+                )
+            
             print(f"[INFO] HTTPS server active on https://localhost:{HTTPS_PORT}")
             print(f"[INFO] Web interface: https://localhost:{HTTPS_PORT}/config.html")
             print("[INFO] Press Ctrl+C to stop the server")
+            
+            if IS_WINDOWS:
+                print("[INFO] Note: Sur Windows, ignorez les erreurs SSL occasionnelles")
+                print("[INFO] Alternative HTTP disponible sur http://localhost:{HTTPS_PORT}")
+            
             http_server.serve_forever()
+            
         except KeyboardInterrupt:
             print("\n[INFO] Keyboard interrupt received")
         except Exception as e:
             if not shutdown_event.is_set():
                 print(f"[ERROR] HTTPS impossible: {e}")
+                print("[INFO] Basculement vers HTTP...")
                 run_http_fallback()
     else:
         print(f"[INFO] SSL certificates missing - starting HTTP")
@@ -561,6 +687,8 @@ def run_http_fallback():
     try:
         print(f"[INFO] HTTP server active on http://localhost:{HTTPS_PORT}")
         print(f"[INFO] Web interface: http://localhost:{HTTPS_PORT}/config.html")
+        if IS_WINDOWS:
+            print("[INFO] Mode HTTP - pas d'erreurs SSL sur Windows")
         print("[INFO] Press Ctrl+C to stop the server")
         socketio.run(
             app, 
@@ -574,6 +702,22 @@ def run_http_fallback():
     except Exception as e:
         if not shutdown_event.is_set():
             print(f"[ERROR] Cannot start server: {e}")
+
+# Custom error handler for SSL errors on Windows
+def handle_ssl_error(func):
+    """Decorator to handle SSL errors gracefully on Windows"""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if "ssl" in str(e).lower() or "certificate" in str(e).lower():
+                # Silently ignore SSL errors on Windows
+                if IS_WINDOWS:
+                    return None
+                print(f"[SSL-WARNING] {e}")
+            else:
+                raise e
+    return wrapper
 
 def main_thread():
     global SERIAL_PORT, ENABLE_SERIAL, serial_thread
