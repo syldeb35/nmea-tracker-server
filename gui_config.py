@@ -3,11 +3,11 @@ import os
 import json
 import subprocess
 import platform
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
-                             QWidget, QLabel, QLineEdit, QSpinBox, QCheckBox, 
-                             QPushButton, QGroupBox, QComboBox, QTextEdit, 
-                             QTabWidget, QMessageBox, QStatusBar, QGridLayout,
-                             QSplitter, QFrame)
+from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QLabel, QLineEdit, QSpinBox, QCheckBox
+from PyQt6.QtWidgets import QPushButton, QGroupBox, QComboBox, QTextEdit
+from PyQt6.QtWidgets import QTabWidget, QMessageBox, QStatusBar, QGridLayout
+from PyQt6.QtWidgets import QSplitter, QFrame
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
