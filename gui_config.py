@@ -350,14 +350,20 @@ class NMEAServerGUI(QMainWindow):
     def check_server_status(self):
         """Check if server is running and update status"""
         if self.server_process and self.server_process.state() == QProcess.ProcessState.Running:
-            self.status_bar.showMessage("Server running - https://localhost:5000")
+            server_protocol = os.getenv("SERVER_PROTOCOL", "https")
+            server_host = os.getenv("SERVER_HOST", "localhost")
+            server_port = os.getenv("SERVER_PORT", "5000")
+            self.status_bar.showMessage(f"Server running - {server_protocol}://{server_host}:{server_port}")
         elif self.start_button.isEnabled():
             self.status_bar.showMessage("Server stopped")
     
     def open_web_interface(self):
         """Open web interface in default browser"""
         import webbrowser
-        webbrowser.open("https://localhost:5000/config.html")
+        server_protocol = os.getenv("SERVER_PROTOCOL", "https")
+        server_host = os.getenv("SERVER_HOST", "localhost")
+        server_port = os.getenv("SERVER_PORT", "5000")
+        webbrowser.open(f"{server_protocol}://{server_host}:{server_port}/config.html")
     
     def closeEvent(self, event):
         """Handle application close"""
