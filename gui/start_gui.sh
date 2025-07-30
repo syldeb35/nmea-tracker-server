@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "🚀 Starting NMEA Server GUI..."
 
 # Check if virtual environment exists

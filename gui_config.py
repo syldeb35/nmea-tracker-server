@@ -5,7 +5,6 @@ import subprocess
 import platform
 from pathlib import Path
 
-# Ajout de l'import manquant pour serial
 import serial
 import serial.tools.list_ports
 
