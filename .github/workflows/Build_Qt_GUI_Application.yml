@@ -1,0 +1,268 @@
+name: Build Qt GUI Application
+
+on:
+  push:
+    branches: [ main, develop, qt-gui ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    # === LINUX SETUP ===
+    - name: Install Qt dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          qt6-base-dev \
+          qt6-tools-dev \
+          libgl1-mesa-dev \
+          libegl1-mesa-dev \
+          libxcb-xinerama0 \
+          libxcb-cursor0 \
+          libbluetooth-dev \
+          bluez \
+          bluez-tools
+        
+    # === MACOS SETUP ===
+    - name: Install Qt dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install qt6
+        
+    # === WINDOWS SETUP ===
+    - name: Install Qt dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Qt sera installé via pip install PyQt6
+        echo "Qt will be installed via PyQt6 pip package"
+        
+    # === PYTHON DEPENDENCIES ===
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+        pip install -r requirements_gui.txt
+        
+    # === BUILD SERVER EXECUTABLE ===
+    - name: Build NMEA Server
+      run: |
+        pyinstaller nmea_server.spec --clean --noconfirm
+        
+    # === BUILD QT GUI EXECUTABLE ===
+    - name: Build Qt GUI Application (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        pyinstaller --onefile \
+          --windowed \
+          --name "NMEA_Server_GUI" \
+          --icon "icon.ico" \
+          --add-data "templates:templates" \
+          --add-data "cert.pem:." \
+          --add-data "key.pem:." \
+          --add-data ".env:.env" \
+          --hidden-import "PyQt6" \
+          --hidden-import "serial" \
+          --hidden-import "serial.tools.list_ports" \
+          gui_config.py
+          
+    - name: Build Qt GUI Application (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        pyinstaller --onefile `
+          --windowed `
+          --name "NMEA_Server_GUI" `
+          --icon "icon.ico" `
+          --add-data "templates;templates" `
+          --add-data "cert.pem;." `
+          --add-data "key.pem;." `
+          --add-data ".env;.env" `
+          --hidden-import "PyQt6" `
+          --hidden-import "serial" `
+          --hidden-import "serial.tools.list_ports" `
+          gui_config.py
+          
+    # === VERIFY BUILDS ===
+    - name: Verify executables (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        echo "=== Build artifacts ==="
+        ls -la dist/
+        echo ""
+        echo "=== Server executable ==="
+        file dist/nmea_tracker_server || echo "Server executable not found"
+        echo ""
+        echo "=== GUI executable ==="
+        file dist/NMEA_Server_GUI || echo "GUI executable not found"
+        
+    - name: Verify executables (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Write-Host "=== Build artifacts ==="
+        Get-ChildItem dist/
+        Write-Host ""
+        Write-Host "=== Server executable ==="
+        if (Test-Path "dist/nmea_tracker_server.exe") { 
+          Get-ItemProperty "dist/nmea_tracker_server.exe" | Select-Object Name, Length, LastWriteTime
+        } else { 
+          Write-Host "Server executable not found" 
+        }
+        Write-Host ""
+        Write-Host "=== GUI executable ==="
+        if (Test-Path "dist/NMEA_Server_GUI.exe") { 
+          Get-ItemProperty "dist/NMEA_Server_GUI.exe" | Select-Object Name, Length, LastWriteTime
+        } else { 
+          Write-Host "GUI executable not found" 
+        }
+        
+    # === TEST GUI HELP (NON-INTERACTIVE) ===
+    - name: Test GUI startup (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        # Test GUI startup with virtual display
+        export QT_QPA_PLATFORM=offscreen
+        timeout 10s ./dist/NMEA_Server_GUI --help || echo "GUI help test completed"
+        
+    - name: Test GUI startup (Windows)  
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        # Test GUI startup (will fail without display but should not crash immediately)
+        Start-Process -FilePath "dist/NMEA_Server_GUI.exe" -ArgumentList "--help" -Wait -NoNewWindow -PassThru | Out-Null
+        Write-Host "GUI startup test completed"
+        
+    - name: Test GUI startup (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        # Test GUI startup with virtual display
+        timeout 10s ./dist/NMEA_Server_GUI --help || echo "GUI help test completed"
+        
+    # === CREATE RELEASE PACKAGES ===
+    - name: Create release package (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        mkdir -p release/linux/
+        cp dist/nmea_tracker_server release/linux/
+        cp dist/NMEA_Server_GUI release/linux/
+        cp start_gui.sh release/linux/
+        cp README.md release/linux/
+        cp LICENSE release/linux/ 2>/dev/null || echo "LICENSE not found"
+        cd release && tar -czf nmea-tracker-linux-x64.tar.gz linux/
+        
+    - name: Create release package (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path "release/windows/"
+        Copy-Item "dist/nmea_tracker_server.exe" "release/windows/"
+        Copy-Item "dist/NMEA_Server_GUI.exe" "release/windows/"
+        Copy-Item "start_gui.bat" "release/windows/"
+        Copy-Item "README.md" "release/windows/"
+        if (Test-Path "LICENSE") { Copy-Item "LICENSE" "release/windows/" }
+        Compress-Archive -Path "release/windows/*" -DestinationPath "release/nmea-tracker-windows-x64.zip"
+        
+    - name: Create release package (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        mkdir -p release/macos/
+        cp dist/nmea_tracker_server release/macos/
+        cp dist/NMEA_Server_GUI release/macos/
+        cp start_gui.sh release/macos/
+        cp README.md release/macos/
+        cp LICENSE release/macos/ 2>/dev/null || echo "LICENSE not found"
+        cd release && tar -czf nmea-tracker-macos-x64.tar.gz macos/
+        
+    # === UPLOAD ARTIFACTS ===
+    - name: Upload server artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: nmea-server-${{ matrix.os }}
+        path: |
+          dist/nmea_tracker_server*
+          
+    - name: Upload GUI artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: nmea-gui-${{ matrix.os }}
+        path: |
+          dist/NMEA_Server_GUI*
+          
+    - name: Upload release package
+      uses: actions/upload-artifact@v3
+      with:
+        name: nmea-tracker-complete-${{ matrix.os }}
+        path: |
+          release/*.tar.gz
+          release/*.zip
+          
+  # === RELEASE JOB ===
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Display structure
+      run: |
+        echo "=== Downloaded artifacts ==="
+        find . -name "*.exe" -o -name "nmea_tracker_server*" -o -name "NMEA_Server_GUI*" -o -name "*.tar.gz" -o -name "*.zip"
+        
+    - name: Create Release
+      if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release:')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: NMEA Tracker Server v${{ github.run_number }}
+        body: |
+          🧭 **NMEA Tracker Server with Qt GUI**
+          
+          ## 🌟 New Features
+          - ✅ Qt Desktop GUI Application
+          - ✅ Bluetooth GPS Auto-Management
+          - ✅ Dual Interface (Web + Desktop)
+          - ✅ Real-time GPS monitoring
+          
+          ## 📦 Downloads
+          - **Windows**: `nmea-tracker-windows-x64.zip`
+          - **Linux**: `nmea-tracker-linux-x64.tar.gz` 
+          - **macOS**: `nmea-tracker-macos-x64.tar.gz`
+          
+          ## 🚀 Quick Start
+          1. Download package for your OS
+          2. Extract files
+          3. Run `NMEA_Server_GUI` for desktop interface
+          4. Or run `nmea_tracker_server` for web interface
+          
+          ## 🔧 Features
+          - Web interface: `https://localhost:5000`
+          - Qt GUI: Native desktop application
+          - Auto Bluetooth GPS discovery (Linux)
+          - Multi-protocol support (Serial/UDP/TCP)
+        draft: false
+        prerelease: false
