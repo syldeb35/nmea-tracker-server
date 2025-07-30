@@ -19,14 +19,13 @@ import logging
 import signal
 import atexit
 import subprocess
-#import ssl
 import time  # Required import
 from flask import Flask, Response, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
-import ssl
+# import ssl
 
 # Operating system detection
 IS_WINDOWS = platform.system() == 'Windows'
