@@ -103,7 +103,7 @@ else
             ;;
         10)
             echo "Lancement de l'interface graphique..."
-            ./start_gui.sh
+            ./gui/start_gui.sh
             ;;
         q|Q)
             echo "Au revoir !"
