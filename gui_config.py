@@ -239,8 +239,9 @@ class NMEAServerGUI(QMainWindow):
                             try:
                                 self.udp_port.setValue(int(value))
                             except ValueError:
-                                self.udp_port.setValue(0)  # Set default value or handle error
-                                print(f"Error parsing configuration for key 'UDP_PORT': Invalid value '{value}'")  # Enhanced logging
+                                default_udp_port = 5005  # Set a valid default port
+                                self.udp_port.setValue(default_udp_port)
+                                print(f"Error parsing configuration for key 'UDP_PORT': Invalid value '{value}'. Defaulting to {default_udp_port}.")
                         elif key == "TCP_IP":
                             self.tcp_ip.setText(value)
                         elif key == "TCP_PORT":
