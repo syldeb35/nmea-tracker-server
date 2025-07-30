@@ -237,11 +237,19 @@ class NMEAServerGUI(QMainWindow):
                         elif key == "UDP_IP":
                             self.udp_ip.setText(value)
                         elif key == "UDP_PORT":
-                            self.udp_port.setValue(int(value))
+                            try:
+                                self.udp_port.setValue(int(value))
+                            except ValueError:
+                                self.udp_port.setValue(0)  # Set default value or handle error
+                                print(f"Invalid UDP_PORT value: {value}")  # Optional logging
                         elif key == "TCP_IP":
                             self.tcp_ip.setText(value)
                         elif key == "TCP_PORT":
-                            self.tcp_port.setValue(int(value))
+                            try:
+                                self.tcp_port.setValue(int(value))
+                            except ValueError:
+                                self.tcp_port.setValue(0)  # Set default value or handle error
+                                print(f"Invalid TCP_PORT value: {value}")  # Optional logging
                         elif key == "SERIAL_PORT":
                             # Find and select the port
                             for i in range(self.serial_port.count()):
