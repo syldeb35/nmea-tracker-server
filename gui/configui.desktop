@@ -4,6 +4,6 @@ Type=Application
 Name=NMEA Server GUI
 Comment=Graphical interface for NMEA Server configuration
 Exec=$HOME/Partage/Windy_Plugin/nmea-tracker-server/start_gui.sh
-Icon=$HOME/Partage/Windy_Plugin/nmea-tracker-server/templates/favicon.svg
+Icon=templates/favicon.svg
 Terminal=false
 Categories=Network;Development;
