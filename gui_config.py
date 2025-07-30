@@ -247,7 +247,7 @@ class NMEAServerGUI(QMainWindow):
                             try:
                                 self.tcp_port.setValue(int(value))
                             except ValueError:
-                                self.tcp_port.setValue(5006)  # Set valid default port
+                                self.tcp_port.setValue(self.DEFAULT_TCP_PORT)  # Set valid default port
                                 print(f"Error parsing configuration for key 'TCP_PORT': Invalid value '{value}'. Defaulting to port 5006.")  # Enhanced logging
                         elif key == "SERIAL_PORT":
                             # Find and select the port
