@@ -58,6 +58,7 @@ else
     echo "   [7] Tester build local avec .spec amélioré"
     echo "   [8] Tester simulation workflow macOS"
     echo "   [9] Diagnostic problèmes macOS"
+    echo "   [10] 🖥️  Lancer l'interface graphique Qt"
     echo "   [q] Quitter"
     echo
     
@@ -99,6 +100,10 @@ else
         9)
             echo "Diagnostic problèmes macOS..."
             ./scripts/common/diagnose_macos.sh
+            ;;
+        10)
+            echo "Lancement de l'interface graphique..."
+            ./start_gui.sh
             ;;
         q|Q)
             echo "Au revoir !"
