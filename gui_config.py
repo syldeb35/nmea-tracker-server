@@ -3,7 +3,6 @@ import os
 import json
 import subprocess
 import platform
-from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                              QWidget, QLabel, QLineEdit, QSpinBox, QCheckBox, 
                              QPushButton, QGroupBox, QComboBox, QTextEdit, 
