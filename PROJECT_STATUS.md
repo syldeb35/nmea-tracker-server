@@ -29,7 +29,47 @@
    - Compatibilité PowerShell/Bash résolue
    - Builds automatiques Linux/Windows/macOS
 
+6. **🔵 BLUETOOTH GPS AUTO-MANAGEMENT** - Automatisation complète
+   - Découverte automatique des GPS Bluetooth via scan
+   - Configuration automatique des connexions rfcomm
+   - Surveillance continue avec reconnexion automatique
+   - Plus besoin de commandes manuelles sdptool/rfcomm
+
+7. **🖥️ INTERFACE GRAPHIQUE QT** - Application desktop multiplateforme
+   - Interface Qt Python pour configuration du serveur
+   - Contrôle start/stop du serveur intégré
+   - Logs en temps réel dans l'interface
+   - Configuration complète via GUI intuitive
+
 ### 🔧 Corrections Techniques Récentes
+
+#### Gestion Bluetooth Automatique
+
+- **Fonctionnalité**: Auto-découverte GPS Bluetooth sur Linux
+- **Composants**:
+
+  ```python
+  class BluetoothGPSManager:
+    - scan_bluetooth_devices()
+    - find_spp_channel()
+    - setup_rfcomm_connection()
+    - test_gps_connection()
+    - maintain_connection()
+  ```
+
+- **Thread de surveillance**: Monitoring continu toutes les minutes
+- **Mode AUTO**: Configuration port série "AUTO" pour découverte automatique
+- **Stabilité**: Correction des problèmes de connexion série simultanée
+
+#### Interface Qt Python
+
+- **Architecture**: Application PyQt6 complète avec panneaux configurables
+- **Fonctionnalités**:
+  - Configuration temps réel de tous les paramètres serveur
+  - Contrôle serveur (start/stop/restart) intégré
+  - Logs serveur en direct avec scrolling automatique
+  - Détection automatique des ports série disponibles
+  - Support mode AUTO Bluetooth avec documentation intégrée
 
 #### GitHub Actions Workflow (.github/workflows/build.yml)
 
@@ -50,29 +90,16 @@
     run: Get-ChildItem dist/
   ```
 
-#### Gestion Encodage Unicode
+#### Gestion SSL améliorée
 
-- **Problème**: Emojis incompatibles avec Windows cp1252
-- **Solution**: Remplacement par équivalents ASCII
-
-  ```python
-  # Avant: print("🔍 Test...")
-  # Après: print("[TEST] Test...")
-  ```
-
-#### Syntaxe Python Cross-Platform
-
-- **Problème**: f-strings avec quotes imbriquées
-- **Solution**: Simplification des chaînes formatées
-
-  ```python
-  # Avant: f"Test {variable['key']}"
-  # Après: f"Test {variable_key}"
-  ```
+- **Windows**: Suppression des logs SSL verbose et erreurs certificat
+- **Linux**: Correction import WSGIServer redondant
+- **Certificats**: Génération automatique certificats auto-signés
+- **Fallback**: Basculement automatique HTTP si HTTPS échoue
 
 ### 🚀 État Actuel
 
-#### Structure Projet Optimisée
+#### Structure Projet Complète
 
 ```text
 nmea-tracker-server/
@@ -84,53 +111,76 @@ nmea-tracker-server/
 ├── .github/workflows/  # CI/CD multi-plateforme
 ├── .vscode/           # Configuration VS Code optimisée
 ├── templates/         # Interface web traduite
-└── nmea_server.py     # Serveur avec parser AIS
+├── gui_config.py      # 🆕 Interface graphique Qt
+├── start_gui.sh       # 🆕 Lanceur GUI Linux
+├── start_gui.bat      # 🆕 Lanceur GUI Windows
+├── requirements_gui.txt # 🆕 Dépendances Qt
+├── nmea_server.py     # Serveur avec Bluetooth auto + AIS
+└── docs/              # 🆕 Documentation Bluetooth
 ```
 
-#### Menu Principal Unifié (run.sh)
+#### Fonctionnalités Serveur Avancées
 
-- Interface interactive claire
-- 9 options disponibles incluant tests
-- Support pour tous les types de builds
-- Validation cross-platform intégrée
+1. **Mode AUTO**: Détection automatique GPS Bluetooth
+2. **Thread monitoring**: Surveillance connexions Bluetooth
+3. **Reconnexion automatique**: Maintien connexion GPS
+4. **Interface dual**: Web HTTPS + GUI Qt desktop
+5. **Logs rotatifs**: Gestion historique des logs NMEA
+6. **Multi-protocole**: Support série, UDP, TCP simultané
 
-#### Scripts de Test Complets
+#### Interface Utilisateur Dual
 
-1. `test_github_actions.sh` - Validation workflows
-2. `test_crossplatform_build.sh` - Test compatibilité OS
-3. `test_windows_compat.sh` - Simulation PowerShell
-4. Validation automatique des prérequis
+1. **Web Interface** (config.html):
+   - Accessible via HTTPS sur port 5000
+   - Configuration complète via navigateur
+   - Monitoring temps réel des données GPS
+
+2. **GUI Qt Application** (gui_config.py):
+   - Application desktop native multiplateforme
+   - Contrôle serveur intégré avec start/stop
+   - Logs temps réel et configuration intuitive
+   - Détection automatique ports série
 
 ### 📋 Actions Recommandées
 
 #### Immédiat
 
-1. **Valider sur GitHub**: Commit + push pour tester workflows
+1. **Tester Interface Qt**: Valider l'application GUI
+
+   ```bash
+   pip install PyQt6 pyserial
+   python gui_config.py
+   ```
+
+2. **Valider Bluetooth Auto**: Tester découverte automatique
+
+   ```bash
+   # Configurer port sur "AUTO" dans .env
+   SERIAL_PORT=AUTO
+   python nmea_server.py
+   ```
+
+3. **Push nouvelles fonctionnalités**: Commit complet
 
    ```bash
    git add .
-   git commit -m "Fix cross-platform workflow PowerShell compatibility"
+   git commit -m "feat: Add Qt GUI + Bluetooth auto-management"
    git push
-   ```
-
-2. **Créer tag release**: Déclencher build complet
-
-   ```bash
-   git tag v1.2.0
-   git push origin v1.2.0
    ```
 
 #### Court Terme
 
-- Surveiller builds GitHub Actions sur les 3 plateformes
-- Tester exécutables générés sur chaque OS
-- Documenter processus de release
+- Tester interface Qt sur Windows/macOS
+- Valider Bluetooth auto-discovery sur différents GPS
+- Améliorer documentation utilisateur pour mode AUTO
+- Créer builds avec dépendances Qt incluses
 
 #### Long Terme
 
-- Tests automatisés plus étendus
-- Support d'autres formats NMEA
-- Interface web responsive
+- Interface Qt avec monitoring GPS en temps réel
+- Cartographie intégrée dans l'interface Qt
+- Support découverte automatique GPS USB
+- Mode serveur distribué multi-instance
 
 ### 🎯 Objectifs Atteints
 
@@ -140,6 +190,10 @@ nmea-tracker-server/
 ✅ **CI/CD multi-plateforme stable**
 ✅ **VS Code optimisé pour le développement**
 ✅ **Tests automatisés complets**
+✅ **🔵 Bluetooth GPS auto-management complet**
+✅ **🖥️ Interface graphique Qt multiplateforme**
+✅ **🔄 Monitoring et reconnexion automatique**
+✅ **⚙️ Configuration dual web + desktop**
 
 ### 💡 Points Clés Techniques
 
@@ -148,7 +202,46 @@ nmea-tracker-server/
 3. **Shells**: bash (Unix) vs pwsh (Windows)
 4. **Commandes**: ls vs Get-ChildItem selon l'OS
 5. **Tests**: Scripts de validation locaux avant CI
+6. **🆕 Bluetooth**: Gestion automatique rfcomm + sdptool sur Linux
+7. **🆕 Threading**: Surveillance Bluetooth non-bloquante
+8. **🆕 Qt Interface**: Application desktop native avec PyQt6
+9. **🆕 SSL robuste**: Gestion certificats auto-signés + fallback HTTP
+
+### 🏗️ Architecture Technique Avancée
+
+#### Bluetooth Auto-Management
+
+```text
+BluetoothGPSManager
+├── scan_bluetooth_devices()    # hcitool scan
+├── find_spp_channel()         # sdptool browse
+├── setup_rfcomm_connection()  # rfcomm bind
+├── test_gps_connection()      # test NMEA
+└── maintain_connection()      # surveillance
+```
+
+#### Threading Model
+
+```text
+Main Thread
+├── serial_listener()          # Thread lecture série
+├── udp_listener()            # Thread écoute UDP
+├── tcp_listener()            # Thread écoute TCP
+├── bluetooth_monitor()       # Thread surveillance BT
+└── flask_app()              # Thread serveur web
+```
+
+#### Qt GUI Architecture
+
+```text
+NMEAServerGUI (QMainWindow)
+├── Config Panel              # Configuration serveur
+├── Log Panel                # Logs temps réel
+├── Status Bar               # État serveur
+└── QProcess                 # Contrôle serveur
+```
 
 ---
-*Dernière mise à jour: [$(date)]*
-*État: Prêt pour validation GitHub Actions*
+*Dernière mise à jour: 31 juillet 2025*
+*État: Interface Qt + Bluetooth auto-management opérationnels*
+*Prochaine étape: Tests multi-plateforme Qt + validation

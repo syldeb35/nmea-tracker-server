@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NMEA Server GUI
+Comment=Graphical interface for NMEA Server configuration
+Exec=./start_gui.sh
+Icon=templates/favicon.svg
+Terminal=false
+Categories=Network;Development;
