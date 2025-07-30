@@ -249,7 +249,7 @@ class NMEAServerGUI(QMainWindow):
                                 self.tcp_port.setValue(int(value))
                             except ValueError:
                                 self.tcp_port.setValue(0)  # Set default value or handle error
-                                print(f"Invalid TCP_PORT value: {value}")  # Optional logging
+                                print(f"Invalid TCP_PORT value: {value}. Key: TCP_PORT")  # Clearer debugging
                         elif key == "SERIAL_PORT":
                             # Find and select the port
                             for i in range(self.serial_port.count()):
