@@ -7,17 +7,20 @@ Vous avez maintenant une **connexion GPS Bluetooth entièrement automatisée** q
 ## 🚀 Fonctionnalités ajoutées
 
 ### 1. **Module BluetoothGPSManager**
+
 - 🔍 Scan automatique des appareils Bluetooth
 - 🔗 Détection automatique du canal SPP 
 - ⚡ Création/libération automatique de rfcomm
 - 🧪 Validation GPS par test des trames NMEA
 
 ### 2. **Surveillance continue**
+
 - 🕐 Thread de monitoring toutes les 60 secondes
 - 🔄 Reconnexion automatique si déconnexion
 - 📝 Logs détaillés pour debug
 
 ### 3. **Interface utilisateur améliorée**
+
 - 🎛️ Option "AUTO" dans la page de configuration
 - 📋 Documentation intégrée dans l'interface
 - ℹ️ Instructions claires pour l'utilisateur
@@ -25,11 +28,13 @@ Vous avez maintenant une **connexion GPS Bluetooth entièrement automatisée** q
 ## 📁 Fichiers modifiés/créés
 
 ### Core
+
 - ✅ `nmea_server.py` - Ajout du module Bluetooth automatique
 - ✅ `nmea_server.spec` - Import subprocess pour les commandes Bluetooth
 - ✅ `templates/config.html` - Option AUTO avec documentation
 
-### Documentation  
+### Documentation
+
 - ✅ `BLUETOOTH_AUTO_README.md` - Guide utilisateur simple
 - ✅ `docs/bluetooth_auto_connection.md` - Documentation technique complète
 - ✅ `test_bluetooth_auto.sh` - Script de test des prérequis
@@ -37,7 +42,9 @@ Vous avez maintenant une **connexion GPS Bluetooth entièrement automatisée** q
 ## 🔧 Utilisation simple
 
 ### Pour l'utilisateur final
+
 1. **Installer les prérequis** (une seule fois) :
+
    ```bash
    sudo apt-get install bluez bluez-utils
    sudo usermod -a -G dialout $USER
@@ -45,6 +52,7 @@ Vous avez maintenant une **connexion GPS Bluetooth entièrement automatisée** q
    ```
 
 2. **Activer le mode AUTO** :
+
    - Aller sur `http://localhost:5000/config`
    - Sélectionner "AUTO - Bluetooth GPS Auto-Discovery"
    - Appliquer
@@ -58,6 +66,7 @@ Vous avez maintenant une **connexion GPS Bluetooth entièrement automatisée** q
 ## 🎛️ Avant/Après
 
 ### ❌ Avant (Manuel)
+
 ```bash
 # Commandes complexes à retenir
 sdptool browse 40:DE:24:A6:F6:11
@@ -66,6 +75,7 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11
 ```
 
 ### ✅ Maintenant (Automatique)
+
 ```bash
 # Dans l'interface web : sélectionner "AUTO"
 # Le serveur fait le reste automatiquement !
@@ -74,6 +84,7 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11
 ## 🔍 Validation
 
 ### Tests effectués
+
 - ✅ Compilation sans erreurs Python
 - ✅ Imports et dépendances OK
 - ✅ Interface web fonctionnelle  
@@ -82,13 +93,14 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11
 - ✅ Fallback vers méthode traditionnelle
 
 ### Compatibilité
+
 - ✅ **Linux** : Fonctionnalité complète
 - ✅ **Windows/macOS** : Fallback automatique
 - ✅ **Rétrocompatible** : Fonctionne avec la configuration existante
 
 ## 📊 Architecture
 
-```
+```text
 nmea_server.py
 ├── BluetoothGPSManager (nouvelle classe)
 │   ├── scan_bluetooth_devices()

@@ -7,6 +7,7 @@ Cette fonctionnalité permet la **découverte et connexion automatique** des ré
 ## Avantages
 
 ### ✅ Avant (Manuel)
+
 ```bash
 # Étapes manuelles nécessaires
 sdptool browse 40:DE:24:A6:F6:11        # Rechercher le canal SPP
@@ -15,23 +16,27 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11 # Créer le port rfcomm0
 ```
 
 ### 🚀 Maintenant (Automatique)
+
 1. Sélectionner **"AUTO - Bluetooth GPS Auto-Discovery"** dans la configuration
 2. Le serveur gère automatiquement tout le reste !
 
 ## Comment ça fonctionne
 
 ### Découverte Automatique
+
 - **Scan Bluetooth** : Recherche tous les appareils à proximité
 - **Détection SPP** : Utilise `sdptool` pour identifier les canaux Serial Port Profile
 - **Test GPS** : Vérifie que l'appareil envoie bien des trames NMEA
 - **Connexion** : Configure automatiquement `rfcomm` si un GPS est trouvé
 
 ### Surveillance Continue
+
 - **Vérification périodique** : Toutes les 60 secondes
 - **Reconnexion automatique** : En cas de perte de connexion
 - **Gestion des erreurs** : Logs détaillés pour le debug
 
 ### Commandes Automatisées
+
 ```bash
 # Le serveur exécute automatiquement:
 hciconfig hci0 up                           # Active Bluetooth
@@ -43,11 +48,13 @@ sudo rfcomm bind 0 XX:XX:XX:XX:XX:XX CANAL # Crée la connexion
 ## Configuration
 
 ### 1. Dans l'interface web
+
 - Aller sur `http://votre-serveur:5000/config`
 - Sélectionner **"AUTO - Bluetooth GPS Auto-Discovery (Linux only)"**
 - Appliquer la configuration
 
 ### 2. Prérequis système (Linux)
+
 ```bash
 # Installation des outils Bluetooth
 sudo apt-get install bluez bluez-utils
@@ -59,6 +66,7 @@ sudo usermod -a -G dialout $USER
 ```
 
 ### 3. Test des prérequis
+
 ```bash
 # Utiliser le script de test fourni
 ./test_bluetooth_auto.sh
@@ -67,7 +75,8 @@ sudo usermod -a -G dialout $USER
 ## Logs et Debug
 
 ### Messages de log typiques
-```
+
+```text
 [BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===
 [BLUETOOTH] Scan des appareils Bluetooth...
 [BLUETOOTH] Trouvé: 40:DE:24:A6:F6:11 - Android Phone
@@ -85,7 +94,8 @@ sudo usermod -a -G dialout $USER
 ```
 
 ### En cas de problème
-```
+
+```text
 [BLUETOOTH] Aucun appareil trouvé
 [BLUETOOTH] Échec du scan: Timeout
 [BLUETOOTH] Aucun canal SPP trouvé
@@ -95,10 +105,12 @@ sudo usermod -a -G dialout $USER
 ## Compatibilité
 
 ### Systèmes supportés
+
 - ✅ **Linux** : Fonctionnalité complète
 - ❌ **Windows/macOS** : Fallback vers détection traditionnelle
 
 ### Appareils testés
+
 - 📱 **Téléphones Android** avec GPS activé et Bluetooth
 - 🛰️ **Récepteurs GPS Bluetooth** dédiés
 - 📟 **Appareils compatibles SPP** (Serial Port Profile)
@@ -106,11 +118,13 @@ sudo usermod -a -G dialout $USER
 ## Sécurité
 
 ### Permissions requises
+
 - **rfcomm** : Nécessite `sudo` pour bind/release
 - **hcitool/sdptool** : Accès Bluetooth système
 - **Groupe dialout** : Accès aux ports série
 
 ### Considérations
+
 - La découverte se fait uniquement sur les appareils **découvrables**
 - Aucune authentification/pairing automatique
 - Connexion en lecture seule (réception NMEA)
@@ -118,17 +132,20 @@ sudo usermod -a -G dialout $USER
 ## Dépannage
 
 ### GPS non détecté
+
 1. Vérifier que l'appareil GPS est **allumé** et **découvrable**
 2. Tester manuellement : `hcitool scan`
 3. Vérifier les permissions : `sudo rfcomm --help`
 4. Exécuter le script de test : `./test_bluetooth_auto.sh`
 
 ### Connexion perdue
+
 - Le système se reconnecte automatiquement toutes les 60 secondes
 - Vérifier la portée Bluetooth (< 10 mètres généralement)
 - Consulter les logs pour diagnostiquer
 
 ### Problèmes de permissions
+
 ```bash
 # Ajouter l'utilisateur au groupe dialout
 sudo usermod -a -G dialout $USER
@@ -143,11 +160,13 @@ logout # puis reconnexion
 ## Architecture Technique
 
 ### Classes principales
+
 - **`BluetoothGPSManager`** : Gestion complète Bluetooth
 - **`bluetooth_monitor()`** : Thread de surveillance
 - **`detect_bluetooth_serial_port()`** : Interface avec l'ancien système
 
 ### Flux de fonctionnement
+
 1. **Démarrage** → Thread de surveillance créé
 2. **Scan** → Découverte des appareils Bluetooth
 3. **Test** → Vérification SPP et trames NMEA

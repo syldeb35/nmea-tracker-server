@@ -15,12 +15,15 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11 # Créer rfcomm0
 ## 🔧 Comment l'utiliser
 
 ### 1. Activer le mode AUTO
+
 1. Ouvrir votre navigateur sur `http://localhost:5000/config`
 2. Dans "Serial port", choisir **"AUTO - Bluetooth GPS Auto-Discovery"**
 3. Cliquer sur "Apply"
 
 ### 2. C'est tout !
+
 Le serveur va automatiquement :
+
 - 🔍 Scanner les appareils Bluetooth toutes les minutes
 - 🔗 Détecter votre GPS et trouver le bon canal
 - ⚡ Créer la connexion rfcomm automatiquement
@@ -48,6 +51,7 @@ Utilisez le script de test fourni :
 ```
 
 Il vérifiera automatiquement :
+
 - ✅ Outils Bluetooth installés
 - ✅ Bluetooth activé  
 - ✅ Permissions correctes
@@ -57,7 +61,7 @@ Il vérifiera automatiquement :
 
 Dans la console du serveur, vous verrez :
 
-```
+```text
 [BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===
 [BLUETOOTH] Trouvé: 40:DE:24:A6:F6:11 - Mon Téléphone
 [BLUETOOTH] Canal SPP trouvé: 11
@@ -69,11 +73,13 @@ Dans la console du serveur, vous verrez :
 ## 🔧 Dépannage
 
 ### GPS pas trouvé ?
+
 - Vérifiez que votre GPS/téléphone est **allumé** et **découvrable**
 - Rapprochez-vous (< 10 mètres)
 - Lancez le test : `./test_bluetooth_auto.sh`
 
 ### Problèmes de permissions ?
+
 ```bash
 # Vérifier les groupes
 groups $USER
