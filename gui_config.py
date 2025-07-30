@@ -3,11 +3,17 @@ import os
 import json
 import subprocess
 import platform
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout
-from PyQt6.QtWidgets import QWidget, QLabel, QLineEdit, QSpinBox, QCheckBox
-from PyQt6.QtWidgets import QPushButton, QGroupBox, QComboBox, QTextEdit
-from PyQt6.QtWidgets import QTabWidget, QMessageBox, QStatusBar, QGridLayout
-from PyQt6.QtWidgets import QSplitter, QFrame
+from pathlib import Path
+
+# Ajout de l'import manquant pour serial
+import serial
+import serial.tools.list_ports
+
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
+                             QWidget, QLabel, QLineEdit, QSpinBox, QCheckBox, 
+                             QPushButton, QGroupBox, QComboBox, QTextEdit, 
+                             QTabWidget, QMessageBox, QStatusBar, QGridLayout,
+                             QSplitter, QFrame)
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
@@ -16,6 +22,8 @@ class NMEAServerGUI(QMainWindow):
         super().__init__()
         self.server_process = None
         self.config_file = ".env"
+        self.DEFAULT_UDP_PORT = 5005  # Default UDP port if config is invalid
+        self.DEFAULT_TCP_PORT = 5006  # Default TCP port if config is invalid
         self.init_ui()
         self.load_config()
         self.setup_status_timer()
@@ -194,11 +202,12 @@ class NMEAServerGUI(QMainWindow):
             self.serial_port.addItem("AUTO - Bluetooth GPS Auto-Discovery")
         
         # Detect serial ports
-        if serial and serial.tools.list_ports:
+        try:
+            # L'import est maintenant disponible en haut du fichier
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 self.serial_port.addItem(f"{port.device} - {port.description}")
-        else:
+        except ImportError:
             # Fallback for common ports
             if platform.system() == "Windows":
                 for i in range(1, 21):
@@ -209,6 +218,15 @@ class NMEAServerGUI(QMainWindow):
                 for port in common_ports:
                     if os.path.exists(port):
                         self.serial_port.addItem(port)
+        except Exception as e:
+            print(f"[GUI] Erreur détection ports série: {e}")
+            # Fallback minimal
+            if platform.system() == "Windows":
+                for i in range(1, 10):
+                    self.serial_port.addItem(f"COM{i}")
+            else:
+                self.serial_port.addItem("/dev/rfcomm0")
+                self.serial_port.addItem("/dev/ttyUSB0")
     
     def load_config(self):
         """Load configuration from .env file"""
@@ -247,7 +265,7 @@ class NMEAServerGUI(QMainWindow):
                                 self.tcp_port.setValue(int(value))
                             except ValueError:
                                 self.tcp_port.setValue(self.DEFAULT_TCP_PORT)  # Set valid default port
-                                print(f"Error parsing configuration for key 'TCP_PORT': Invalid value '{value}'. Defaulting to port 5006.")  # Enhanced logging
+                                print(f"Error parsing configuration for key 'TCP_PORT': Invalid value '{value}'. Defaulting to port {self.DEFAULT_TCP_PORT}.")  # Enhanced logging
                         elif key == "SERIAL_PORT":
                             # Find and select the port
                             for i in range(self.serial_port.count()):
