@@ -194,12 +194,11 @@ class NMEAServerGUI(QMainWindow):
             self.serial_port.addItem("AUTO - Bluetooth GPS Auto-Discovery")
         
         # Detect serial ports
-        try:
-            import serial.tools.list_ports
+        if serial and serial.tools.list_ports:
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 self.serial_port.addItem(f"{port.device} - {port.description}")
-        except ImportError:
+        else:
             # Fallback for common ports
             if platform.system() == "Windows":
                 for i in range(1, 21):
