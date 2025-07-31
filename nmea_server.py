@@ -49,7 +49,7 @@ TCP_PORT = 5006
 HTTPS_PORT = 5000
 REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR|MMB|MDA)')
 
-# Ajouter ces variables globales après les autres
+# Ajouter ces variables globales après les imports et avant les autres variables
 last_nmea_data = []  # Buffer des dernières données NMEA
 max_nmea_buffer = 50  # Garder les 50 dernières lignes
 
@@ -248,7 +248,7 @@ def udp_listener(stop_event):
                 if DEBUG:
                     print(f"[NMEA][UDP] {message}")
                 nmea_logger.info(f"[UDP] {message}")
-                emit_nmea_data("UDP", message)  # 🆕 Utiliser la nouvelle fonction
+                emit_nmea_data("UDP", message)  # 🆕 Ajouter cette ligne
         except socket.timeout:
             continue
         except Exception as e:
@@ -281,7 +281,7 @@ def tcp_listener(stop_event):
                             if DEBUG:
                                 print(f"[NMEA][TCP] {message}")
                             nmea_logger.info(f"[TCP] {message}")
-                            emit_nmea_data("TCP", message)  # 🆕 Utiliser la nouvelle fonction
+                            emit_nmea_data("TCP", message)  # 🆕 Ajouter cette ligne
                     except socket.timeout:
                         continue
                     except Exception as e:
@@ -360,7 +360,7 @@ def serial_listener(port, baudrate, stop_event):
                                     if DEBUG:
                                         print(f"[NMEA][SERIAL] {line}")
                                     nmea_logger.info(f"[SERIAL] {line}")
-                                    emit_nmea_data("SERIAL", line)  # 🆕 Utiliser la nouvelle fonction
+                                    emit_nmea_data("SERIAL", line)  # 🆕 Ajouter cette ligne
                     else:
                         # Small pause if no data
                         time.sleep(0.01)
