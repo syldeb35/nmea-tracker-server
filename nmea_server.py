@@ -49,6 +49,10 @@ TCP_PORT = 5006
 HTTPS_PORT = 5000
 REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR|MMB|MDA)')
 
+# Ajouter ces variables globales après les autres
+last_nmea_data = []  # Buffer des dernières données NMEA
+max_nmea_buffer = 50  # Garder les 50 dernières lignes
+
 # === PYINSTALLER RESOURCE PATH HELPER ===
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -242,9 +246,9 @@ def udp_listener(stop_event):
             message = data.decode('utf-8', errors='ignore').strip()
             if not REJECTED_PATTERN.match(message):
                 if DEBUG:
-                    print(f"[NMEA][UDP]{message}")
-                nmea_logger.info(f"[NMEA][UDP] {message}")
-                socketio.emit('nmea_data', message)
+                    print(f"[NMEA][UDP] {message}")
+                nmea_logger.info(f"[UDP] {message}")
+                emit_nmea_data("UDP", message)  # 🆕 Utiliser la nouvelle fonction
         except socket.timeout:
             continue
         except Exception as e:
@@ -275,9 +279,9 @@ def tcp_listener(stop_event):
                         message = data.decode('utf-8', errors='ignore').strip()
                         if not REJECTED_PATTERN.match(message):
                             if DEBUG:
-                                print(f"[NMEA][TCP]{message}")
-                            nmea_logger.info(f"[NMEA][TCP] {message}")
-                            socketio.emit('nmea_data', message)
+                                print(f"[NMEA][TCP] {message}")
+                            nmea_logger.info(f"[TCP] {message}")
+                            emit_nmea_data("TCP", message)  # 🆕 Utiliser la nouvelle fonction
                     except socket.timeout:
                         continue
                     except Exception as e:
@@ -356,7 +360,7 @@ def serial_listener(port, baudrate, stop_event):
                                     if DEBUG:
                                         print(f"[NMEA][SERIAL] {line}")
                                     nmea_logger.info(f"[SERIAL] {line}")
-                                    socketio.emit('nmea_data', line)
+                                    emit_nmea_data("SERIAL", line)  # 🆕 Utiliser la nouvelle fonction
                     else:
                         # Small pause if no data
                         time.sleep(0.01)
@@ -1329,3 +1333,66 @@ if __name__ == "__main__":
         print("[MAIN] Stopping config watcher...")
         config_watcher.stop()
         bluetooth_manager.cleanup_rfcomm()
+
+# Ajouter ces endpoints après les autres routes
+
+@socketio.on('connect')
+def handle_connect():
+    """Gérer les nouvelles connexions WebSocket"""
+    print(f"[WEBSOCKET] Client connecté: {request.sid}")
+    
+    # Envoyer les dernières données NMEA au client qui se connecte
+    for data in last_nmea_data[-10:]:  # Les 10 dernières
+        socketio.emit('nmea_data', {
+            'source': 'HISTORY',
+            'message': data,
+            'timestamp': time.strftime("%H:%M:%S"),
+            'formatted': data
+        }, room=request.sid)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Gérer les déconnexions WebSocket"""
+    print(f"[WEBSOCKET] Client déconnecté: {request.sid}")
+
+@socketio.on('request_status')
+def handle_status_request():
+    """Gérer les demandes de statut"""
+    status = get_current_status()
+    socketio.emit('status_update', status, room=request.sid)
+
+def get_current_status():
+    """Obtenir le statut actuel du serveur"""
+    global serial_thread, udp_thread, tcp_thread
+    
+    return {
+        'serial_connected': serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
+        'udp_active': udp_thread and udp_thread.is_alive() and ENABLE_UDP,
+        'tcp_active': tcp_thread and tcp_thread.is_alive() and ENABLE_TCP,
+        'connections_active': sum([
+            serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
+            udp_thread and udp_thread.is_alive() and ENABLE_UDP,
+            tcp_thread and tcp_thread.is_alive() and ENABLE_TCP
+        ]),
+        'config': {
+            'ENABLE_SERIAL': ENABLE_SERIAL,
+            'ENABLE_UDP': ENABLE_UDP,
+            'ENABLE_TCP': ENABLE_TCP,
+            'UDP_IP': UDP_IP,
+            'UDP_PORT': UDP_PORT,
+            'TCP_IP': TCP_IP,
+            'TCP_PORT': TCP_PORT,
+            'SERIAL_PORT': SERIAL_PORT,
+            'SERIAL_BAUDRATE': SERIAL_BAUDRATE,
+            'DEBUG': DEBUG
+        }
+    }
+
+@app.route('/api/nmea_history')
+def api_nmea_history():
+    """Récupérer l'historique des données NMEA"""
+    return jsonify({
+        'success': True,
+        'data': last_nmea_data[-20:],  # Les 20 dernières
+        'count': len(last_nmea_data)
+    })

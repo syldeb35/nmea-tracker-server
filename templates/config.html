@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>NMEA Connection Setup</title>
         <link rel="icon" type="image/svg+xml" href="favicon.svg">
-        <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMTk3NmQyO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMjU2YTM7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNSIgZmlsbD0idXJsKCNncmFkMSkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHBhdGggZD0iTTE2IDYgTDIwIDE0IEwxNiAxMiBMMTIgMTQgWiIgZmlsbD0iI2ZmZiIvPgogIDxwYXRoIGQ9Ik04IDE4IEwyNCAxOCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMCAyMiBMMjIgMjIiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMjYiIHI9IjEuNSIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4K">
+        <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMTk3NmQyO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMjU2YTM7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNSIgZmlsbD0idXJsKCNncmFkMSkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHBhdGggZD0iTTE2IDYgTDIwIDE0IEwxNiAxMiBMMTIgMTQgWiIgZmlsbD0iI2ZmZiIvPgogIDxwYXRoIGQ9Ik08IDE4IEwyNCAxOCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMCAyMiBMMjIgMjIiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMjYiIHI9IjEuNSIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4K">
         <style>
             body {
                 font-family: 'Segoe UI', Arial, sans-serif;
@@ -203,5 +203,288 @@
                 </div>
             </div>
         </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+        <script>
+        // Configuration WebSocket
+        const socket = io();
+        let isConnected = false;
+
+        // Connexion WebSocket
+        socket.on('connect', function() {
+            console.log('WebSocket connecté');
+            isConnected = true;
+            updateConnectionIndicator(true);
+            
+            // Demander le statut immédiatement
+            socket.emit('request_status');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('WebSocket déconnecté');
+            isConnected = false;
+            updateConnectionIndicator(false);
+        });
+
+        // Réception des données NMEA en temps réel
+        socket.on('nmea_data', function(data) {
+            updateNMEADisplay(data);
+        });
+
+        // Réception des mises à jour de statut
+        socket.on('status_update', function(status) {
+            updateConnectionStatus(status);
+        });
+
+        function updateConnectionIndicator(connected) {
+            const indicator = document.getElementById('websocket-status') || createWebSocketIndicator();
+            indicator.className = connected ? 'status-indicator active' : 'status-indicator';
+            indicator.textContent = connected ? '🟢 WebSocket connecté' : '🔴 WebSocket déconnecté';
+        }
+
+        function createWebSocketIndicator() {
+            const indicator = document.createElement('div');
+            indicator.id = 'websocket-status';
+            indicator.className = 'status-indicator';
+            const statusSection = document.querySelector('.connection-status');
+            if (statusSection) {
+                const row = document.createElement('div');
+                row.className = 'status-row';
+                row.innerHTML = '<span>WebSocket:</span>';
+                row.appendChild(indicator);
+                statusSection.appendChild(row);
+            }
+            return indicator;
+        }
+
+        function updateNMEADisplay(data) {
+            const display = document.getElementById('nmea-data');
+            if (!display) return;
+            
+            // Créer une nouvelle ligne
+            const line = document.createElement('div');
+            line.textContent = data.formatted || `[${data.timestamp}][${data.source}] ${data.message}`;
+            
+            // Ajouter la couleur selon la source
+            switch(data.source) {
+                case 'SERIAL':
+                    line.style.color = '#0f0'; // Vert
+                    break;
+                case 'UDP':
+                    line.style.color = '#ff0'; // Jaune
+                    break;
+                case 'TCP':
+                    line.style.color = '#0ff'; // Cyan
+                    break;
+                default:
+                    line.style.color = '#888'; // Gris pour l'historique
+            }
+            
+            // Ajouter au début de l'affichage
+            display.insertBefore(line, display.firstChild);
+            
+            // Garder seulement les 100 dernières lignes
+            while (display.children.length > 100) {
+                display.removeChild(display.lastChild);
+            }
+            
+            // Auto-scroll vers le haut pour voir les nouvelles données
+            if (display.children.length === 1) {
+                display.scrollTop = 0;
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            console.log('Status update:', status);
+            
+            // Mettre à jour les indicateurs
+            const indicators = {
+                'serial-status': status.serial_connected,
+                'udp-status': status.udp_active,
+                'tcp-status': status.tcp_active
+            };
+            
+            for (const [id, active] of Object.entries(indicators)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.className = active ? 'status-indicator active' : 'status-indicator';
+                    element.textContent = active ? '🟢 Connecté' : '🔴 Déconnecté';
+                }
+            }
+            
+            // Mettre à jour le compteur de connexions
+            const activeCount = status.connections_active || 0;
+            const countElement = document.getElementById('connection-count') || createConnectionCounter();
+            countElement.textContent = `${activeCount} connexion(s) active(s)`;
+        }
+
+        function createConnectionCounter() {
+            const counter = document.createElement('div');
+            counter.id = 'connection-count';
+            counter.style.fontWeight = 'bold';
+            counter.style.textAlign = 'center';
+            counter.style.marginTop = '10px';
+            
+            const statusSection = document.querySelector('.connection-status');
+            if (statusSection) {
+                statusSection.appendChild(counter);
+            }
+            return counter;
+        }
+
+        // Charger l'historique NMEA au démarrage
+        async function loadNMEAHistory() {
+            try {
+                const response = await fetch('/api/nmea_history');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const display = document.getElementById('nmea-data');
+                    display.innerHTML = ''; // Vider
+                    
+                    result.data.forEach(line => {
+                        updateNMEADisplay({
+                            source: 'HISTORY',
+                            message: line,
+                            timestamp: '',
+                            formatted: line
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur chargement historique:', error);
+            }
+        }
+
+        // Demander le statut toutes les 5 secondes
+        setInterval(() => {
+            if (isConnected) {
+                socket.emit('request_status');
+            } else {
+                // Essayer de recharger le statut via API REST
+                checkServerStatus();
+            }
+        }, 5000);
+
+        // Charger l'historique au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNMEAHistory();
+            
+            // Ajouter un message initial
+            setTimeout(() => {
+                if (document.getElementById('nmea-data').children.length === 0) {
+                    updateNMEADisplay({
+                        source: 'SYSTEM',
+                        message: 'En attente des données NMEA...',
+                        timestamp: new Date().toLocaleTimeString(),
+                        formatted: '[SYSTEM] En attente des données NMEA...'
+                    });
+                }
+            }, 1000);
+        });
+
+        // Améliorer la fonction applyConfig existante
+        async function applyConfig() {
+            const formData = new FormData(document.getElementById('configForm'));
+            
+            try {
+                showStatus('Application de la configuration...', 'info');
+                
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✅ Configuration appliquée ! Redémarrage des connexions...', 'success');
+                    
+                    // Demander le nouveau statut après 2 secondes
+                    setTimeout(() => {
+                        if (isConnected) {
+                            socket.emit('request_status');
+                        }
+                    }, 2000);
+                    
+                } else {
+                    showStatus('❌ Erreur: ' + result.error, 'error');
+                }
+                
+            } catch (error) {
+                showStatus('❌ Erreur réseau: ' + error.message, 'error');
+            }
+        }
+
+        // CSS amélioré
+        const advancedStyle = document.createElement('style');
+        advancedStyle.textContent = `
+        .data-display {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            border: 1px solid #333;
+        }
+
+        .data-display div {
+            margin: 1px 0;
+            padding: 1px 0;
+            border-bottom: 1px solid #111;
+        }
+
+        .status-indicator {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+
+        .status-indicator.active {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-indicator:not(.active) {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .connection-status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 15px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        #connection-count {
+            background: #e3f2fd;
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+        }
+        `;
+        document.head.appendChild(advancedStyle);
+        </script>
     </body>
 </html>
