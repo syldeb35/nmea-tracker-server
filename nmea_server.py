@@ -1334,7 +1334,7 @@ if __name__ == "__main__":
         config_watcher.stop()
         bluetooth_manager.cleanup_rfcomm()
 
-# Ajouter ces endpoints après les autres routes
+# Ajouter ces endpoints après les routes existantes, avant if __name__ == "__main__":
 
 @socketio.on('connect')
 def handle_connect():
@@ -1396,3 +1396,34 @@ def api_nmea_history():
         'data': last_nmea_data[-20:],  # Les 20 dernières
         'count': len(last_nmea_data)
     })
+
+# Ajouter cette fonction après les imports et avant les autres fonctions
+def emit_nmea_data(source, message):
+    """Émet les données NMEA via WebSocket et les stocke"""
+    global last_nmea_data
+    
+    try:
+        # Ajouter timestamp
+        timestamp = time.strftime("%H:%M:%S")
+        formatted_message = f"[{timestamp}][{source}] {message}"
+        
+        # Ajouter au buffer
+        last_nmea_data.append(formatted_message)
+        if len(last_nmea_data) > max_nmea_buffer:
+            last_nmea_data.pop(0)
+        
+        # Émettre via WebSocket (seulement si socketio est disponible)
+        try:
+            socketio.emit('nmea_data', {
+                'source': source,
+                'message': message,
+                'timestamp': timestamp,
+                'formatted': formatted_message
+            })
+        except Exception as ws_error:
+            # Si WebSocket échoue, continuer sans erreur
+            if DEBUG:
+                print(f"[WEBSOCKET] Erreur émission: {ws_error}")
+                
+    except Exception as e:
+        print(f"[EMIT] Erreur lors de l'émission NMEA: {e}")
