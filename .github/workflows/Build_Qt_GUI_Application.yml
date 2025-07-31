@@ -59,20 +59,109 @@ jobs:
         pip install pyinstaller
         pip install -r requirements.txt
         pip install -r requirements_gui.txt
+        # === CREATE ICONS IF MISSING ===
+    - name: Create icons if missing
+      run: |
+        pip install Pillow
+        python -c "
+        from PIL import Image, ImageDraw
+        import os
         
+        def create_icon(size, filename, format_name):
+            img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+            
+            bg_color = (25, 118, 210, 255)
+            fg_color = (255, 255, 255, 255)
+            
+            margin = size // 16
+            draw.ellipse([margin, margin, size-margin, size-margin], 
+                        fill=bg_color, outline=fg_color, width=size//64)
+            
+            center = size // 2
+            needle_size = size // 8
+            draw.polygon([
+                (center, center - needle_size),
+                (center + needle_size//3, center),
+                (center, center - needle_size//4),
+                (center - needle_size//3, center),
+            ], fill=fg_color)
+            
+            y = center + needle_size//2
+            draw.line([size//4, y, 3*size//4, y], fill=fg_color, width=size//32)
+            
+            img.save(filename, format_name)
+            return img
+        
+        # Create icons
+        if not os.path.exists('icon.png'):
+            create_icon(512, 'icon.png', 'PNG')
+            print('Created icon.png')
+            
+        if not os.path.exists('icon.ico'):
+            img = create_icon(256, 'temp.png', 'PNG')
+            img.save('icon.ico', 'ICO', sizes=[(16,16), (32,32), (64,64), (128,128), (256,256)])
+            os.remove('temp.png')
+            print('Created icon.ico')
+        "
+        
+    # === CREATE MACOS ICON ===
+    - name: Create macOS icon
+      if: runner.os == 'macOS'
+      run: |
+        if [ ! -f "icon.icns" ] && [ -f "icon.png" ]; then
+          # Use sips (built-in macOS tool) to create iconset
+          mkdir -p icon.iconset
+          sips -z 16 16 icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32 icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32 icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64 icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128 icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256 icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256 icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512 icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512 icon.png --out icon.iconset/icon_512x512.png
+          
+          # Create .icns file
+          iconutil -c icns icon.iconset -o icon.icns
+          rm -rf icon.iconset
+          echo "✅ Created icon.icns"
+        fi
+    
     # === BUILD SERVER EXECUTABLE ===
     - name: Build NMEA Server
       run: |
         pyinstaller nmea_server.spec --clean --noconfirm
         
-    # === BUILD QT GUI EXECUTABLE ===
-    - name: Build Qt GUI Application (Linux/macOS)
-      if: runner.os != 'Windows'
+        # === BUILD QT GUI EXECUTABLE ===
+    - name: Build Qt GUI Application (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        ICON_FILE="icon.png"
+        if [ -f "icon.icns" ]; then
+          ICON_FILE="icon.icns"
+        fi
+        
+        pyinstaller --onefile \
+          --windowed \
+          --name "NMEA_Server_GUI" \
+          --icon "$ICON_FILE" \
+          --add-data "templates:templates" \
+          --add-data "cert.pem:." \
+          --add-data "key.pem:." \
+          --add-data ".env:.env" \
+          --hidden-import "PyQt6" \
+          --hidden-import "serial" \
+          --hidden-import "serial.tools.list_ports" \
+          gui_config.py
+          
+    - name: Build Qt GUI Application (Linux)
+      if: runner.os == 'Linux'
       run: |
         pyinstaller --onefile \
           --windowed \
           --name "NMEA_Server_GUI" \
-          --icon "icon.ico" \
+          --icon "icon.png" \
           --add-data "templates:templates" \
           --add-data "cert.pem:." \
           --add-data "key.pem:." \
@@ -231,14 +320,14 @@ jobs:
         echo "=== Downloaded artifacts ==="
         find . -name "*.exe" -o -name "nmea_tracker_server*" -o -name "NMEA_Server_GUI*" -o -name "*.tar.gz" -o -name "*.zip"
         
-    - name: Create Release
+        - name: Create Release
       if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release:')
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ github.run_number }}
-        release_name: NMEA Tracker Server v${{ github.run_number }}
+        name: NMEA Tracker Server v${{ github.run_number }}
         body: |
           🧭 **NMEA Tracker Server with Qt GUI**
           
@@ -266,3 +355,6 @@ jobs:
           - Multi-protocol support (Serial/UDP/TCP)
         draft: false
         prerelease: false
+        files: |
+          release/*.tar.gz
+          release/*.zip
