@@ -1,6 +1,5 @@
 @echo off
 echo 🚀 Starting NMEA Server GUI...
-
 if exist gui_config.py (
     echo Starting Qt GUI...
     python gui_config.py
