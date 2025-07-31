@@ -20,7 +20,7 @@ import signal
 import atexit
 import subprocess
 import time  # Required import
-from flask import Flask, Response, render_template, request, redirect, url_for
+from flask import Flask, Response, render_template, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from logging.handlers import RotatingFileHandler
@@ -819,6 +819,73 @@ def select_connection():
 def config():
     return render_template('./index.html') #, allowed_types=", ".join(ALLOWED_SENTENCE_TYPES))
 
+@app.route('/api/status')
+def api_status():
+    """Get current server status"""
+    try:
+        status = {
+            'serial_connected': False,
+            'udp_active': False,
+            'tcp_active': False,
+            'connections_active': 0,
+            'last_data_time': None,
+            'config': dict(nmea_server.config) if 'nmea_server' in globals() else {}
+        }
+        
+        # Check serial connection
+        if hasattr(nmea_server, 'serial_manager') and nmea_server.serial_manager:
+            status['serial_connected'] = nmea_server.serial_manager.is_connected()
+            
+        # Check UDP server
+        if hasattr(nmea_server, 'udp_socket') and nmea_server.udp_socket:
+            status['udp_active'] = True
+            
+        # Check TCP server
+        if hasattr(nmea_server, 'tcp_server') and nmea_server.tcp_server:
+            status['tcp_active'] = True
+            
+        # Count active connections
+        status['connections_active'] = sum([
+            status['serial_connected'],
+            status['udp_active'],
+            status['tcp_active']
+        ])
+        
+        # Get last data timestamp
+        if hasattr(nmea_server, 'last_nmea_time'):
+            status['last_data_time'] = nmea_server.last_nmea_time
+            
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/config', methods=['POST'])
+def api_update_config():
+    """Update configuration with immediate reload"""
+    try:
+        # Save new configuration
+        config_data = {}
+        for key in request.form:
+            config_data[key] = request.form[key]
+            
+        # Write to .env file
+        with open('.env', 'w') as f:
+            for key, value in config_data.items():
+                f.write(f"{key}={value}\n")
+                
+        # Trigger reload (will happen automatically via file watcher)
+        return jsonify({
+            'success': True, 
+            'message': 'Configuration updated successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
 # === BLUETOOTH GPS AUTO-MANAGEMENT ===
 class BluetoothGPSManager:
     """
@@ -1126,10 +1193,136 @@ class BluetoothGPSManager:
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()
 
-# Instance globale du gestionnaire Bluetooth
-bluetooth_manager = BluetoothGPSManager()
+class ConfigWatcher:
+    def __init__(self, config_file=".env", callback=None):
+        self.config_file = config_file
+        self.callback = callback
+        self.last_modified = 0
+        self.running = True
+        
+    def start_watching(self):
+        """Start watching config file for changes"""
+        def watch():
+            while self.running:
+                try:
+                    if os.path.exists(self.config_file):
+                        current_modified = os.path.getmtime(self.config_file)
+                        if current_modified != self.last_modified:
+                            self.last_modified = current_modified
+                            if self.callback:
+                                print(f"[CONFIG] Configuration file changed, reloading...")
+                                self.callback()
+                    time.sleep(1)  # Check every second
+                except Exception as e:
+                    print(f"[CONFIG] Error watching config: {e}")
+                    time.sleep(5)
+                    
+        thread = threading.Thread(target=watch, daemon=True)
+        thread.start()
+        
+    def stop(self):
+        self.running = False
 
-if __name__ == '__main__':
-    main_thread()
-    print(f"[INFO] SocketIO async mode: {socketio.async_mode}")
-    print(f"[HTTPS] Secure WebSocket server on https://0.0.0.0:{HTTPS_PORT}")
+class NMEAServer:
+    def __init__(self):
+        # ... existing init code ...
+        self.config_watcher = None
+        self.setup_config_watcher()
+        
+    def setup_config_watcher(self):
+        """Setup config file watcher for hot reload"""
+        self.config_watcher = ConfigWatcher(".env", self.reload_config)
+        self.config_watcher.start_watching()
+        
+    def reload_config(self):
+        """Reload configuration and restart connections"""
+        try:
+            print("[CONFIG] Reloading configuration...")
+            
+            # Stop existing connections
+            self.stop_all_connections()
+            
+            # Reload config
+            self.load_config()
+            
+            # Restart connections
+            self.start_all_connections()
+            
+            print("[CONFIG] Configuration reloaded successfully!")
+            
+        except Exception as e:
+            print(f"[CONFIG] Error reloading config: {e}")
+            
+    def stop_all_connections(self):
+        """Stop all active connections"""
+        try:
+            # Stop serial connection
+            if hasattr(self, 'serial_manager') and self.serial_manager:
+                self.serial_manager.disconnect()
+                
+            # Stop UDP server
+            if hasattr(self, 'udp_socket') and self.udp_socket:
+                self.udp_socket.close()
+                self.udp_socket = None
+                
+            # Stop TCP server
+            if hasattr(self, 'tcp_server') and self.tcp_server:
+                self.tcp_server.close()
+                self.tcp_server = None
+                
+            print("[CONFIG] All connections stopped")
+            
+        except Exception as e:
+            print(f"[CONFIG] Error stopping connections: {e}")
+            
+    def start_all_connections(self):
+        """Start all enabled connections"""
+        try:
+            # Start serial if enabled
+            if self.config.get('ENABLE_SERIAL', 'false').lower() == 'true':
+                self.setup_serial()
+                
+            # Start UDP if enabled
+            if self.config.get('ENABLE_UDP', 'false').lower() == 'true':
+                self.setup_udp_server()
+                
+            # Start TCP if enabled
+            if self.config.get('ENABLE_TCP', 'false').lower() == 'true':
+                self.setup_tcp_server()
+                
+            print("[CONFIG] All enabled connections started")
+            
+        except Exception as e:
+            print(f"[CONFIG] Error starting connections: {e}")
+
+    # ... rest of existing code ...
+    
+    def cleanup(self):
+        """Cleanup when server stops"""
+        if self.config_watcher:
+            self.config_watcher.stop()
+        self.stop_all_connections()
+
+# In the main section, add signal handling for clean shutdown
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    print('[MAIN] Shutting down gracefully...')
+    if 'nmea_server' in globals():
+        nmea_server.cleanup()
+    sys.exit(0)
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    nmea_server = NMEAServer()
+    
+    try:
+        print("[MAIN] Starting NMEA Server...")
+        nmea_server.run(debug=nmea_server.config.get('DEBUG', 'false').lower() == 'true')
+    except KeyboardInterrupt:
+        print("[MAIN] Received interrupt signal")
+    finally:
+        nmea_server.cleanup()
