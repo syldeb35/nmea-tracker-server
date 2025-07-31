@@ -50,8 +50,41 @@ HTTPS_PORT = 5000
 REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR|MMB|MDA)')
 
 # Ajouter ces variables globales après les imports et avant les autres variables
+# (vers la ligne 50-60, après les imports mais avant les variables globales)
+
+# Variables globales pour les données NMEA en temps réel
 last_nmea_data = []  # Buffer des dernières données NMEA
 max_nmea_buffer = 50  # Garder les 50 dernières lignes
+
+def emit_nmea_data(source, message):
+    """Émet les données NMEA via WebSocket et les stocke"""
+    global last_nmea_data
+    
+    try:
+        # Ajouter timestamp
+        timestamp = time.strftime("%H:%M:%S")
+        formatted_message = f"[{timestamp}][{source}] {message}"
+        
+        # Ajouter au buffer
+        last_nmea_data.append(formatted_message)
+        if len(last_nmea_data) > max_nmea_buffer:
+            last_nmea_data.pop(0)
+        
+        # Émettre via WebSocket (seulement si socketio est disponible)
+        try:
+            socketio.emit('nmea_data', {
+                'source': source,
+                'message': message,
+                'timestamp': timestamp,
+                'formatted': formatted_message
+            })
+        except Exception as ws_error:
+            # Si WebSocket échoue, continuer sans erreur
+            if DEBUG:
+                print(f"[WEBSOCKET] Erreur émission: {ws_error}")
+                
+    except Exception as e:
+        print(f"[EMIT] Erreur lors de l'émission NMEA: {e}")
 
 # === PYINSTALLER RESOURCE PATH HELPER ===
 def get_resource_path(relative_path):
@@ -248,7 +281,7 @@ def udp_listener(stop_event):
                 if DEBUG:
                     print(f"[NMEA][UDP] {message}")
                 nmea_logger.info(f"[UDP] {message}")
-                emit_nmea_data("UDP", message)  # 🆕 Ajouter cette ligne
+                emit_nmea_data("UDP", message)
         except socket.timeout:
             continue
         except Exception as e:
@@ -281,7 +314,7 @@ def tcp_listener(stop_event):
                             if DEBUG:
                                 print(f"[NMEA][TCP] {message}")
                             nmea_logger.info(f"[TCP] {message}")
-                            emit_nmea_data("TCP", message)  # 🆕 Ajouter cette ligne
+                            emit_nmea_data("TCP", message)
                     except socket.timeout:
                         continue
                     except Exception as e:
@@ -360,7 +393,7 @@ def serial_listener(port, baudrate, stop_event):
                                     if DEBUG:
                                         print(f"[NMEA][SERIAL] {line}")
                                     nmea_logger.info(f"[SERIAL] {line}")
-                                    emit_nmea_data("SERIAL", line)  # 🆕 Ajouter cette ligne
+                                    emit_nmea_data("SERIAL", line)
                     else:
                         # Small pause if no data
                         time.sleep(0.01)
@@ -1396,34 +1429,3 @@ def api_nmea_history():
         'data': last_nmea_data[-20:],  # Les 20 dernières
         'count': len(last_nmea_data)
     })
-
-# Ajouter cette fonction après les imports et avant les autres fonctions
-def emit_nmea_data(source, message):
-    """Émet les données NMEA via WebSocket et les stocke"""
-    global last_nmea_data
-    
-    try:
-        # Ajouter timestamp
-        timestamp = time.strftime("%H:%M:%S")
-        formatted_message = f"[{timestamp}][{source}] {message}"
-        
-        # Ajouter au buffer
-        last_nmea_data.append(formatted_message)
-        if len(last_nmea_data) > max_nmea_buffer:
-            last_nmea_data.pop(0)
-        
-        # Émettre via WebSocket (seulement si socketio est disponible)
-        try:
-            socketio.emit('nmea_data', {
-                'source': source,
-                'message': message,
-                'timestamp': timestamp,
-                'formatted': formatted_message
-            })
-        except Exception as ws_error:
-            # Si WebSocket échoue, continuer sans erreur
-            if DEBUG:
-                print(f"[WEBSOCKET] Erreur émission: {ws_error}")
-                
-    except Exception as e:
-        print(f"[EMIT] Erreur lors de l'émission NMEA: {e}")
