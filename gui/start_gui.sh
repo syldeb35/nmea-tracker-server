@@ -13,8 +13,9 @@ source .venv/bin/activate
 
 # Install/upgrade GUI requirements
 echo "Installing GUI dependencies..."
-pip install -q -r requirements_gui.txt
+pip install -q -r ../requirements.txt
+pip install -q -r ../requirements_gui.txt
 
 # Start GUI
 echo "Starting GUI application..."
-python gui_config.py
+python ../gui_config.py
