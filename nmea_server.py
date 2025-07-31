@@ -819,73 +819,6 @@ def select_connection():
 def config():
     return render_template('./index.html') #, allowed_types=", ".join(ALLOWED_SENTENCE_TYPES))
 
-@app.route('/api/status')
-def api_status():
-    """Get current server status"""
-    try:
-        status = {
-            'serial_connected': False,
-            'udp_active': False,
-            'tcp_active': False,
-            'connections_active': 0,
-            'last_data_time': None,
-            'config': dict(nmea_server.config) if 'nmea_server' in globals() else {}
-        }
-        
-        # Check serial connection
-        if hasattr(nmea_server, 'serial_manager') and nmea_server.serial_manager:
-            status['serial_connected'] = nmea_server.serial_manager.is_connected()
-            
-        # Check UDP server
-        if hasattr(nmea_server, 'udp_socket') and nmea_server.udp_socket:
-            status['udp_active'] = True
-            
-        # Check TCP server
-        if hasattr(nmea_server, 'tcp_server') and nmea_server.tcp_server:
-            status['tcp_active'] = True
-            
-        # Count active connections
-        status['connections_active'] = sum([
-            status['serial_connected'],
-            status['udp_active'],
-            status['tcp_active']
-        ])
-        
-        # Get last data timestamp
-        if hasattr(nmea_server, 'last_nmea_time'):
-            status['last_data_time'] = nmea_server.last_nmea_time
-            
-        return jsonify(status)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/config', methods=['POST'])
-def api_update_config():
-    """Update configuration with immediate reload"""
-    try:
-        # Save new configuration
-        config_data = {}
-        for key in request.form:
-            config_data[key] = request.form[key]
-            
-        # Write to .env file
-        with open('.env', 'w') as f:
-            for key, value in config_data.items():
-                f.write(f"{key}={value}\n")
-                
-        # Trigger reload (will happen automatically via file watcher)
-        return jsonify({
-            'success': True, 
-            'message': 'Configuration updated successfully'
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False, 
-            'error': str(e)
-        }), 500
-
 # === BLUETOOTH GPS AUTO-MANAGEMENT ===
 class BluetoothGPSManager:
     """
@@ -1221,108 +1154,178 @@ class ConfigWatcher:
         thread.start()
         
     def stop(self):
-        self.running = False
+        self.running = True
 
-class NMEAServer:
-    def __init__(self):
-        # ... existing init code ...
-        self.config_watcher = None
-        self.setup_config_watcher()
-        
-    def setup_config_watcher(self):
-        """Setup config file watcher for hot reload"""
-        self.config_watcher = ConfigWatcher(".env", self.reload_config)
-        self.config_watcher.start_watching()
-        
-    def reload_config(self):
-        """Reload configuration and restart connections"""
-        try:
-            print("[CONFIG] Reloading configuration...")
-            
-            # Stop existing connections
-            self.stop_all_connections()
-            
-            # Reload config
-            self.load_config()
-            
-            # Restart connections
-            self.start_all_connections()
-            
-            print("[CONFIG] Configuration reloaded successfully!")
-            
-        except Exception as e:
-            print(f"[CONFIG] Error reloading config: {e}")
-            
-    def stop_all_connections(self):
-        """Stop all active connections"""
-        try:
-            # Stop serial connection
-            if hasattr(self, 'serial_manager') and self.serial_manager:
-                self.serial_manager.disconnect()
-                
-            # Stop UDP server
-            if hasattr(self, 'udp_socket') and self.udp_socket:
-                self.udp_socket.close()
-                self.udp_socket = None
-                
-            # Stop TCP server
-            if hasattr(self, 'tcp_server') and self.tcp_server:
-                self.tcp_server.close()
-                self.tcp_server = None
-                
-            print("[CONFIG] All connections stopped")
-            
-        except Exception as e:
-            print(f"[CONFIG] Error stopping connections: {e}")
-            
-    def start_all_connections(self):
-        """Start all enabled connections"""
-        try:
-            # Start serial if enabled
-            if self.config.get('ENABLE_SERIAL', 'false').lower() == 'true':
-                self.setup_serial()
-                
-            # Start UDP if enabled
-            if self.config.get('ENABLE_UDP', 'false').lower() == 'true':
-                self.setup_udp_server()
-                
-            # Start TCP if enabled
-            if self.config.get('ENABLE_TCP', 'false').lower() == 'true':
-                self.setup_tcp_server()
-                
-            print("[CONFIG] All enabled connections started")
-            
-        except Exception as e:
-            print(f"[CONFIG] Error starting connections: {e}")
-
-    # ... rest of existing code ...
+# Fonction globale pour recharger la configuration
+def reload_configuration():
+    """Reload configuration and restart connections"""
+    global ENABLE_SERIAL, ENABLE_UDP, ENABLE_TCP, DEBUG
+    global UDP_IP, UDP_PORT, TCP_IP, TCP_PORT, SERIAL_PORT, SERIAL_BAUDRATE
     
-    def cleanup(self):
-        """Cleanup when server stops"""
-        if self.config_watcher:
-            self.config_watcher.stop()
-        self.stop_all_connections()
+    try:
+        print("[CONFIG] Reloading configuration...")
+        
+        # Stop existing threads
+        serial_stop.set()
+        udp_stop.set() 
+        tcp_stop.set()
+        
+        # Wait for threads to stop
+        time.sleep(2)
+        
+        # Reload environment variables
+        load_dotenv(override=True)
+        
+        # Update global variables
+        ENABLE_SERIAL = os.getenv("ENABLE_SERIAL", "True").lower() == "true"
+        ENABLE_UDP = os.getenv("ENABLE_UDP", "True").lower() == "true"
+        ENABLE_TCP = os.getenv("ENABLE_TCP", "True").lower() == "true"
+        DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+        
+        UDP_IP = os.getenv("UDP_IP", "0.0.0.0")
+        UDP_PORT = int(os.getenv("UDP_PORT", 5005))
+        TCP_IP = os.getenv("TCP_IP", "0.0.0.0")
+        TCP_PORT = int(os.getenv("TCP_PORT", 5006))
+        
+        SERIAL_PORT = os.getenv("SERIAL_PORT", DEFAULT_SERIAL_PORT).strip()
+        SERIAL_BAUDRATE = int(os.getenv("SERIAL_BAUDRATE", 4800))
+        
+        print(f"[CONFIG] New configuration loaded:")
+        print(f"  - Serial: {ENABLE_SERIAL} (Port: {SERIAL_PORT})")
+        print(f"  - UDP: {ENABLE_UDP} (Port: {UDP_PORT})")
+        print(f"  - TCP: {ENABLE_TCP} (Port: {TCP_PORT})")
+        
+        # Restart connections
+        manage_threads()
+        
+        print("[CONFIG] Configuration reloaded successfully!")
+        
+    except Exception as e:
+        print(f"[CONFIG] Error reloading config: {e}")
 
-# In the main section, add signal handling for clean shutdown
-import signal
-import sys
+# Améliorer l'endpoint API pour mettre à jour les variables globales
+@app.route('/api/config', methods=['POST'])
+def api_update_config():
+    """Update configuration with immediate reload"""
+    global ENABLE_SERIAL, ENABLE_UDP, ENABLE_TCP, DEBUG
+    global UDP_IP, UDP_PORT, TCP_IP, TCP_PORT, SERIAL_PORT, SERIAL_BAUDRATE
+    
+    try:
+        # Update global variables immediately
+        ENABLE_SERIAL = 'enable_serial' in request.form
+        ENABLE_UDP = 'enable_udp' in request.form
+        ENABLE_TCP = 'enable_tcp' in request.form
+        DEBUG = 'enable_debug' in request.form
 
-def signal_handler(sig, frame):
-    print('[MAIN] Shutting down gracefully...')
-    if 'nmea_server' in globals():
-        nmea_server.cleanup()
-    sys.exit(0)
+        UDP_IP = request.form.get('udp_ip', UDP_IP)
+        try:
+            UDP_PORT = int(request.form.get('udp_port', UDP_PORT))
+        except ValueError:
+            pass
+        TCP_IP = request.form.get('tcp_ip', TCP_IP)
+        try:
+            TCP_PORT = int(request.form.get('tcp_port', TCP_PORT))
+        except ValueError:
+            pass
 
+        SERIAL_PORT = request.form.get('serial_port', SERIAL_PORT)
+        try:
+            SERIAL_BAUDRATE = int(request.form.get('serial_baudrate', SERIAL_BAUDRATE))
+        except (ValueError, TypeError):
+            pass
+        
+        # Save to .env file
+        config_lines = [
+            f'ENABLE_SERIAL={"true" if ENABLE_SERIAL else "false"}',
+            f'ENABLE_UDP={"true" if ENABLE_UDP else "false"}',
+            f'ENABLE_TCP={"true" if ENABLE_TCP else "false"}',
+            f'DEBUG={"true" if DEBUG else "false"}',
+            f'UDP_IP={UDP_IP}',
+            f'UDP_PORT={UDP_PORT}',
+            f'TCP_IP={TCP_IP}',
+            f'TCP_PORT={TCP_PORT}',
+            f'SERIAL_PORT={SERIAL_PORT}',
+            f'SERIAL_BAUDRATE={SERIAL_BAUDRATE}'
+        ]
+        
+        with open('.env', 'w') as f:
+            f.write('\n'.join(config_lines))
+        
+        print(f"[API] Configuration updated:")
+        print(f"  - UDP: {ENABLE_UDP} ({UDP_IP}:{UDP_PORT})")
+        print(f"  - TCP: {ENABLE_TCP} ({TCP_IP}:{TCP_PORT})")
+        print(f"  - Serial: {ENABLE_SERIAL} ({SERIAL_PORT})")
+        
+        # Restart threads with new configuration
+        manage_threads()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Configuration updated and applied successfully'
+        })
+        
+    except Exception as e:
+        print(f"[API] Error updating config: {e}")
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
+# Mettre à jour l'endpoint status pour utiliser les variables globales
+@app.route('/api/status')
+def api_status():
+    """Get current server status"""
+    global serial_thread, udp_thread, tcp_thread
+    
+    try:
+        status = {
+            'serial_connected': serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
+            'udp_active': udp_thread and udp_thread.is_alive() and ENABLE_UDP,
+            'tcp_active': tcp_thread and tcp_thread.is_alive() and ENABLE_TCP,
+            'connections_active': 0,
+            'config': {
+                'ENABLE_SERIAL': ENABLE_SERIAL,
+                'ENABLE_UDP': ENABLE_UDP,
+                'ENABLE_TCP': ENABLE_TCP,
+                'UDP_IP': UDP_IP,
+                'UDP_PORT': UDP_PORT,
+                'TCP_IP': TCP_IP,
+                'TCP_PORT': TCP_PORT,
+                'SERIAL_PORT': SERIAL_PORT,
+                'SERIAL_BAUDRATE': SERIAL_BAUDRATE,
+                'DEBUG': DEBUG
+            }
+        }
+        
+        # Count active connections
+        status['connections_active'] = sum([
+            status['serial_connected'],
+            status['udp_active'],
+            status['tcp_active']
+        ])
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Initialiser le gestionnaire Bluetooth
+bluetooth_manager = BluetoothGPSManager()
+
+# Initialiser le watcher de configuration
+config_watcher = ConfigWatcher(".env", reload_configuration)
+
+# Corriger la partie main
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    nmea_server = NMEAServer()
+    # Démarrer le watcher de configuration
+    config_watcher.start_watching()
     
     try:
         print("[MAIN] Starting NMEA Server...")
-        nmea_server.run(debug=nmea_server.config.get('DEBUG', 'false').lower() == 'true')
+        main_thread()  # Utiliser la fonction main_thread() existante
     except KeyboardInterrupt:
         print("[MAIN] Received interrupt signal")
     finally:
-        nmea_server.cleanup()
+        print("[MAIN] Stopping config watcher...")
+        config_watcher.stop()
+        bluetooth_manager.cleanup_rfcomm()
