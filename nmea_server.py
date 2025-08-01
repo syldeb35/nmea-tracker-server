@@ -56,6 +56,8 @@ REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR
 last_nmea_data = []  # Buffer des dernières données NMEA
 max_nmea_buffer = 50  # Garder les 50 dernières lignes
 
+# === NMEA DATA EMISSION FUNCTION ===
+
 def emit_nmea_data(source, message):
     """Émet les données NMEA via WebSocket et les stocke"""
     global last_nmea_data
@@ -70,7 +72,19 @@ def emit_nmea_data(source, message):
         if len(last_nmea_data) > max_nmea_buffer:
             last_nmea_data.pop(0)
         
-        # Émettre via WebSocket (seulement si socketio est disponible)
+        # ÉMETTRE VERS WINDY PLUGIN via WebSocket simple
+        try:
+            # Émettre les données NMEA pures pour Windy
+            socketio.emit('nmea', message)
+            
+            if DEBUG:
+                print(f"[WINDY] Envoyé: {message}")
+                
+        except Exception as windy_error:
+            if DEBUG:
+                print(f"[WINDY] Erreur émission: {windy_error}")
+        
+        # Émettre aussi pour l'interface web de configuration
         try:
             socketio.emit('nmea_data', {
                 'source': source,
@@ -79,9 +93,8 @@ def emit_nmea_data(source, message):
                 'formatted': formatted_message
             })
         except Exception as ws_error:
-            # Si WebSocket échoue, continuer sans erreur
             if DEBUG:
-                print(f"[WEBSOCKET] Erreur émission: {ws_error}")
+                print(f"[WEBSOCKET] Erreur émission interface: {ws_error}")
                 
     except Exception as e:
         print(f"[EMIT] Erreur lors de l'émission NMEA: {e}")
