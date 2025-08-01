@@ -1347,40 +1347,20 @@ def api_update_config():
 # Mettre à jour l'endpoint status pour utiliser les variables globales
 @app.route('/api/status')
 def api_status():
-    """Get current server status"""
-    global serial_thread, udp_thread, tcp_thread
-    
+    """API endpoint pour obtenir le statut des connexions"""
     try:
-        status = {
-            'serial_connected': serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
-            'udp_active': udp_thread and udp_thread.is_alive() and ENABLE_UDP,
-            'tcp_active': tcp_thread and tcp_thread.is_alive() and ENABLE_TCP,
-            'connections_active': 0,
-            'config': {
-                'ENABLE_SERIAL': ENABLE_SERIAL,
-                'ENABLE_UDP': ENABLE_UDP,
-                'ENABLE_TCP': ENABLE_TCP,
-                'UDP_IP': UDP_IP,
-                'UDP_PORT': UDP_PORT,
-                'TCP_IP': TCP_IP,
-                'TCP_PORT': TCP_PORT,
-                'SERIAL_PORT': SERIAL_PORT,
-                'SERIAL_BAUDRATE': SERIAL_BAUDRATE,
-                'DEBUG': DEBUG
-            }
-        }
-        
-        # Count active connections
-        status['connections_active'] = sum([
-            status['serial_connected'],
-            status['udp_active'],
-            status['tcp_active']
-        ])
-        
+        status = get_current_status()
         return jsonify(status)
-        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        if DEBUG:
+            print(f"[API] Erreur status: {e}")
+        return jsonify({
+            'udp_active': False,
+            'tcp_active': False,
+            'serial_connected': False,
+            'connections_active': 0,
+            'error': str(e)
+        })
 
 # Initialiser le gestionnaire Bluetooth
 bluetooth_manager = BluetoothGPSManager()
@@ -1425,37 +1405,59 @@ def handle_disconnect():
     print(f"[WEBSOCKET] Client déconnecté: {request.sid}")
 
 @socketio.on('request_status')
-def handle_status_request():
-    """Gérer les demandes de statut"""
-    status = get_current_status()
-    socketio.emit('status_update', status, room=request.sid)
+def handle_request_status():
+    """Gérer les demandes de statut via WebSocket"""
+    try:
+        status = get_current_status()
+        emit('status_update', status)
+        
+        if DEBUG:
+            print(f"[WEBSOCKET] Status envoyé: {status}")
+            
+    except Exception as e:
+        if DEBUG:
+            print(f"[WEBSOCKET] Erreur envoi status: {e}")
+        emit('status_update', {
+            'udp_active': False,
+            'tcp_active': False,
+            'serial_connected': False,
+            'connections_active': 0,
+            'error': str(e)
+        })
 
 def get_current_status():
-    """Obtenir le statut actuel du serveur"""
-    global serial_thread, udp_thread, tcp_thread
+    """Retourne le statut actuel de toutes les connexions"""
+    global udp_thread, tcp_thread, serial_thread, bluetooth_manager
     
-    return {
-        'serial_connected': serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
-        'udp_active': udp_thread and udp_thread.is_alive() and ENABLE_UDP,
-        'tcp_active': tcp_thread and tcp_thread.is_alive() and ENABLE_TCP,
-        'connections_active': sum([
-            serial_thread and serial_thread.is_alive() and ENABLE_SERIAL,
-            udp_thread and udp_thread.is_alive() and ENABLE_UDP,
-            tcp_thread and tcp_thread.is_alive() and ENABLE_TCP
-        ]),
-        'config': {
-            'ENABLE_SERIAL': ENABLE_SERIAL,
-            'ENABLE_UDP': ENABLE_UDP,
-            'ENABLE_TCP': ENABLE_TCP,
-            'UDP_IP': UDP_IP,
-            'UDP_PORT': UDP_PORT,
-            'TCP_IP': TCP_IP,
-            'TCP_PORT': TCP_PORT,
-            'SERIAL_PORT': SERIAL_PORT,
-            'SERIAL_BAUDRATE': SERIAL_BAUDRATE,
-            'DEBUG': DEBUG
-        }
+    # Vérifier si les threads UDP/TCP sont actifs
+    udp_active = udp_thread is not None and udp_thread.is_alive()
+    tcp_active = tcp_thread is not None and tcp_thread.is_alive()
+    
+    # Vérifier le statut serial/bluetooth
+    serial_connected = False
+    if serial_thread is not None and serial_thread.is_alive():
+        serial_connected = True
+    elif bluetooth_manager is not None:
+        try:
+            serial_connected = bluetooth_manager.is_connected()
+        except:
+            serial_connected = False
+    
+    # Compter les connexions actives
+    connections_active = sum([udp_active, tcp_active, serial_connected])
+    
+    status = {
+        'udp_active': udp_active,
+        'tcp_active': tcp_active,
+        'serial_connected': serial_connected,
+        'connections_active': connections_active,
+        'timestamp': time.strftime("%H:%M:%S")
     }
+    
+    if DEBUG:
+        print(f"[STATUS] UDP: {udp_active}, TCP: {tcp_active}, Serial: {serial_connected}")
+    
+    return status
 
 @app.route('/api/nmea_history')
 def api_nmea_history():
