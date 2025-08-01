@@ -64,6 +64,21 @@ def emit_nmea_data(source, message):
     global last_nmea_data
     
     try:
+        # Vérifications des paramètres d'entrée
+        if source is None or source == "":
+            source = "UNKNOWN"
+        if message is None or message == "":
+            if DEBUG:
+                print("[EMIT] Message NMEA vide - ignoré")
+            return
+            
+        # Nettoyer le message (supprimer les caractères indésirables)
+        message = str(message).strip()
+        if not message or message == "undefined":
+            if DEBUG:
+                print(f"[EMIT] Message invalide ignoré: '{message}'")
+            return
+        
         # Ajouter timestamp
         timestamp = time.strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}][{source}] {message}"
@@ -85,14 +100,18 @@ def emit_nmea_data(source, message):
             if DEBUG:
                 print(f"[WINDY] Erreur émission: {windy_error}")
         
-        # Émettre pour l'interface web de configuration (avec objet)
+        # Émettre pour l'interface web de configuration (avec objet) avec nom différent
         try:
-            socketio.emit('nmea_data', {
+            socketio.emit('nmea_data_web', {
                 'source': source,
                 'message': message,
                 'timestamp': timestamp,
                 'formatted': formatted_message
             })
+            
+            if DEBUG:
+                print(f"[WEB] Envoyé object pour interface web")
+                
         except Exception as ws_error:
             if DEBUG:
                 print(f"[WEBSOCKET] Erreur émission interface: {ws_error}")
@@ -295,7 +314,8 @@ def udp_listener(stop_event):
                 if DEBUG:
                     print(f"[NMEA][UDP] {message}")
                 nmea_logger.info(f"[UDP] {message}")
-                emit_nmea_data("UDP", message)
+                if message and message.strip():
+                    emit_nmea_data("UDP", message.strip())
         except socket.timeout:
             continue
         except Exception as e:
@@ -328,7 +348,8 @@ def tcp_listener(stop_event):
                             if DEBUG:
                                 print(f"[NMEA][TCP] {message}")
                             nmea_logger.info(f"[TCP] {message}")
-                            emit_nmea_data("TCP", message)
+                            if message and message.strip():
+                                emit_nmea_data("TCP", message.strip())
                     except socket.timeout:
                         continue
                     except Exception as e:
@@ -407,7 +428,8 @@ def serial_listener(port, baudrate, stop_event):
                                     if DEBUG:
                                         print(f"[NMEA][SERIAL] {line}")
                                     nmea_logger.info(f"[SERIAL] {line}")
-                                    emit_nmea_data("SERIAL", line)
+                                    if line and line.strip():
+                                        emit_nmea_data("SERIAL", line.strip())
                     else:
                         # Small pause if no data
                         time.sleep(0.01)
