@@ -226,8 +226,8 @@
             updateConnectionIndicator(false);
         });
 
-        // Réception des données NMEA en temps réel
-        socket.on('nmea_data', function(data) {
+        // Réception des données NMEA en temps réel (événement séparé)
+        socket.on('nmea_data_web', function(data) {
             updateNMEADisplay(data);
         });
 
