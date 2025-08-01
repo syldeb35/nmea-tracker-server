@@ -139,6 +139,35 @@
                     <input type="number" name="tcp_port" value="{{ tcp_port }}">
                 </label>
                 <hr>
+                <div class="section-title">Mode de connexion avancé:</div>
+                <p>Choisir le mode de connexion réseau :</p>
+
+                <label><input type="radio" name="udp_mode" value="server" checked> UDP Serveur (écoute les connexions entrantes)</label>
+                <label><input type="radio" name="udp_mode" value="client"> UDP Client (écoute les broadcasts)</label>
+
+                <label><input type="radio" name="tcp_mode" value="server" checked> TCP Serveur (écoute les connexions entrantes)</label>
+                <label><input type="radio" name="tcp_mode" value="client"> TCP Client (se connecte au GPS)</label>
+
+                <div id="client-config" style="display:none; background:#f0f8ff; padding:10px; margin:10px 0;">
+                    <label>IP du GPS (pour mode client):
+                        <input type="text" name="gps_ip" placeholder="192.168.1.100">
+                    </label>
+                    <label>Port du GPS (pour mode client):
+                        <input type="number" name="gps_port" placeholder="50110">
+                    </label>
+                </div>
+                <script>
+                    // Afficher/masquer la config client
+                    document.querySelectorAll('input[name="udp_mode"], input[name="tcp_mode"]').forEach(radio => {
+                        radio.addEventListener('change', function() {
+                            const showClient = document.querySelector('input[name="udp_mode"]:checked').value === 'client' ||
+                                            document.querySelector('input[name="tcp_mode"]:checked').value === 'client';
+                            document.getElementById('client-config').style.display = showClient ? 'block' : 'none';
+                        });
+                    });
+                </script>
+
+                <hr>
                 <div class="section-title">Serial settings:</div>
                 <p>Configure the serial settings for the connection:</p>
                 <label>Serial port:

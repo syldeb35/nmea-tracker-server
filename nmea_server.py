@@ -325,6 +325,47 @@ def udp_listener(stop_event):
     sock.close()
     print("[UDP] Stopped.")
 
+# Function to listen to UDP broadcasts in client mode
+# This function listens for UDP broadcasts on a specified port and emits the received NMEA data.
+# It is designed to handle incoming messages, filter out unwanted patterns, and emit valid NMEA data.
+# It uses a stop event to allow graceful shutdown of the listener thread.
+
+def udp_client_listener(target_ip, target_port, stop_event):
+    """Écoute UDP en mode client/broadcast"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    # Configuration pour recevoir les broadcasts
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    
+    # Bind sur toutes les interfaces pour recevoir les broadcasts
+    sock.bind(('0.0.0.0', target_port))
+    
+    print(f"[UDP-CLIENT] Écoute broadcasts sur port {target_port}")
+    sock.settimeout(1.0)
+    
+    while not stop_event.is_set() and not shutdown_event.is_set():
+        try:
+            data, addr = sock.recvfrom(1024)
+            message = data.decode('utf-8', errors='ignore').strip()
+            
+            if not REJECTED_PATTERN.match(message):
+                if DEBUG:
+                    print(f"[NMEA][UDP-CLIENT] {message} (from {addr})")
+                nmea_logger.info(f"[UDP-CLIENT] {message}")
+                if message and message.strip():
+                    emit_nmea_data("UDP", message.strip())
+                    
+        except socket.timeout:
+            continue
+        except Exception as e:
+            if not shutdown_event.is_set():
+                print(f"[UDP-CLIENT] Error: {e}")
+            break
+            
+    sock.close()
+    print("[UDP-CLIENT] Stopped.")
+
 def tcp_listener(stop_event):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -364,6 +405,76 @@ def tcp_listener(stop_event):
             break
     sock.close()
     print("[TCP] Stopped.")
+
+
+
+
+def tcp_client_listener(target_ip, target_port, stop_event):
+    """Connexion TCP en mode client vers un GPS"""
+    print(f"[TCP-CLIENT] Tentative connexion à {target_ip}:{target_port}")
+    
+    retry_interval = 10  # Reconnexion toutes les 10 secondes
+    
+    while not stop_event.is_set() and not shutdown_event.is_set():
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5.0)  # Timeout connexion
+            
+            # Connexion au GPS
+            sock.connect((target_ip, target_port))
+            print(f"[TCP-CLIENT] Connecté à {target_ip}:{target_port}")
+            
+            sock.settimeout(1.0)  # Timeout lecture
+            buffer = ""
+            
+            while not stop_event.is_set() and not shutdown_event.is_set():
+                try:
+                    data = sock.recv(1024)
+                    if not data:
+                        print("[TCP-CLIENT] Connexion fermée par le serveur")
+                        break
+                        
+                    buffer += data.decode('utf-8', errors='ignore')
+                    
+                    # Traiter les lignes complètes
+                    while '\n' in buffer:
+                        line, buffer = buffer.split('\n', 1)
+                        message = line.strip()
+                        
+                        if message and not REJECTED_PATTERN.match(message):
+                            if DEBUG:
+                                print(f"[NMEA][TCP-CLIENT] {message}")
+                            nmea_logger.info(f"[TCP-CLIENT] {message}")
+                            if message and message.strip():
+                                emit_nmea_data("TCP", message.strip())
+                                
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    print(f"[TCP-CLIENT] Erreur lecture: {e}")
+                    break
+                    
+        except socket.timeout:
+            print(f"[TCP-CLIENT] Timeout connexion à {target_ip}:{target_port}")
+        except ConnectionRefused:
+            if DEBUG:
+                print(f"[TCP-CLIENT] Connexion refusée par {target_ip}:{target_port}")
+        except Exception as e:
+            print(f"[TCP-CLIENT] Erreur connexion: {e}")
+        finally:
+            if sock:
+                sock.close()
+        
+        # Attendre avant de retry
+        print(f"[TCP-CLIENT] Reconnexion dans {retry_interval} secondes...")
+        for _ in range(retry_interval * 10):
+            if stop_event.is_set():
+                break
+            time.sleep(0.1)
+    
+    print("[TCP-CLIENT] Stopped.")
+
 
 # Function to listen to the serial port and send NMEA data
 # Uses a buffer to handle pending data and avoid frame loss
