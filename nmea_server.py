@@ -76,7 +76,7 @@ def emit_nmea_data(source, message):
         # ÉMETTRE VERS WINDY PLUGIN - SEULEMENT LA CHAÎNE NMEA PURE
         try:
             # Envoyer SEULEMENT la chaîne NMEA pure (pas d'objet)
-            socketio.emit('nmea', message)  # Juste la chaîne, pas d'objet
+            socketio.emit('nmea_data', message)  # Juste la chaîne, pas d'objet
             
             if DEBUG:
                 print(f"[WINDY] Envoyé string: {message}")
