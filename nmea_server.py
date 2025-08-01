@@ -57,6 +57,7 @@ last_nmea_data = []  # Buffer des dernières données NMEA
 max_nmea_buffer = 50  # Garder les 50 dernières lignes
 
 # === NMEA DATA EMISSION FUNCTION ===
+# Émettre les données NMEA via WebSocket et les stocker dans le buffer
 
 def emit_nmea_data(source, message):
     """Émet les données NMEA via WebSocket et les stocke"""
@@ -72,19 +73,19 @@ def emit_nmea_data(source, message):
         if len(last_nmea_data) > max_nmea_buffer:
             last_nmea_data.pop(0)
         
-        # ÉMETTRE VERS WINDY PLUGIN via WebSocket simple
+        # ÉMETTRE VERS WINDY PLUGIN - SEULEMENT LA CHAÎNE NMEA PURE
         try:
-            # Émettre les données NMEA pures pour Windy
-            socketio.emit('nmea', message)
+            # Envoyer SEULEMENT la chaîne NMEA pure (pas d'objet)
+            socketio.emit('nmea', message)  # Juste la chaîne, pas d'objet
             
             if DEBUG:
-                print(f"[WINDY] Envoyé: {message}")
+                print(f"[WINDY] Envoyé string: {message}")
                 
         except Exception as windy_error:
             if DEBUG:
                 print(f"[WINDY] Erreur émission: {windy_error}")
         
-        # Émettre aussi pour l'interface web de configuration
+        # Émettre pour l'interface web de configuration (avec objet)
         try:
             socketio.emit('nmea_data', {
                 'source': source,
