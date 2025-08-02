@@ -1001,6 +1001,36 @@ def handle_ssl_error(func):
                 raise e
     return wrapper
 
+# Fonction de test à ajouter temporairement
+def test_ports_separately():
+    """Test UDP et TCP séparément pour identifier les conflits"""
+    import socket
+    
+    print("[TEST] Test des ports individuellement...")
+    
+    # Test UDP
+    try:
+        udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_sock.bind(('0.0.0.0', UDP_PORT))
+        print(f"[TEST] ✅ UDP port {UDP_PORT} disponible")
+        udp_sock.close()
+    except Exception as e:
+        print(f"[TEST] ❌ UDP port {UDP_PORT} problème: {e}")
+    
+    # Test TCP
+    try:
+        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tcp_sock.bind(('0.0.0.0', TCP_PORT))
+        tcp_sock.listen(1)
+        print(f"[TEST] ✅ TCP port {TCP_PORT} disponible")
+        tcp_sock.close()
+    except Exception as e:
+        print(f"[TEST] ❌ TCP port {TCP_PORT} problème: {e}")
+
+# Appeler cette fonction dans main_thread() avant manage_threads()
+
+
 def main_thread():
     global SERIAL_PORT, ENABLE_SERIAL, serial_thread
     print("[INFO] Starting NMEA server...")
@@ -1677,35 +1707,6 @@ def get_current_status():
         print(f"[STATUS] UDP: {udp_active}(port {UDP_PORT}), TCP: {tcp_active}(port {TCP_PORT}), Serial: {serial_connected}")
     
     return status
-
-# Fonction de test à ajouter temporairement
-def test_ports_separately():
-    """Test UDP et TCP séparément pour identifier les conflits"""
-    import socket
-    
-    print("[TEST] Test des ports individuellement...")
-    
-    # Test UDP
-    try:
-        udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        udp_sock.bind(('0.0.0.0', UDP_PORT))
-        print(f"[TEST] ✅ UDP port {UDP_PORT} disponible")
-        udp_sock.close()
-    except Exception as e:
-        print(f"[TEST] ❌ UDP port {UDP_PORT} problème: {e}")
-    
-    # Test TCP
-    try:
-        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        tcp_sock.bind(('0.0.0.0', TCP_PORT))
-        tcp_sock.listen(1)
-        print(f"[TEST] ✅ TCP port {TCP_PORT} disponible")
-        tcp_sock.close()
-    except Exception as e:
-        print(f"[TEST] ❌ TCP port {TCP_PORT} problème: {e}")
-
-# Appeler cette fonction dans main_thread() avant manage_threads()
 
 @app.route('/api/nmea_history')
 def api_nmea_history():
