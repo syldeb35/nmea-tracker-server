@@ -224,12 +224,17 @@ class SSLErrorFilter:
         self.original_stderr = original_stderr
         
     def write(self, text):
-        # Filtrer les erreurs SSL connues
-        if any(keyword in text.lower() for keyword in [
+        # 🆕 Liste étendue des patterns SSL à filtrer
+        ssl_patterns = [
             'ssl:', 'sslv3_alert', 'certificate_unknown', 
             'gevent', 'greenlet', 'wrap_socket_and_handle',
-            'handshake', '_ssl.c:', 'ssl.sslerror'
-        ]):
+            'handshake', '_ssl.c:', 'ssl.sslerror',
+            'certificate_verify_failed', 'ssl handshake failed',
+            'wsgiserver', 'baseserver', 'pywsgi'
+        ]
+        
+        # Filtrer les erreurs SSL connues
+        if any(keyword in text.lower() for keyword in ssl_patterns):
             return  # Ignorer complètement
         
         # Écrire tout le reste vers stderr original
@@ -990,33 +995,45 @@ def run_flask_app():
     if os.path.exists(cert_path) and os.path.exists(key_path):
         main_logger.info("SSL certificates found - starting HTTPS")
         try:
-            # Configuration WSGIServer
+            # 🆕 Configuration WSGIServer SANS les paramètres problématiques
             http_server = WSGIServer(
                 ('0.0.0.0', HTTPS_PORT), 
                 app, 
                 keyfile=key_path, 
                 certfile=cert_path
+                # 🚫 Ne PAS ajouter log=None ou error_log=None qui causent des erreurs
             )
+            
+            # 🚫 Ne PAS utiliser http_server.set_spawn() qui cause le TypeError
 
             main_logger.info(f"HTTPS server active on https://localhost:{HTTPS_PORT}")
             main_logger.info(f"Web interface: https://localhost:{HTTPS_PORT}/config.html")
             main_logger.info("Press Ctrl+C to stop the server")
-
-            if IS_WINDOWS:
-                main_logger.info("Alternative HTTP disponible sur http://localhost:{HTTPS_PORT}")
             
-            # Serveur simple sans gestion d'exception SSL compliquée
+            if IS_WINDOWS:
+                main_logger.info(f"Alternative HTTP disponible sur http://localhost:{HTTPS_PORT}")
+            
+            # 🆕 Serveur HTTPS avec gestion SSL simplifiée
             try:
                 http_server.serve_forever()
             except KeyboardInterrupt:
                 main_logger.info("Keyboard interrupt received")
                 raise
             except Exception as e:
-                # Laisser passer toutes les erreurs sauf SSL pour diagnostic
-                if "ssl" not in str(e).lower() and "certificate" not in str(e).lower():
+                # Filtrer SEULEMENT les erreurs SSL répétitives - laisser passer les vraies erreurs
+                error_msg = str(e).lower()
+                if any(ssl_keyword in error_msg for ssl_keyword in [
+                    'sslv3_alert_certificate_unknown',
+                    'certificate_unknown', 
+                    'ssl handshake',
+                    'wrap_socket_and_handle'
+                ]):
+                    # Ignorer silencieusement ces erreurs SSL cosmétiques
+                    pass
+                else:
+                    # Pour toutes les autres erreurs, les signaler
                     error_logger.error(f"HTTPS server error: {e}")
                     raise
-                # Les erreurs SSL sont ignorées silencieusement
                 
         except KeyboardInterrupt:
             main_logger.info("Keyboard interrupt received")
@@ -1032,23 +1049,24 @@ def run_flask_app():
 def run_http_fallback():
     """Start server in simple HTTP mode"""
     try:
-        print(f"[INFO] HTTP server active on http://localhost:{HTTPS_PORT}")
-        print(f"[INFO] Web interface: http://localhost:{HTTPS_PORT}/config.html")
+        main_logger.info(f"HTTP fallback server on http://localhost:{HTTPS_PORT}")
+        main_logger.info(f"Web interface: http://localhost:{HTTPS_PORT}/config.html")
         if IS_WINDOWS:
-            print("[INFO] Mode HTTP - pas d'erreurs SSL sur Windows")
-        print("[INFO] Press Ctrl+C to stop the server")
+            main_logger.info("Mode HTTP - pas d'erreurs SSL sur Windows")
+        main_logger.info("Press Ctrl+C to stop the server")
+        
         socketio.run(
             app, 
             host='0.0.0.0', 
             port=HTTPS_PORT, 
-            debug=False,  # Disable verbose logs
+            debug=False,
             allow_unsafe_werkzeug=True
         )
     except KeyboardInterrupt:
-        print("\n[INFO] Keyboard interrupt received")
+        main_logger.info("Keyboard interrupt received")
     except Exception as e:
         if not shutdown_event.is_set():
-            print(f"[ERROR] Cannot start server: {e}")
+            error_logger.error(f"Cannot start server: {e}")
 
 # Custom error handler for SSL errors on Windows
 def handle_ssl_error(func):
