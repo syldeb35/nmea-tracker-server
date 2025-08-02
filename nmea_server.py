@@ -294,7 +294,26 @@ udp_stop = threading.Event()
 tcp_stop = threading.Event()
 bluetooth_monitor_stop = threading.Event()
 
-# === MODIFIED FUNCTIONS TO SUPPORT STOPPING ===
+# === NMEA DATA CLEANING FUNCTION ===
+# This function cleans NMEA data by removing common repeater prefixes and unwanted characters.
+# It is designed to handle various NMEA formats and ensure clean data for processing.
+# It removes common repeater prefixes, cleans up double dollar signs, and strips control characters.
+# It is used to ensure that only valid NMEA sentences are processed and emitted.
+def clean_nmea_data(data):
+    """Nettoie les données NMEA des préfixes de répéteur"""
+    import re
+    
+    # Supprimer les préfixes courants des répéteurs
+    data = re.sub(r'^\$[A-Z0-9]{2,6}\$', '$', data)
+    
+    # Nettoyer les doubles $
+    data = re.sub(r'\$+', '$', data)
+    
+    # Supprimer les caractères de contrôle
+    data = re.sub(r'[\r\n\x00-\x1F]', '', data)
+    
+    return data.strip()
+
 
 # Function to listen to UDP broadcasts in server mode
 # This function listens for UDP broadcasts on a specified port and emits the received NMEA data.
@@ -306,7 +325,8 @@ def udp_listener(stop_event):
     while not stop_event.is_set() and not shutdown_event.is_set():
         try:
             data, addr = sock.recvfrom(1024)
-            message = data.decode('utf-8', errors='ignore').strip()
+            # Nettoyer les données NMEA avant émission
+            message = clean_nmea_data(data.decode('utf-8', errors='ignore'))
             if not REJECTED_PATTERN.match(message):
                 if DEBUG:
                     print(f"[NMEA][UDP] {message}")
@@ -364,46 +384,83 @@ def udp_client_listener(target_ip, target_port, stop_event):
     print("[UDP-CLIENT] Stopped.")
 
 def tcp_listener(stop_event):
+    # 🆕 CORRECTION WINDOWS : forcer 0.0.0.0 pour le binding
+    bind_ip = "0.0.0.0"  # Toujours utiliser 0.0.0.0 pour le binding
+    
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((TCP_IP, TCP_PORT))
-    sock.listen(1)
-    print(f"[TCP] Listening on {TCP_IP}:{TCP_PORT}")
-    sock.settimeout(1.0)
-    while not stop_event.is_set() and not shutdown_event.is_set():
-        try:
-            conn, addr = sock.accept()
-            print(f"[TCP] Connection from {addr}")
-            with conn:
-                conn.settimeout(1.0)
-                while not stop_event.is_set() and not shutdown_event.is_set():
-                    try:
-                        data = conn.recv(1024)
-                        if not data:
+    
+    try:
+        sock.bind((bind_ip, TCP_PORT))
+        sock.listen(1)
+        print(f"[TCP] Listening on {bind_ip}:{TCP_PORT}")
+        sock.settimeout(1.0)
+        
+        while not stop_event.is_set() and not shutdown_event.is_set():
+            try:
+                conn, addr = sock.accept()
+                print(f"[TCP] Connection from {addr}")
+                
+                with conn:
+                    conn.settimeout(1.0)
+                    buffer = ""  # 🆕 Buffer pour reconstituer les lignes
+                    
+                    while not stop_event.is_set() and not shutdown_event.is_set():
+                        try:
+                            data = conn.recv(1024)
+                            if not data:
+                                print(f"[TCP] Connection closed by {addr}")
+                                break
+                            
+                            # 🆕 Ajouter au buffer et traiter les lignes complètes
+                            buffer += data.decode('utf-8', errors='ignore')
+                            
+                            # 🆕 Traiter toutes les lignes complètes dans le buffer
+                            while '\n' in buffer:
+                                line, buffer = buffer.split('\n', 1)
+                                message = clean_nmea_data(line)
+                                
+                                if message and not REJECTED_PATTERN.match(message):
+                                    if DEBUG:
+                                        print(f"[NMEA][TCP] {message}")
+                                    nmea_logger.info(f"[TCP] {message}")
+                                    if message and message.strip():
+                                        emit_nmea_data("TCP", message.strip())
+                            
+                            # 🆕 Si le buffer devient trop grand, le vider (protection)
+                            if len(buffer) > 4096:
+                                if DEBUG:
+                                    print("[TCP] Buffer trop grand, vidage")
+                                buffer = ""
+                                
+                        except socket.timeout:
+                            continue
+                        except Exception as e:
+                            if not shutdown_event.is_set():
+                                print(f"[TCP] Connection error: {e}")
                             break
-                        message = data.decode('utf-8', errors='ignore').strip()
-                        if not REJECTED_PATTERN.match(message):
-                            if DEBUG:
-                                print(f"[NMEA][TCP] {message}")
-                            nmea_logger.info(f"[TCP] {message}")
-                            if message and message.strip():
-                                emit_nmea_data("TCP", message.strip())
-                    except socket.timeout:
-                        continue
-                    except Exception as e:
-                        if not shutdown_event.is_set():
-                            print(f"[TCP] Connection error: {e}")
-                        break
-        except socket.timeout:
-            continue
-        except Exception as e:
-            if not shutdown_event.is_set():
-                print(f"[TCP] Error: {e}")
-            break
-    sock.close()
+                            
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if not shutdown_event.is_set():
+                    print(f"[TCP] Error: {e}")
+                break
+                
+    except Exception as e:
+        print(f"[TCP] Bind error on {bind_ip}:{TCP_PORT} - {e}")
+        if "10049" in str(e):
+            print("[TCP] Windows Error 10049: Invalid address - using 0.0.0.0")
+        elif "10048" in str(e):
+            print("[TCP] Port already in use - try another port")
+        return
+    finally:
+        try:
+            sock.close()
+        except:
+            pass
+            
     print("[TCP] Stopped.")
-
-
 
 
 def tcp_client_listener(target_ip, target_port, stop_event):
@@ -530,7 +587,7 @@ def serial_listener(port, baudrate, stop_event):
                             # Process complete lines
                             while '\n' in buffer:
                                 line, buffer = buffer.split('\n', 1)
-                                line = line.strip()
+                                line = clean_nmea_data(line)
                                 
                                 if line and not REJECTED_PATTERN.match(line):
                                     if DEBUG:
