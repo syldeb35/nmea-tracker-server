@@ -171,35 +171,35 @@ except ImportError:
 # 🆕 SYSTÈME DE LOGS STRUCTURÉ PAR FICHIERS
 os.makedirs("logs", exist_ok=True)
 
-# Formatter commun pour tous les logs
+# Formatter commun pour tous les logs - SANS caractères spéciaux
 file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
 
 # 🆕 LOGGER POUR TRAMES NMEA (remplace les print EMIT-DEBUG)
 nmea_logger = logging.getLogger("nmea_data")
 nmea_logger.setLevel(logging.INFO)
-nmea_handler = RotatingFileHandler("logs/nmea_data.log", maxBytes=2*1024*1024, backupCount=5)
+nmea_handler = RotatingFileHandler("logs/nmea_data.log", maxBytes=2*1024*1024, backupCount=5, encoding='utf-8')
 nmea_handler.setFormatter(file_formatter)
 nmea_logger.addHandler(nmea_handler)
 
 # 🆕 LOGGER POUR DEBUG GÉNÉRAL (remplace les print DEBUG)
 debug_logger = logging.getLogger("debug")
 debug_logger.setLevel(logging.DEBUG)
-debug_handler = RotatingFileHandler("logs/debug.log", maxBytes=1024*1024, backupCount=3)
+debug_handler = RotatingFileHandler("logs/debug.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 debug_handler.setFormatter(file_formatter)
 debug_logger.addHandler(debug_handler)
 
 # 🆕 LOGGER POUR CONNEXIONS TCP/UDP (détails techniques)
 network_logger = logging.getLogger("network")
 network_logger.setLevel(logging.INFO)
-network_handler = RotatingFileHandler("logs/network.log", maxBytes=1024*1024, backupCount=3)
+network_handler = RotatingFileHandler("logs/network.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 network_handler.setFormatter(file_formatter)
 network_logger.addHandler(network_handler)
 
 # 🆕 LOGGER POUR ERREURS SYSTÈME
 error_logger = logging.getLogger("errors")
 error_logger.setLevel(logging.ERROR)
-error_handler = RotatingFileHandler("logs/errors.log", maxBytes=1024*1024, backupCount=5)
+error_handler = RotatingFileHandler("logs/errors.log", maxBytes=1024*1024, backupCount=5, encoding='utf-8')
 error_handler.setFormatter(file_formatter)
 error_logger.addHandler(error_handler)
 
@@ -207,8 +207,8 @@ error_logger.addHandler(error_handler)
 main_logger = logging.getLogger("main")
 main_logger.setLevel(logging.INFO)
 
-# Handler fichier pour main
-main_file_handler = RotatingFileHandler("logs/main.log", maxBytes=1024*1024, backupCount=3)
+# Handler fichier pour main avec UTF-8
+main_file_handler = RotatingFileHandler("logs/main.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 main_file_handler.setFormatter(file_formatter)
 main_logger.addHandler(main_file_handler)
 
@@ -833,10 +833,10 @@ def manage_threads():
             udp_thread.start()
             time.sleep(0.5)
             if udp_thread.is_alive():
-                main_logger.info("✅ UDP thread started successfully")
+                main_logger.info("UDP thread started successfully")
                 debug_logger.info("UDP thread started successfully")
             else:
-                main_logger.error("❌ UDP thread failed to start")
+                main_logger.error("UDP thread failed to start")
                 error_logger.error("UDP thread failed to start")
         else:
             debug_logger.info("UDP thread already active")
@@ -855,10 +855,10 @@ def manage_threads():
             tcp_thread.start()
             time.sleep(0.5)
             if tcp_thread.is_alive():
-                main_logger.info("✅ TCP thread started successfully")
+                main_logger.info("TCP thread started successfully")
                 debug_logger.info("TCP thread started successfully")
             else:
-                main_logger.error("❌ TCP thread failed to start")
+                main_logger.error("TCP thread failed to start")
                 error_logger.error("TCP thread failed to start")
         else:
             debug_logger.info("TCP thread already active")
@@ -882,10 +882,10 @@ def manage_threads():
                 serial_thread.start()
                 time.sleep(0.5)
                 if serial_thread.is_alive():
-                    main_logger.info("✅ SERIAL thread started successfully")
+                    main_logger.info("SERIAL thread started successfully")
                     debug_logger.info("SERIAL thread started successfully")
                 else:
-                    main_logger.error("❌ SERIAL thread failed to start")
+                    main_logger.error("SERIAL thread failed to start")
                     debug_logger.error("SERIAL thread failed to start")
             else:
                 debug_logger.info("SERIAL thread already active")
@@ -1524,40 +1524,6 @@ class BluetoothGPSManager:
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()
     
-class ConfigWatcher:
-    def __init__(self, config_file=".env", callback=None):
-        self.config_file = config_file
-        self.callback = callback
-        self.last_modified = 0
-        self.running = True
-        self.reload_debounce = 0  # 🆕 Debouncing
-        
-    def start_watching(self):
-        """Start watching config file for changes"""
-        def watch():
-            while self.running:
-                try:
-                    if os.path.exists(self.config_file):
-                        current_modified = os.path.getmtime(self.config_file)
-                        current_time = time.time()
-                        
-                        if (current_modified != self.last_modified and 
-                            current_time - self.reload_debounce > 2):  # 🆕 2 secondes minimum
-                            
-                            self.last_modified = current_modified
-                            self.reload_debounce = current_time
-                            
-                            if self.callback:
-                                print(f"[CONFIG] Configuration file changed, reloading...")
-                                self.callback()
-                    time.sleep(1)  # Check every second
-                except Exception as e:
-                    print(f"[CONFIG] Error watching config: {e}")
-                    time.sleep(5)
-                    
-        thread = threading.Thread(target=watch, daemon=True)
-        thread.start()
-
 
 class ConfigWatcher:
     def __init__(self, config_file=".env", callback=None):
@@ -1635,6 +1601,86 @@ def reload_configuration():
         
     except Exception as e:
         print(f"[CONFIG] Error reloading config: {e}")
+
+
+def get_current_status():
+    """Retourne le statut actuel de toutes les connexions avec debug"""
+    global udp_thread, tcp_thread, serial_thread, bluetooth_manager
+    
+    # 🆕 Vérification sécurisée des threads
+    try:
+        udp_active = (udp_thread is not None and 
+                     hasattr(udp_thread, 'is_alive') and 
+                     udp_thread.is_alive() and 
+                     ENABLE_UDP)
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification UDP: {e}")
+        udp_active = False
+    
+    try:
+        tcp_active = (tcp_thread is not None and 
+                     hasattr(tcp_thread, 'is_alive') and 
+                     tcp_thread.is_alive() and 
+                     ENABLE_TCP)
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification TCP: {e}")
+        tcp_active = False
+    
+    try:
+        # Vérifier le statut serial/bluetooth
+        serial_connected = False
+        if ENABLE_SERIAL:
+            if serial_thread is not None and hasattr(serial_thread, 'is_alive') and serial_thread.is_alive():
+                serial_connected = True
+            elif IS_LINUX and bluetooth_manager is not None:
+                try:
+                    serial_connected = bluetooth_manager.check_connection_status()
+                except Exception as bt_error:
+                    if DEBUG:
+                        print(f"[STATUS-DEBUG] Erreur Bluetooth: {bt_error}")
+                    serial_connected = False
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification Serial: {e}")
+        serial_connected = False
+    
+    # Debug détaillé
+    if DEBUG:
+        print(f"[STATUS-DEBUG] ENABLE_UDP: {ENABLE_UDP}, UDP thread exists: {udp_thread is not None}")
+        print(f"[STATUS-DEBUG] ENABLE_TCP: {ENABLE_TCP}, TCP thread exists: {tcp_thread is not None}")
+        print(f"[STATUS-DEBUG] ENABLE_SERIAL: {ENABLE_SERIAL}, Serial thread exists: {serial_thread is not None}")
+        
+        if udp_thread:
+            print(f"[STATUS-DEBUG] UDP thread alive: {udp_thread.is_alive()}")
+        if tcp_thread:
+            print(f"[STATUS-DEBUG] TCP thread alive: {tcp_thread.is_alive()}")
+        if serial_thread:
+            print(f"[STATUS-DEBUG] Serial thread alive: {serial_thread.is_alive()}")
+    
+    # Compter les connexions actives
+    connections_active = sum([udp_active, tcp_active, serial_connected])
+    
+    status = {
+        'udp_active': udp_active,
+        'tcp_active': tcp_active,
+        'serial_connected': serial_connected,
+        'connections_active': connections_active,
+        'timestamp': time.strftime("%H:%M:%S"),
+        'udp_port': UDP_PORT,
+        'tcp_port': TCP_PORT,
+        # 🆕 Ajout des informations de configuration
+        'udp_enabled': ENABLE_UDP,
+        'tcp_enabled': ENABLE_TCP,
+        'serial_enabled': ENABLE_SERIAL
+    }
+    
+    if DEBUG:
+        print(f"[STATUS] Final status - UDP: {udp_active}, TCP: {tcp_active}, Serial: {serial_connected}")
+    
+    return status
+
 
 # Améliorer l'endpoint API pour mettre à jour les variables globales
 @app.route('/api/config', methods=['POST'])
@@ -1791,84 +1837,6 @@ def handle_request_status():
             'connections_active': 0,
             'error': str(e)
         })
-
-def get_current_status():
-    """Retourne le statut actuel de toutes les connexions avec debug"""
-    global udp_thread, tcp_thread, serial_thread, bluetooth_manager
-    
-    # 🆕 Vérification sécurisée des threads
-    try:
-        udp_active = (udp_thread is not None and 
-                     hasattr(udp_thread, 'is_alive') and 
-                     udp_thread.is_alive() and 
-                     ENABLE_UDP)
-    except Exception as e:
-        if DEBUG:
-            print(f"[STATUS-DEBUG] Erreur vérification UDP: {e}")
-        udp_active = False
-    
-    try:
-        tcp_active = (tcp_thread is not None and 
-                     hasattr(tcp_thread, 'is_alive') and 
-                     tcp_thread.is_alive() and 
-                     ENABLE_TCP)
-    except Exception as e:
-        if DEBUG:
-            print(f"[STATUS-DEBUG] Erreur vérification TCP: {e}")
-        tcp_active = False
-    
-    try:
-        # Vérifier le statut serial/bluetooth
-        serial_connected = False
-        if ENABLE_SERIAL:
-            if serial_thread is not None and hasattr(serial_thread, 'is_alive') and serial_thread.is_alive():
-                serial_connected = True
-            elif IS_LINUX and bluetooth_manager is not None:
-                try:
-                    serial_connected = bluetooth_manager.check_connection_status()
-                except Exception as bt_error:
-                    if DEBUG:
-                        print(f"[STATUS-DEBUG] Erreur Bluetooth: {bt_error}")
-                    serial_connected = False
-    except Exception as e:
-        if DEBUG:
-            print(f"[STATUS-DEBUG] Erreur vérification Serial: {e}")
-        serial_connected = False
-    
-    # Debug détaillé
-    if DEBUG:
-        print(f"[STATUS-DEBUG] ENABLE_UDP: {ENABLE_UDP}, UDP thread exists: {udp_thread is not None}")
-        print(f"[STATUS-DEBUG] ENABLE_TCP: {ENABLE_TCP}, TCP thread exists: {tcp_thread is not None}")
-        print(f"[STATUS-DEBUG] ENABLE_SERIAL: {ENABLE_SERIAL}, Serial thread exists: {serial_thread is not None}")
-        
-        if udp_thread:
-            print(f"[STATUS-DEBUG] UDP thread alive: {udp_thread.is_alive()}")
-        if tcp_thread:
-            print(f"[STATUS-DEBUG] TCP thread alive: {tcp_thread.is_alive()}")
-        if serial_thread:
-            print(f"[STATUS-DEBUG] Serial thread alive: {serial_thread.is_alive()}")
-    
-    # Compter les connexions actives
-    connections_active = sum([udp_active, tcp_active, serial_connected])
-    
-    status = {
-        'udp_active': udp_active,
-        'tcp_active': tcp_active,
-        'serial_connected': serial_connected,
-        'connections_active': connections_active,
-        'timestamp': time.strftime("%H:%M:%S"),
-        'udp_port': UDP_PORT,
-        'tcp_port': TCP_PORT,
-        # 🆕 Ajout des informations de configuration
-        'udp_enabled': ENABLE_UDP,
-        'tcp_enabled': ENABLE_TCP,
-        'serial_enabled': ENABLE_SERIAL
-    }
-    
-    if DEBUG:
-        print(f"[STATUS] Final status - UDP: {udp_active}, TCP: {tcp_active}, Serial: {serial_connected}")
-    
-    return status
 
 @app.route('/api/nmea_history')
 def api_nmea_history():
