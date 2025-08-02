@@ -328,9 +328,7 @@ def udp_listener(stop_event):
             # Nettoyer les données NMEA avant émission
             message = clean_nmea_data(data.decode('utf-8', errors='ignore'))
             if not REJECTED_PATTERN.match(message):
-                if DEBUG:
-                    print(f"[NMEA][UDP] {message}")
-                nmea_logger.info(f"[UDP] {message}")
+                # nmea_logger.info(f"[UDP] {message}")
                 if message and message.strip():
                     emit_nmea_data("UDP", message.strip())
         except socket.timeout:
@@ -367,8 +365,6 @@ def udp_client_listener(target_ip, target_port, stop_event):
             message = data.decode('utf-8', errors='ignore').strip()
             
             if not REJECTED_PATTERN.match(message):
-                if DEBUG:
-                    print(f"[NMEA][UDP-CLIENT] {message} (from {addr})")
                 nmea_logger.info(f"[UDP-CLIENT] {message}")
                 if message and message.strip():
                     emit_nmea_data("UDP", message.strip())
@@ -421,8 +417,6 @@ def tcp_listener(stop_event):
                                 message = clean_nmea_data(line)
                                 
                                 if message and not REJECTED_PATTERN.match(message):
-                                    if DEBUG:
-                                        print(f"[NMEA][TCP] {message}")
                                     nmea_logger.info(f"[TCP] {message}")
                                     if message and message.strip():
                                         emit_nmea_data("TCP", message.strip())
@@ -497,8 +491,6 @@ def tcp_client_listener(target_ip, target_port, stop_event):
                         message = line.strip()
                         
                         if message and not REJECTED_PATTERN.match(message):
-                            if DEBUG:
-                                print(f"[NMEA][TCP-CLIENT] {message}")
                             nmea_logger.info(f"[TCP-CLIENT] {message}")
                             if message and message.strip():
                                 emit_nmea_data("TCP", message.strip())
@@ -590,8 +582,6 @@ def serial_listener(port, baudrate, stop_event):
                                 line = clean_nmea_data(line)
                                 
                                 if line and not REJECTED_PATTERN.match(line):
-                                    if DEBUG:
-                                        print(f"[NMEA][SERIAL] {line}")
                                     nmea_logger.info(f"[SERIAL] {line}")
                                     if line and line.strip():
                                         emit_nmea_data("SERIAL", line.strip())
@@ -709,8 +699,12 @@ def bluetooth_monitor(stop_event):
     print("[BLUETOOTH-MONITOR] Arrêt de la surveillance Bluetooth.")
 
 # === THREAD MANAGEMENT FUNCTION ===
+# Remplacer la fonction manage_threads() par cette version avec debug :
+
 def manage_threads():
     global serial_thread, udp_thread, tcp_thread, bluetooth_monitor_thread
+    
+    print(f"[THREAD-MANAGER] Démarrage des threads - UDP:{ENABLE_UDP}, TCP:{ENABLE_TCP}, Serial:{ENABLE_SERIAL}")
     
     # BLUETOOTH MONITOR (uniquement sur Linux)
     if IS_LINUX and ENABLE_SERIAL:
@@ -724,25 +718,76 @@ def manage_threads():
             bluetooth_monitor_stop.set()
             bluetooth_monitor_thread = None
     
+    # UDP
+    if ENABLE_UDP:
+        if udp_thread is None or not udp_thread.is_alive():
+            print(f"[THREAD-MANAGER] Démarrage thread UDP sur port {UDP_PORT}")
+            udp_stop.clear()
+            udp_thread = threading.Thread(target=udp_listener, args=(udp_stop,), daemon=True)
+            udp_thread.start()
+            time.sleep(0.5)  # Petite pause pour laisser le thread démarrer
+            if udp_thread.is_alive():
+                print("[THREAD-MANAGER] ✅ Thread UDP démarré avec succès")
+            else:
+                print("[THREAD-MANAGER] ❌ Échec démarrage thread UDP")
+        else:
+            print("[THREAD-MANAGER] Thread UDP déjà actif")
+    else:
+        if udp_thread and udp_thread.is_alive():
+            print("[THREAD-MANAGER] Arrêt thread UDP")
+            udp_stop.set()
+            udp_thread = None
+            
+    # TCP
+    if ENABLE_TCP:
+        if tcp_thread is None or not tcp_thread.is_alive():
+            print(f"[THREAD-MANAGER] Démarrage thread TCP sur port {TCP_PORT}")
+            tcp_stop.clear()
+            tcp_thread = threading.Thread(target=tcp_listener, args=(tcp_stop,), daemon=True)
+            tcp_thread.start()
+            time.sleep(0.5)  # Petite pause pour laisser le thread démarrer
+            if tcp_thread.is_alive():
+                print("[THREAD-MANAGER] ✅ Thread TCP démarré avec succès")
+            else:
+                print("[THREAD-MANAGER] ❌ Échec démarrage thread TCP")
+        else:
+            print("[THREAD-MANAGER] Thread TCP déjà actif")
+    else:
+        if tcp_thread and tcp_thread.is_alive():
+            print("[THREAD-MANAGER] Arrêt thread TCP")
+            tcp_stop.set()
+            tcp_thread = None
+
     # SERIAL - seulement si ce n'est pas AUTO ou si AUTO est résolu
     if ENABLE_SERIAL:
         actual_port = SERIAL_PORT
         
-        # Si mode AUTO, ne démarrer le thread série que si une connexion Bluetooth est établie
         if SERIAL_PORT == "AUTO":
-            # Ne pas démarrer le thread série maintenant - le bluetooth monitor s'en chargera
             print("[AUTO-DETECT] Mode AUTO - attente de la découverte Bluetooth...")
         else:
-            # Port spécifique fourni - démarrer le thread série
             if serial_thread is None or not serial_thread.is_alive():
                 print(f"[THREAD-MANAGER] Démarrage thread série sur {actual_port}")
                 serial_stop.clear()
                 serial_thread = threading.Thread(target=serial_listener, args=(actual_port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                 serial_thread.start()
+                time.sleep(0.5)
+                if serial_thread.is_alive():
+                    print("[THREAD-MANAGER] ✅ Thread SERIAL démarré avec succès")
+                else:
+                    print("[THREAD-MANAGER] ❌ Échec démarrage thread SERIAL")
+            else:
+                print("[THREAD-MANAGER] Thread SERIAL déjà actif")
     else:
         if serial_thread and serial_thread.is_alive():
+            print("[THREAD-MANAGER] Arrêt thread SERIAL")
             serial_stop.set()
             serial_thread = None
+    
+    # Status final
+    print(f"[THREAD-MANAGER] Status final:")
+    print(f"  - UDP: {'✅ Actif' if udp_thread and udp_thread.is_alive() else '❌ Inactif'}")
+    print(f"  - TCP: {'✅ Actif' if tcp_thread and tcp_thread.is_alive() else '❌ Inactif'}")
+    print(f"  - Serial: {'✅ Actif' if serial_thread and serial_thread.is_alive() else '❌ Inactif'}")
             
     # UDP
     if ENABLE_UDP:
@@ -985,6 +1030,9 @@ def main_thread():
             print("[INFO] No serial port detected - serial function disabled")
             ENABLE_SERIAL = False
     
+    # Test ports separately if enabled
+    test_ports_separately()
+
     # Start threads for UDP, TCP and Serial if enabled
     manage_threads()
     
@@ -1591,12 +1639,16 @@ def handle_request_status():
         })
 
 def get_current_status():
-    """Retourne le statut actuel de toutes les connexions"""
+    """Retourne le statut actuel de toutes les connexions avec debug"""
     global udp_thread, tcp_thread, serial_thread, bluetooth_manager
     
-    # Vérifier si les threads UDP/TCP sont actifs
+    # Debug détaillé
     udp_active = udp_thread is not None and udp_thread.is_alive()
     tcp_active = tcp_thread is not None and tcp_thread.is_alive()
+    
+    if DEBUG:
+        print(f"[STATUS-DEBUG] UDP thread: {udp_thread}, alive: {udp_thread.is_alive() if udp_thread else 'N/A'}")
+        print(f"[STATUS-DEBUG] TCP thread: {tcp_thread}, alive: {tcp_thread.is_alive() if tcp_thread else 'N/A'}")
     
     # Vérifier le statut serial/bluetooth
     serial_connected = False
@@ -1604,7 +1656,7 @@ def get_current_status():
         serial_connected = True
     elif bluetooth_manager is not None:
         try:
-            serial_connected = bluetooth_manager.is_connected()
+            serial_connected = bluetooth_manager.check_connection_status()
         except:
             serial_connected = False
     
@@ -1616,13 +1668,44 @@ def get_current_status():
         'tcp_active': tcp_active,
         'serial_connected': serial_connected,
         'connections_active': connections_active,
-        'timestamp': time.strftime("%H:%M:%S")
+        'timestamp': time.strftime("%H:%M:%S"),
+        'udp_port': UDP_PORT,
+        'tcp_port': TCP_PORT
     }
     
     if DEBUG:
-        print(f"[STATUS] UDP: {udp_active}, TCP: {tcp_active}, Serial: {serial_connected}")
+        print(f"[STATUS] UDP: {udp_active}(port {UDP_PORT}), TCP: {tcp_active}(port {TCP_PORT}), Serial: {serial_connected}")
     
     return status
+
+# Fonction de test à ajouter temporairement
+def test_ports_separately():
+    """Test UDP et TCP séparément pour identifier les conflits"""
+    import socket
+    
+    print("[TEST] Test des ports individuellement...")
+    
+    # Test UDP
+    try:
+        udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_sock.bind(('0.0.0.0', UDP_PORT))
+        print(f"[TEST] ✅ UDP port {UDP_PORT} disponible")
+        udp_sock.close()
+    except Exception as e:
+        print(f"[TEST] ❌ UDP port {UDP_PORT} problème: {e}")
+    
+    # Test TCP
+    try:
+        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tcp_sock.bind(('0.0.0.0', TCP_PORT))
+        tcp_sock.listen(1)
+        print(f"[TEST] ✅ TCP port {TCP_PORT} disponible")
+        tcp_sock.close()
+    except Exception as e:
+        print(f"[TEST] ❌ TCP port {TCP_PORT} problème: {e}")
+
+# Appeler cette fonction dans main_thread() avant manage_threads()
 
 @app.route('/api/nmea_history')
 def api_nmea_history():
