@@ -400,10 +400,9 @@ def udp_client_listener(target_ip, target_port, stop_event):
     print("[UDP-CLIENT] Stopped.")
 
 def tcp_listener(stop_event):
-    """Écoute TCP en mode serveur avec gestion correcte des variables"""
-    global TCP_PORT  # 🆕 Déclarer explicitement la variable globale
+    """Écoute TCP en mode serveur avec debug détaillé"""
+    global TCP_PORT
     
-    # Forcer l'IP de binding pour Windows
     bind_ip = "0.0.0.0"
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -431,22 +430,52 @@ def tcp_listener(stop_event):
                                 print(f"[TCP] Connection closed by {addr}")
                                 break
                             
-                            # Ajouter au buffer et traiter les lignes complètes
-                            buffer += data.decode('utf-8', errors='ignore')
+                            # 🆕 DEBUG : Données brutes reçues
+                            raw_data = data.decode('utf-8', errors='ignore')
+                            if DEBUG:
+                                print(f"[TCP-RAW] Reçu {len(data)} bytes: {raw_data[:100]}...")
+                            
+                            buffer += raw_data
+                            
+                            # 🆕 DEBUG : Contenu du buffer
+                            if DEBUG and '\n' in buffer:
+                                print(f"[TCP-BUFFER] Buffer contient {buffer.count(chr(10))} ligne(s)")
                             
                             # Traiter toutes les lignes complètes dans le buffer
+                            line_count = 0
                             while '\n' in buffer:
                                 line, buffer = buffer.split('\n', 1)
+                                line_count += 1
+                                
+                                # 🆕 DEBUG : Ligne avant nettoyage
+                                if DEBUG:
+                                    print(f"[TCP-LINE-{line_count}] Brute: '{line[:80]}...'")
+                                
                                 message = clean_nmea_data(line)
                                 
-                                if message and not REJECTED_PATTERN.match(message):
-                                    # 🆕 LOG pour debug
+                                # 🆕 DEBUG : Ligne après nettoyage
+                                if DEBUG:
+                                    print(f"[TCP-CLEAN-{line_count}] Nettoyée: '{message[:80]}...'")
+                                
+                                if message:
+                                    # 🆕 DEBUG : Test du pattern
+                                    pattern_match = REJECTED_PATTERN.match(message)
                                     if DEBUG:
-                                        print(f"[TCP-DEBUG] Émission: {message[:50]}...")
+                                        print(f"[TCP-PATTERN-{line_count}] Pattern rejeté: {pattern_match is not None}")
                                     
-                                    # 🆕 CORRECTION : Appel explicite de la fonction
-                                    nmea_logger.info(f"[TCP] {message}")
-                                    emit_nmea_data("TCP", message.strip())
+                                    if not pattern_match:
+                                        # 🆕 DEBUG : Message accepté
+                                        if DEBUG:
+                                            print(f"[TCP-ACCEPT-{line_count}] ✅ Message accepté: {message[:50]}...")
+                                        
+                                        nmea_logger.info(f"[TCP] {message}")
+                                        emit_nmea_data("TCP", message.strip())
+                                    else:
+                                        if DEBUG:
+                                            print(f"[TCP-REJECT-{line_count}] ❌ Message rejeté par pattern")
+                                else:
+                                    if DEBUG:
+                                        print(f"[TCP-EMPTY-{line_count}] ❌ Message vide après nettoyage")
                             
                             # Protection contre buffer trop grand
                             if len(buffer) > 4096:
