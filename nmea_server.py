@@ -449,34 +449,34 @@ def tcp_listener(stop_event):
                                 line_count += 1
                                 
                                 # 🆕 DEBUG : Ligne avant nettoyage
-                                if DEBUG:
-                                    print(f"[TCP-LINE-{line_count}] Brute: '{line[:80]}...'")
+                                # if DEBUG:
+                                #     print(f"[TCP-LINE-{line_count}] Brute: '{line[:80]}...'")
                                 
                                 message = clean_nmea_data(line)
                                 
                                 # 🆕 DEBUG : Ligne après nettoyage
-                                if DEBUG:
-                                    print(f"[TCP-CLEAN-{line_count}] Nettoyée: '{message[:80]}...'")
+                                # if DEBUG:
+                                #     print(f"[TCP-CLEAN-{line_count}] Nettoyée: '{message[:80]}...'")
                                 
                                 if message:
                                     # 🆕 DEBUG : Test du pattern
                                     pattern_match = REJECTED_PATTERN.match(message)
-                                    if DEBUG:
-                                        print(f"[TCP-PATTERN-{line_count}] Pattern rejeté: {pattern_match is not None}")
+                                    # if DEBUG:
+                                    #     print(f"[TCP-PATTERN-{line_count}] Pattern rejeté: {pattern_match is not None}")
                                     
                                     if not pattern_match:
                                         # 🆕 DEBUG : Message accepté
-                                        if DEBUG:
-                                            print(f"[TCP-ACCEPT-{line_count}] ✅ Message accepté: {message[:50]}...")
+                                        # if DEBUG:
+                                        #     print(f"[TCP-ACCEPT-{line_count}] ✅ Message accepté: {message[:50]}...")
                                         
                                         nmea_logger.info(f"[TCP] {message}")
                                         emit_nmea_data("TCP", message.strip())
                                     else:
-                                        if DEBUG:
-                                            print(f"[TCP-REJECT-{line_count}] ❌ Message rejeté par pattern")
+                                        # if DEBUG:
+                                        #     print(f"[TCP-REJECT-{line_count}] ❌ Message rejeté par pattern")
                                 else:
-                                    if DEBUG:
-                                        print(f"[TCP-EMPTY-{line_count}] ❌ Message vide après nettoyage")
+                                    # if DEBUG:
+                                    #     print(f"[TCP-EMPTY-{line_count}] ❌ Message vide après nettoyage")
                             
                             # Protection contre buffer trop grand
                             if len(buffer) > 4096:
@@ -1662,17 +1662,24 @@ def api_status():
     """API endpoint pour obtenir le statut des connexions"""
     try:
         status = get_current_status()
+        
+        # 🆕 Log pour debug
+        if DEBUG:
+            print(f"[API-STATUS] Retour: {status}")
+            
         return jsonify(status)
     except Exception as e:
-        if DEBUG:
-            print(f"[API] Erreur status: {e}")
+        print(f"[API-STATUS] Erreur: {e}")
         return jsonify({
             'udp_active': False,
             'tcp_active': False,
             'serial_connected': False,
             'connections_active': 0,
+            'udp_enabled': ENABLE_UDP,
+            'tcp_enabled': ENABLE_TCP,
+            'serial_enabled': ENABLE_SERIAL,
             'error': str(e)
-        })
+        }), 500
 
 # Initialiser le gestionnaire Bluetooth
 bluetooth_manager = BluetoothGPSManager()
