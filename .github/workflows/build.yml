@@ -16,22 +16,22 @@ jobs:
       fail-fast: false  # Continue même si un job échoue
       matrix:
         include:
-          - os: ubuntu-latest
-            arch: linux
-            ext: ""
-            separator: ":"
+          # - os: ubuntu-latest
+          #   arch: linux
+          #   ext: ""
+          #   separator: ":"
           - os: windows-latest
             arch: windows
             ext: ".exe"
             separator: ";"
-          - os: macos-latest
-            arch: macos
-            ext: ""
-            separator: ":"
-          - os: macos-13  # Intel Mac
-            arch: macos-intel
-            ext: ""
-            separator: ":"
+          # - os: macos-latest
+          #   arch: macos
+          #   ext: ""
+          #   separator: ":"
+          # - os: macos-13  # Intel Mac
+          #   arch: macos-intel
+          #   ext: ""
+          #   separator: ":"
 
     steps:
     - name: Checkout code
