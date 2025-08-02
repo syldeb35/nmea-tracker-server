@@ -971,61 +971,62 @@ def create_self_signed_cert():
 
 def run_flask_app():
     global http_server
-    print(f"[INFO] Starting Flask server on port {HTTPS_PORT}")
+    main_logger.info(f"Starting Flask server on port {HTTPS_PORT}")
     
     # Paths for certificates - compatible with PyInstaller
     cert_path = get_resource_path('cert.pem')
     key_path = get_resource_path('key.pem')
     
-    print(f"[DEBUG] Looking for certificates:")
-    print(f"[DEBUG]   cert.pem: {cert_path}")
-    print(f"[DEBUG]   key.pem: {key_path}")
+    debug_logger.debug(f"Looking for certificates:")
+    debug_logger.debug(f"  cert.pem: {cert_path}")
+    debug_logger.debug(f"  key.pem: {key_path}")
     
     # Create certificates if they don't exist on Windows
     if IS_WINDOWS and not (os.path.exists(cert_path) and os.path.exists(key_path)):
-        print("[INFO] Certificats SSL manquants sur Windows - tentative de création...")
+        main_logger.info("Certificats SSL manquants sur Windows - tentative de création...")
         create_self_signed_cert()
     
     # Check certificate existence
     if os.path.exists(cert_path) and os.path.exists(key_path):
-        print("[INFO] SSL certificates found - starting HTTPS")
+        main_logger.info("SSL certificates found - starting HTTPS")
         try:
-            # 🆕 Configuration WSGIServer avec suppression de TOUS les logs
+            # Configuration WSGIServer
             http_server = WSGIServer(
                 ('0.0.0.0', HTTPS_PORT), 
                 app, 
                 keyfile=key_path, 
-                certfile=cert_path,
-                log=None,           # Pas de logs d'accès
-                error_log=None      # Pas de logs d'erreur
+                certfile=cert_path
             )
-            
-            # 🆕 Supprimer complètement le handler de logging du serveur
-            http_server.set_spawn(lambda: None)  # Pas de spawn logging
-            
-            print(f"[INFO] HTTPS server active on https://localhost:{HTTPS_PORT}")
-            print(f"[INFO] Web interface: https://localhost:{HTTPS_PORT}/config.html")
-            print("[INFO] Press Ctrl+C to stop the server")
-            
+
+            main_logger.info(f"HTTPS server active on https://localhost:{HTTPS_PORT}")
+            main_logger.info(f"Web interface: https://localhost:{HTTPS_PORT}/config.html")
+            main_logger.info("Press Ctrl+C to stop the server")
+
             if IS_WINDOWS:
-                print("[INFO] Note: Logs SSL masqués - fonctionnement normal")
+                main_logger.info("Alternative HTTP disponible sur http://localhost:{HTTPS_PORT}")
             
-            # 🆕 Capturer et ignorer les exceptions SSL
+            # Serveur simple sans gestion d'exception SSL compliquée
             try:
                 http_server.serve_forever()
+            except KeyboardInterrupt:
+                main_logger.info("Keyboard interrupt received")
+                raise
             except Exception as e:
-                if "ssl" not in str(e).lower():
-                    raise  # Re-lancer seulement les erreurs non-SSL
-            
+                # Laisser passer toutes les erreurs sauf SSL pour diagnostic
+                if "ssl" not in str(e).lower() and "certificate" not in str(e).lower():
+                    error_logger.error(f"HTTPS server error: {e}")
+                    raise
+                # Les erreurs SSL sont ignorées silencieusement
+                
         except KeyboardInterrupt:
-            print("\n[INFO] Keyboard interrupt received")
+            main_logger.info("Keyboard interrupt received")
         except Exception as e:
             if not shutdown_event.is_set() and "ssl" not in str(e).lower():
-                print(f"[ERROR] HTTPS impossible: {e}")
-                print("[INFO] Basculement vers HTTP...")
+                error_logger.error(f"HTTPS impossible: {e}")
+                main_logger.info("Basculement vers HTTP...")
                 run_http_fallback()
     else:
-        print(f"[INFO] SSL certificates missing - starting HTTP")
+        main_logger.info("SSL certificates missing - starting HTTP")
         run_http_fallback()
 
 def run_http_fallback():
