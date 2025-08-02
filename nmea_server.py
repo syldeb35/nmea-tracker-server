@@ -92,9 +92,6 @@ def emit_nmea_data(source, message):
         try:
             # Envoyer SEULEMENT la chaîne NMEA pure (pas d'objet)
             socketio.emit('nmea_data', message)  # Juste la chaîne, pas d'objet
-            
-            if DEBUG:
-                print(f"[WINDY] Envoyé string: {message}")
                 
         except Exception as windy_error:
             if DEBUG:
@@ -108,9 +105,6 @@ def emit_nmea_data(source, message):
                 'timestamp': timestamp,
                 'formatted': formatted_message
             })
-            
-            if DEBUG:
-                print(f"[WEB] Envoyé object pour interface web")
                 
         except Exception as ws_error:
             if DEBUG:
@@ -301,6 +295,9 @@ tcp_stop = threading.Event()
 bluetooth_monitor_stop = threading.Event()
 
 # === MODIFIED FUNCTIONS TO SUPPORT STOPPING ===
+
+# Function to listen to UDP broadcasts in server mode
+# This function listens for UDP broadcasts on a specified port and emits the received NMEA data.
 def udp_listener(stop_event):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, UDP_PORT))

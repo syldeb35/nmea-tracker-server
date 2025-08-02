@@ -131,14 +131,14 @@
           <p id="gpsMessage"></p>
         </div>
         <div class="CalculResult">
-            <p class="defaut" id="date"></p>
-            <p class="defaut" id="heure"></p>
-            <p class="defaut" id="latitude"></p>
-            <p class="defaut" id="longitude"></p>
-            <p class="defaut" id="altitude"></p>
-            <p class="defaut" id="vitesse"></p>
-            <p class="defaut" id="cap"></p>
-            <p class="defaut" id="heading"></p>
+            <p class="defaut" id="date">Date</p>
+            <p class="defaut" id="heure">Hour</p>
+            <p class="defaut" id="latitude">Lat</p>
+            <p class="defaut" id="longitude">Lon</p>
+            <p class="defaut" id="altitude">Alt</p>
+            <p class="defaut" id="vitesse">SOG</p>
+            <p class="defaut" id="cap">COG</p>
+            <p class="defaut" id="heading">Heading</p>
         </div>
         <!-- ✅ Section AIS -->
         <div class="NMEA">
@@ -159,10 +159,15 @@
             <h2>Position sur la carte</h2>
             <div id="map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
         </div>
-
+        <div class="NMEA">
+            <h2>Navires AIS détectés</h2>
+            <div id="vessel-list" style="max-height: 200px; overflow-y: auto;">
+                <p>Aucun navire détecté pour le moment...</p>
+            </div>
+        </div>
         <script>
-            const socket = io();
-
+        
+        const socket = io();
         const trameTypes = new Set();
         const pDate = document.getElementById('date');
         const pHeure = document.getElementById('heure');
@@ -182,7 +187,8 @@
         const pAisType = document.getElementById('ais-type');
         const pAisDestination = document.getElementById('ais-destination');
         const pAisEta = document.getElementById('ais-eta');
-        
+        let aisCache = new Map(); // Cache pour garder les données AIS par MMSI
+
         // ✅ Initialiser la carte Leaflet
         let map = L.map('map').setView([48.0, 1.0], 6);  // Position et zoom par défaut
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -218,16 +224,32 @@
         }
 
         socket.on('nmea_data', function(data) {
-            document.getElementById('gpsMessage').textContent = data;
-        
-            const parts = data.split(',');
-        
+            
+            // ✅ Nettoyage des préfixes de répéteur GPS
+            let cleanData = data;
+            
+            // Supprimer les préfixes courants des répéteurs
+            const repeaterPrefixes = [
+                /^\$[A-Z]{2,4}\$/,  // $XYZ$, $ABCD$, etc.
+                /^\$[0-9]+\$/,      // $123$, etc.
+                /^\$[A-Z0-9]+\$/    // Combinaisons alphanumériques
+            ];
+            
+            for (const prefix of repeaterPrefixes) {
+                cleanData = cleanData.replace(prefix, '$');
+            }
+            
+            // Afficher la trame nettoyée
+            document.getElementById('gpsMessage').textContent = cleanData;
+
+            const parts = cleanData.split(','); // ✅ Utiliser cleanData au lieu of data
+            
             //Liste des trames reçues
             const trameId = parts[0]; // ex: $GPGGA, $GPRMC, etc.
-                if (!trameTypes.has(trameId)) {
-                    trameTypes.add(trameId);
-                    document.getElementById('listeTrames').textContent = Array.from(trameTypes).sort().join(', ');
-                }
+            if (!trameTypes.has(trameId)) {
+                trameTypes.add(trameId);
+                document.getElementById('listeTrames').textContent = Array.from(trameTypes).sort().join(', ');
+            }
             
             // Conversion de la latitude au format NN° NN,NNN' N/S
             function convertDMtoDMS_Lat(value, direction) {
@@ -450,7 +472,7 @@
                 });
             }
                         
-            if (data.substring(3,6) === 'RMC') {
+            if (cleanDatasubstring(3,6) === 'RMC') {
                 clearHighlightClasses(pDate, pHeure, pLat, pLong, pVitesse);
                 pDate.classList.add('rmc');
                 pHeure.classList.add('rmc');
@@ -468,7 +490,7 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 3, 4, 5, 6); // lat, latDir, lon, lonDir
                 }
-                } else if (data.substring(3,6) === 'GGA') {
+            } else if (cleanDatasubstring(3,6) === 'GGA') {
                 clearHighlightClasses(pHeure, pLat, pLong, pAlt);
                 pHeure.classList.add('gga');
                 pLat.classList.add('gga');
@@ -483,7 +505,7 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 2, 3, 4, 5);
                 }
-                } else if (data.substring(3,6) === 'GLL') {
+            } else if (cleanDatasubstring(3,6) === 'GLL') {
                 clearHighlightClasses(pHeure, pLat, pLong);
                 pHeure.classList.add('gll');
                 pLat.classList.add('gll');
@@ -496,18 +518,42 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 1, 2, 3, 4);
                 }
-                } else if (data.substring(3,6) === 'VTG') {
+            } else if (cleanDatasubstring(3,6) === 'VTG') {
                 const parsed = parseVTG(parts);
                 if (parsed) {
                     document.getElementById('cap').textContent = "Route fond : " + parsed.cap;
                 }
-                } else if (data.substring(3,6) === 'HDT') {
+            } else if (cleanDatasubstring(3,6) === 'HDT') {
                 const parsed = parseHDT(parts);
                 if (parsed) {
                     document.getElementById('heading').textContent = "Cap : " + parsed.heading;
                 }
-                } else if (data.substring(1,6) === 'AIVDM' || data.substring(1,6) === 'AIVDO') {
-                // ✅ Traitement AIS
+            } else if (cleanDatasubstring(1,6) === 'AIVDM' || cleanDatasubstring(1,6) === 'AIVDO') {
+                // ✅ Traitement AIS amélioré avec cache
+                const parsed = parseAIS(parts);
+                if (parsed && parsed.mmsi) {
+                    // Récupérer ou créer l'entrée cache pour ce MMSI
+                    let vessel = aisCache.get(parsed.mmsi) || { mmsi: parsed.mmsi };
+                    
+                    // Fusionner les nouvelles données avec les existantes
+                    Object.assign(vessel, parsed);
+                    
+                    // Sauvegarder dans le cache
+                    aisCache.set(parsed.mmsi, vessel);
+                    
+                    // ✅ Afficher les données du navire le plus récent (ou spécifique)
+                    displayAISData(vessel);
+                    
+                    // ✅ Mettre à jour la carte si on a une position
+                    if (vessel.latitude && vessel.longitude) {
+                        updateAISOnMap(vessel);
+                    }
+                };
+            };
+    
+    
+            // ✅ Nouvelle fonction pour afficher les données AIS
+            function displayAISData(vessel) {
                 clearHighlightClasses(pAisMmsi, pAisNom, pAisPosition, pAisVitesse, pAisCap, pAisType, pAisDestination, pAisEta);
                 pAisMmsi.classList.add('ais');
                 pAisNom.classList.add('ais');
@@ -518,72 +564,129 @@
                 pAisDestination.classList.add('ais');
                 pAisEta.classList.add('ais');
                 
-                const parsed = parseAIS(parts);
-                if (parsed) {
-                    pAisMmsi.textContent = "MMSI : " + parsed.mmsi;
-                    
-                    if (parsed.vesselName) {
-                        pAisNom.textContent = "Navire : " + parsed.vesselName;
-                    }
-                    
-                    if (parsed.latitude && parsed.longitude) {
-                        pAisPosition.textContent = `Position : ${parsed.latitude}°, ${parsed.longitude}°`;
-                        
-                        // ✅ Afficher le navire sur la carte
-                        const lat = parseFloat(parsed.latitude);
-                        const lon = parseFloat(parsed.longitude);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            const shipIcon = L.divIcon({
-                                className: 'ship-icon',
-                                html: `<div style="background: #e91e63; color: white; border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: bold;">${parsed.mmsi.slice(-4)}</div>`,
-                                iconSize: [50, 20],
-                                iconAnchor: [25, 10]
-                            });
-                            
-                            // Supprimer les anciens marqueurs de navires pour ce MMSI
-                            map.eachLayer(layer => {
-                                if (layer.options && layer.options.mmsi === parsed.mmsi) {
-                                    map.removeLayer(layer);
-                                }
-                            });
-                            
-                            // Ajouter nouveau marqueur
-                            L.marker([lat, lon], { 
-                                icon: shipIcon, 
-                                mmsi: parsed.mmsi 
-                            }).addTo(map).bindPopup(`
-                                <b>MMSI:</b> ${parsed.mmsi}<br>
-                                ${parsed.vesselName ? `<b>Nom:</b> ${parsed.vesselName}<br>` : ''}
-                                ${parsed.sog ? `<b>Vitesse:</b> ${parsed.sog} nœuds<br>` : ''}
-                                ${parsed.cog ? `<b>Route:</b> ${parsed.cog}°<br>` : ''}
-                                ${parsed.status ? `<b>Statut:</b> ${parsed.status}` : ''}
-                            `);
-                        }
-                    }
-                    
-                    if (parsed.sog) {
-                        pAisVitesse.textContent = "Vitesse AIS : " + parsed.sog + " nœuds (" + (parsed.sog * 1.852).toFixed(1) + " km/h)";
-                    }
-                    
-                    if (parsed.cog) {
-                        pAisCap.textContent = "Route AIS : " + parsed.cog + "°";
-                    }
-                    
-                    if (parsed.shipType) {
-                        pAisType.textContent = "Type : " + parsed.shipType;
-                    }
-                    
-                    if (parsed.destination) {
-                        pAisDestination.textContent = "Destination : " + parsed.destination;
-                    }
-                    
-                    if (parsed.eta) {
-                        pAisEta.textContent = "ETA : " + parsed.eta;
-                    }
+                // Afficher toutes les données disponibles
+                pAisMmsi.textContent = "MMSI : " + vessel.mmsi;
+                
+                if (vessel.vesselName) {
+                    pAisNom.textContent = "Navire : " + vessel.vesselName;
+                    pAisNom.style.display = 'block';
+                } else {
+                    pAisNom.textContent = "Navire : En attente du nom...";
+                    pAisNom.style.display = 'block';
                 }
-                };
+                
+                if (vessel.latitude && vessel.longitude) {
+                    pAisPosition.textContent = `Position : ${vessel.latitude}°, ${vessel.longitude}°`;
+                    pAisPosition.style.display = 'block';
+                } else {
+                    pAisPosition.style.display = 'none';
+                }
+                
+                if (vessel.sog) {
+                    pAisVitesse.textContent = "Vitesse AIS : " + vessel.sog + " nœuds (" + (vessel.sog * 1.852).toFixed(1) + " km/h)";
+                    pAisVitesse.style.display = 'block';
+                } else {
+                    pAisVitesse.style.display = 'none';
+                }
+                
+                if (vessel.cog) {
+                    pAisCap.textContent = "Route AIS : " + vessel.cog + "°";
+                    pAisCap.style.display = 'block';
+                } else {
+                    pAisCap.style.display = 'none';
+                }
+                
+                if (vessel.shipType) {
+                    pAisType.textContent = "Type : " + vessel.shipType;
+                    pAisType.style.display = 'block';
+                } else {
+                    pAisType.style.display = 'none';
+                }
+                
+                if (vessel.destination) {
+                    pAisDestination.textContent = "Destination : " + vessel.destination;
+                    pAisDestination.style.display = 'block';
+                } else {
+                    pAisDestination.style.display = 'none';
+                }
+                
+                if (vessel.eta) {
+                    pAisEta.textContent = "ETA : " + vessel.eta;
+                    pAisEta.style.display = 'block';
+                } else {
+                    pAisEta.style.display = 'none';
+                }
+                // ✅ Mettre à jour la liste directement ici (plus simple)
+                updateVesselList();
+            }
+
+            // ✅ Nouvelle fonction pour mettre à jour la carte AIS
+            function updateAISOnMap(vessel) {
+                const lat = parseFloat(vessel.latitude);
+                const lon = parseFloat(vessel.longitude);
+                
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const shipIcon = L.divIcon({
+                        className: 'ship-icon',
+                        html: `<div style="background: #e91e63; color: white; border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: bold;">${vessel.mmsi.slice(-4)}</div>`,
+                        iconSize: [50, 20],
+                        iconAnchor: [25, 10]
+                    });
+                    
+                    // Supprimer les anciens marqueurs de navires pour ce MMSI
+                    map.eachLayer(layer => {
+                        if (layer.options && layer.options.mmsi === vessel.mmsi) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    // Ajouter nouveau marqueur avec toutes les infos disponibles
+                    L.marker([lat, lon], { 
+                        icon: shipIcon, 
+                        mmsi: vessel.mmsi 
+                    }).addTo(map).bindPopup(`
+                        <b>MMSI:</b> ${vessel.mmsi}<br>
+                        ${vessel.vesselName ? `<b>Nom:</b> ${vessel.vesselName}<br>` : '<b>Nom:</b> En attente...<br>'}
+                        ${vessel.sog ? `<b>Vitesse:</b> ${vessel.sog} nœuds<br>` : ''}
+                        ${vessel.cog ? `<b>Route:</b> ${vessel.cog}°<br>` : ''}
+                        ${vessel.heading && vessel.heading !== "N/A" ? `<b>Cap:</b> ${vessel.heading}°<br>` : ''}
+                        ${vessel.status ? `<b>Statut:</b> ${vessel.status}<br>` : ''}
+                        ${vessel.shipType ? `<b>Type:</b> ${vessel.shipType}<br>` : ''}
+                        ${vessel.destination ? `<b>Destination:</b> ${vessel.destination}<br>` : ''}
+                        ${vessel.eta ? `<b>ETA:</b> ${vessel.eta}` : ''}
+                    `);
+                }
+            }
+            
+
+            //fonction pour mettre à jour la liste des navires
+
+            function updateVesselList() {
+                const vesselList = document.getElementById('vessel-list');
+                if (aisCache.size === 0) {
+                    vesselList.innerHTML = '<p>Aucun navire détecté pour le moment...</p>';
+                    return;
+                }
+                
+                let html = '';
+                aisCache.forEach((vessel, mmsi) => {
+                    const name = vessel.vesselName || 'Nom inconnu';
+                    const position = vessel.latitude && vessel.longitude ? 
+                        `${vessel.latitude}°, ${vessel.longitude}°` : 'Position inconnue';
+                    const lastUpdate = new Date().toLocaleTimeString();
+                    
+                    html += `
+                        <div style="border: 1px solid #333; margin: 5px 0; padding: 10px; border-radius: 5px; cursor: pointer;" 
+                            onclick="displayAISData(aisCache.get('${mmsi}'))">
+                            <strong>${name}</strong> (MMSI: ${mmsi})<br>
+                            <small>${position} - Mis à jour: ${lastUpdate}</small>
+                        </div>
+                    `;
+                });
+                
+                vesselList.innerHTML = html;
+            }
         });
     </script>
   </body>
 </html>
-
