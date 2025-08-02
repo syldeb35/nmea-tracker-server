@@ -143,7 +143,9 @@ print(f"[INFO] Default serial port: {SERIAL_PORT}")
 if IS_WINDOWS:
     import logging
     # Suppress SSL errors and gevent SSL warnings
+    logging.getLogger('gevent').setLevel(logging.CRITICAL)
     logging.getLogger('gevent.ssl').setLevel(logging.CRITICAL)
+    logging.getLogger('gevent.baseserver').setLevel(logging.CRITICAL)
     logging.getLogger('ssl').setLevel(logging.CRITICAL)
     # Suppress certificate verification warnings if urllib3 is available
     try:
@@ -318,26 +320,41 @@ def clean_nmea_data(data):
 # Function to listen to UDP broadcasts in server mode
 # This function listens for UDP broadcasts on a specified port and emits the received NMEA data.
 def udp_listener(stop_event):
+    # 🆕 Forcer l'IP de binding
+    bind_ip = "0.0.0.0"  # Forcer pour Windows
+    
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
-    print(f"[UDP] Listening on {UDP_IP}:{UDP_PORT}")
-    sock.settimeout(1.0)
-    while not stop_event.is_set() and not shutdown_event.is_set():
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    
+    try:
+        sock.bind((bind_ip, UDP_PORT))  # Utiliser bind_ip au lieu de UDP_IP
+        print(f"[UDP] Listening on {bind_ip}:{UDP_PORT}")
+        sock.settimeout(1.0)
+        
+        while not stop_event.is_set() and not shutdown_event.is_set():
+            try:
+                data, addr = sock.recvfrom(1024)
+                message = clean_nmea_data(data.decode('utf-8', errors='ignore'))
+                if not REJECTED_PATTERN.match(message):
+                    nmea_logger.info(f"[UDP] {message}")
+                    if message and message.strip():
+                        emit_nmea_data("UDP", message.strip())
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if not shutdown_event.is_set():
+                    print(f"[UDP] Error: {e}")
+                break
+                
+    except Exception as e:
+        print(f"[UDP] Bind error on {bind_ip}:{UDP_PORT} - {e}")
+        return
+    finally:
         try:
-            data, addr = sock.recvfrom(1024)
-            # Nettoyer les données NMEA avant émission
-            message = clean_nmea_data(data.decode('utf-8', errors='ignore'))
-            if not REJECTED_PATTERN.match(message):
-                # nmea_logger.info(f"[UDP] {message}")
-                if message and message.strip():
-                    emit_nmea_data("UDP", message.strip())
-        except socket.timeout:
-            continue
-        except Exception as e:
-            if not shutdown_event.is_set():
-                print(f"[UDP] Error: {e}")
-            break
-    sock.close()
+            sock.close()
+        except:
+            pass
+            
     print("[UDP] Stopped.")
 
 # Function to listen to UDP broadcasts in client mode
@@ -788,27 +805,6 @@ def manage_threads():
     print(f"  - UDP: {'✅ Actif' if udp_thread and udp_thread.is_alive() else '❌ Inactif'}")
     print(f"  - TCP: {'✅ Actif' if tcp_thread and tcp_thread.is_alive() else '❌ Inactif'}")
     print(f"  - Serial: {'✅ Actif' if serial_thread and serial_thread.is_alive() else '❌ Inactif'}")
-            
-    # UDP
-    if ENABLE_UDP:
-        if udp_thread is None or not udp_thread.is_alive():
-            udp_stop.clear()
-            udp_thread = threading.Thread(target=udp_listener, args=(udp_stop,), daemon=True)
-            udp_thread.start()
-    else:
-        if udp_thread and udp_thread.is_alive():
-            udp_stop.set()
-            udp_thread = None
-    # TCP
-    if ENABLE_TCP:
-        if tcp_thread is None or not tcp_thread.is_alive():
-            tcp_stop.clear()
-            tcp_thread = threading.Thread(target=tcp_listener, args=(tcp_stop,), daemon=True)
-            tcp_thread.start()
-    else:
-        if tcp_thread and tcp_thread.is_alive():
-            tcp_stop.set()
-            tcp_thread = None
 
 def create_self_signed_cert():
     """Create a self-signed certificate for HTTPS on Windows if needed"""
@@ -1441,6 +1437,41 @@ class BluetoothGPSManager:
         
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()
+    
+class ConfigWatcher:
+    def __init__(self, config_file=".env", callback=None):
+        self.config_file = config_file
+        self.callback = callback
+        self.last_modified = 0
+        self.running = True
+        self.reload_debounce = 0  # 🆕 Debouncing
+        
+    def start_watching(self):
+        """Start watching config file for changes"""
+        def watch():
+            while self.running:
+                try:
+                    if os.path.exists(self.config_file):
+                        current_modified = os.path.getmtime(self.config_file)
+                        current_time = time.time()
+                        
+                        if (current_modified != self.last_modified and 
+                            current_time - self.reload_debounce > 2):  # 🆕 2 secondes minimum
+                            
+                            self.last_modified = current_modified
+                            self.reload_debounce = current_time
+                            
+                            if self.callback:
+                                print(f"[CONFIG] Configuration file changed, reloading...")
+                                self.callback()
+                    time.sleep(1)  # Check every second
+                except Exception as e:
+                    print(f"[CONFIG] Error watching config: {e}")
+                    time.sleep(5)
+                    
+        thread = threading.Thread(target=watch, daemon=True)
+        thread.start()
+
 
 class ConfigWatcher:
     def __init__(self, config_file=".env", callback=None):
