@@ -88,7 +88,10 @@ def emit_nmea_data(source, message):
         if len(last_nmea_data) > max_nmea_buffer:
             last_nmea_data.pop(0)
         
-        # ÉMETTRE VERS WINDY PLUGIN - SEULEMENT LA CHAÎNE NMEA PURE
+        # 🆕 DEBUG pour voir les émissions
+        if DEBUG:
+            print(f"[EMIT-DEBUG] {source}: {message[:50]}...")
+        # Émettre pour Windy Plugin (chaîne NMEA pure)
         try:
             # Envoyer SEULEMENT la chaîne NMEA pure (pas d'objet)
             socketio.emit('nmea_data', message)  # Juste la chaîne, pas d'objet
@@ -97,7 +100,7 @@ def emit_nmea_data(source, message):
             if DEBUG:
                 print(f"[WINDY] Erreur émission: {windy_error}")
         
-        # Émettre pour l'interface web de configuration (avec objet) avec nom différent
+        # Émettre pour l'interface web de configuration (avec objet) avec nom différent   
         try:
             socketio.emit('nmea_data_web', {
                 'source': source,
@@ -397,8 +400,11 @@ def udp_client_listener(target_ip, target_port, stop_event):
     print("[UDP-CLIENT] Stopped.")
 
 def tcp_listener(stop_event):
-    # 🆕 CORRECTION WINDOWS : forcer 0.0.0.0 pour le binding
-    bind_ip = "0.0.0.0"  # Toujours utiliser 0.0.0.0 pour le binding
+    """Écoute TCP en mode serveur avec gestion correcte des variables"""
+    global TCP_PORT  # 🆕 Déclarer explicitement la variable globale
+    
+    # Forcer l'IP de binding pour Windows
+    bind_ip = "0.0.0.0"
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -416,7 +422,7 @@ def tcp_listener(stop_event):
                 
                 with conn:
                     conn.settimeout(1.0)
-                    buffer = ""  # 🆕 Buffer pour reconstituer les lignes
+                    buffer = ""
                     
                     while not stop_event.is_set() and not shutdown_event.is_set():
                         try:
@@ -425,20 +431,24 @@ def tcp_listener(stop_event):
                                 print(f"[TCP] Connection closed by {addr}")
                                 break
                             
-                            # 🆕 Ajouter au buffer et traiter les lignes complètes
+                            # Ajouter au buffer et traiter les lignes complètes
                             buffer += data.decode('utf-8', errors='ignore')
                             
-                            # 🆕 Traiter toutes les lignes complètes dans le buffer
+                            # Traiter toutes les lignes complètes dans le buffer
                             while '\n' in buffer:
                                 line, buffer = buffer.split('\n', 1)
                                 message = clean_nmea_data(line)
                                 
                                 if message and not REJECTED_PATTERN.match(message):
+                                    # 🆕 LOG pour debug
+                                    if DEBUG:
+                                        print(f"[TCP-DEBUG] Émission: {message[:50]}...")
+                                    
+                                    # 🆕 CORRECTION : Appel explicite de la fonction
                                     nmea_logger.info(f"[TCP] {message}")
-                                    if message and message.strip():
-                                        emit_nmea_data("TCP", message.strip())
+                                    emit_nmea_data("TCP", message.strip())
                             
-                            # 🆕 Si le buffer devient trop grand, le vider (protection)
+                            # Protection contre buffer trop grand
                             if len(buffer) > 4096:
                                 if DEBUG:
                                     print("[TCP] Buffer trop grand, vidage")
@@ -472,7 +482,6 @@ def tcp_listener(stop_event):
             pass
             
     print("[TCP] Stopped.")
-
 
 def tcp_client_listener(target_ip, target_port, stop_event):
     """Connexion TCP en mode client vers un GPS"""
