@@ -91,6 +91,7 @@ def emit_nmea_data(source, message):
         # 🆕 DEBUG pour voir les émissions
         if DEBUG:
             print(f"[EMIT-DEBUG] {source}: {message[:50]}...")
+            
         # Émettre pour Windy Plugin (chaîne NMEA pure)
         try:
             # Envoyer SEULEMENT la chaîne NMEA pure (pas d'objet)
@@ -558,7 +559,7 @@ def tcp_client_listener(target_ip, target_port, stop_event):
                     
         except socket.timeout:
             print(f"[TCP-CLIENT] Timeout connexion à {target_ip}:{target_port}")
-        except ConnectionRefused:
+        except ConnectionRefusedError:
             if DEBUG:
                 print(f"[TCP-CLIENT] Connexion refusée par {target_ip}:{target_port}")
         except Exception as e:
@@ -1067,7 +1068,6 @@ def test_ports_separately():
 
 def main_thread():
     global SERIAL_PORT, ENABLE_SERIAL, serial_thread
-    print("[INFO] Starting NMEA server...")
     print(f"[INFO] Configuration:")
     print(f"  - Serial: {ENABLE_SERIAL} (Port: {SERIAL_PORT})")
     print(f"  - UDP: {ENABLE_UDP} (Port: {UDP_PORT})")
@@ -1741,23 +1741,57 @@ def get_current_status():
     """Retourne le statut actuel de toutes les connexions avec debug"""
     global udp_thread, tcp_thread, serial_thread, bluetooth_manager
     
+    # 🆕 Vérification sécurisée des threads
+    try:
+        udp_active = (udp_thread is not None and 
+                     hasattr(udp_thread, 'is_alive') and 
+                     udp_thread.is_alive() and 
+                     ENABLE_UDP)
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification UDP: {e}")
+        udp_active = False
+    
+    try:
+        tcp_active = (tcp_thread is not None and 
+                     hasattr(tcp_thread, 'is_alive') and 
+                     tcp_thread.is_alive() and 
+                     ENABLE_TCP)
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification TCP: {e}")
+        tcp_active = False
+    
+    try:
+        # Vérifier le statut serial/bluetooth
+        serial_connected = False
+        if ENABLE_SERIAL:
+            if serial_thread is not None and hasattr(serial_thread, 'is_alive') and serial_thread.is_alive():
+                serial_connected = True
+            elif IS_LINUX and bluetooth_manager is not None:
+                try:
+                    serial_connected = bluetooth_manager.check_connection_status()
+                except Exception as bt_error:
+                    if DEBUG:
+                        print(f"[STATUS-DEBUG] Erreur Bluetooth: {bt_error}")
+                    serial_connected = False
+    except Exception as e:
+        if DEBUG:
+            print(f"[STATUS-DEBUG] Erreur vérification Serial: {e}")
+        serial_connected = False
+    
     # Debug détaillé
-    udp_active = udp_thread is not None and udp_thread.is_alive()
-    tcp_active = tcp_thread is not None and tcp_thread.is_alive()
-    
     if DEBUG:
-        print(f"[STATUS-DEBUG] UDP thread: {udp_thread}, alive: {udp_thread.is_alive() if udp_thread else 'N/A'}")
-        print(f"[STATUS-DEBUG] TCP thread: {tcp_thread}, alive: {tcp_thread.is_alive() if tcp_thread else 'N/A'}")
-    
-    # Vérifier le statut serial/bluetooth
-    serial_connected = False
-    if serial_thread is not None and serial_thread.is_alive():
-        serial_connected = True
-    elif bluetooth_manager is not None:
-        try:
-            serial_connected = bluetooth_manager.check_connection_status()
-        except:
-            serial_connected = False
+        print(f"[STATUS-DEBUG] ENABLE_UDP: {ENABLE_UDP}, UDP thread exists: {udp_thread is not None}")
+        print(f"[STATUS-DEBUG] ENABLE_TCP: {ENABLE_TCP}, TCP thread exists: {tcp_thread is not None}")
+        print(f"[STATUS-DEBUG] ENABLE_SERIAL: {ENABLE_SERIAL}, Serial thread exists: {serial_thread is not None}")
+        
+        if udp_thread:
+            print(f"[STATUS-DEBUG] UDP thread alive: {udp_thread.is_alive()}")
+        if tcp_thread:
+            print(f"[STATUS-DEBUG] TCP thread alive: {tcp_thread.is_alive()}")
+        if serial_thread:
+            print(f"[STATUS-DEBUG] Serial thread alive: {serial_thread.is_alive()}")
     
     # Compter les connexions actives
     connections_active = sum([udp_active, tcp_active, serial_connected])
@@ -1769,11 +1803,15 @@ def get_current_status():
         'connections_active': connections_active,
         'timestamp': time.strftime("%H:%M:%S"),
         'udp_port': UDP_PORT,
-        'tcp_port': TCP_PORT
+        'tcp_port': TCP_PORT,
+        # 🆕 Ajout des informations de configuration
+        'udp_enabled': ENABLE_UDP,
+        'tcp_enabled': ENABLE_TCP,
+        'serial_enabled': ENABLE_SERIAL
     }
     
     if DEBUG:
-        print(f"[STATUS] UDP: {udp_active}(port {UDP_PORT}), TCP: {tcp_active}(port {TCP_PORT}), Serial: {serial_connected}")
+        print(f"[STATUS] Final status - UDP: {udp_active}, TCP: {tcp_active}, Serial: {serial_connected}")
     
     return status
 
