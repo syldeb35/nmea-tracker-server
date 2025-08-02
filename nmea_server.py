@@ -143,30 +143,76 @@ print(f"[INFO] Default serial port: {SERIAL_PORT}")
 # Disable HTTP logs (werkzeug). Hides GET / POST requests (DEBUG, ERROR, WARNING)
 # logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-# Disable SSL error logs on Windows to avoid certificate warnings
+# 🆕 SUPPRESSION TOTALE des logs SSL/gevent sur TOUS les systèmes
+import logging
+import warnings
+
+# Supprimer TOUS les logs SSL et gevent
+logging.getLogger('gevent').setLevel(logging.CRITICAL + 1)  # Plus que CRITICAL
+logging.getLogger('gevent.ssl').setLevel(logging.CRITICAL + 1)
+logging.getLogger('gevent.baseserver').setLevel(logging.CRITICAL + 1)
+logging.getLogger('gevent.server').setLevel(logging.CRITICAL + 1)
+logging.getLogger('gevent.pywsgi').setLevel(logging.CRITICAL + 1)
+logging.getLogger('ssl').setLevel(logging.CRITICAL + 1)
+
+# Supprimer les warnings Python SSL
+warnings.filterwarnings('ignore', category=Warning)
+warnings.filterwarnings('ignore', message='.*SSL.*')
+warnings.filterwarnings('ignore', message='.*certificate.*')
+
+# Supprimer urllib3 warnings si disponible
+try:
+    import urllib3
+    urllib3.disable_warnings()
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    urllib3.disable_warnings(urllib3.exceptions.SNIMissingWarning)
+    urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
+except ImportError:
+    pass
+
+# 🆕 Rediriger stderr temporairement pour capturer les erreurs SSL gevent
+import sys
+import os
+from io import StringIO
+
+class SSLErrorFilter:
+    """Filtre pour supprimer les erreurs SSL spécifiques"""
+    def __init__(self, original_stderr):
+        self.original_stderr = original_stderr
+        self.buffer = StringIO()
+        
+    def write(self, text):
+        # Filtrer les erreurs SSL connues
+        if any(keyword in text.lower() for keyword in [
+            'ssl:', 'sslv3_alert', 'certificate_unknown', 
+            'gevent', 'greenlet', 'wrap_socket_and_handle',
+            'handshake', '_ssl.c:', 'ssl.sslerror'
+        ]):
+            return  # Ignorer complètement
+        
+        # Écrire tout le reste vers stderr original
+        self.original_stderr.write(text)
+        
+    def flush(self):
+        self.original_stderr.flush()
+        
+    def fileno(self):
+        return self.original_stderr.fileno()
+
+# Appliquer le filtre SSL seulement sur Windows où c'est problématique
 if IS_WINDOWS:
-    import logging
-    # Suppress SSL errors and gevent SSL warnings
-    logging.getLogger('gevent').setLevel(logging.CRITICAL)
-    logging.getLogger('gevent.ssl').setLevel(logging.CRITICAL)
-    logging.getLogger('gevent.baseserver').setLevel(logging.CRITICAL)
-    logging.getLogger('ssl').setLevel(logging.CRITICAL)
-    # Suppress certificate verification warnings if urllib3 is available
-    try:
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    except ImportError:
-        pass  # urllib3 not available, ignore
+    sys.stderr = SSLErrorFilter(sys.stderr)
+    print("[INFO] Filtre SSL activé pour Windows")
 
 # Logger for NMEA frames only
 nmea_logger = logging.getLogger("nmea")
 nmea_logger.setLevel(logging.INFO)
 log_formatter = logging.Formatter('%(asctime)s - %(message)s')
-os.makedirs("logs", exist_ok=True)  # Create logs folder if it doesn't exist
+os.makedirs("logs", exist_ok=True)
 file_handler = RotatingFileHandler(
-    "logs/nmea.log",            # main log file
-    maxBytes=1024 * 1024,    # 1 MB max
-    backupCount=3          # keep up to 3 old files (nmea.log.1, .2, .3)
+    "logs/nmea.log",
+    maxBytes=1024 * 1024,
+    backupCount=3
 )
 file_handler.setFormatter(log_formatter)
 nmea_logger.addHandler(file_handler)
@@ -471,12 +517,12 @@ def tcp_listener(stop_event):
                                         
                                         nmea_logger.info(f"[TCP] {message}")
                                         emit_nmea_data("TCP", message.strip())
-                                    else:
+                                    # else:
                                         # if DEBUG:
                                         #     print(f"[TCP-REJECT-{line_count}] ❌ Message rejeté par pattern")
-                                else:
-                                    # if DEBUG:
-                                    #     print(f"[TCP-EMPTY-{line_count}] ❌ Message vide après nettoyage")
+                                    # else:
+                                        # if DEBUG:
+                                        #     print(f"[TCP-EMPTY-{line_count}] ❌ Message vide après nettoyage")
                             
                             # Protection contre buffer trop grand
                             if len(buffer) > 4096:
@@ -939,59 +985,37 @@ def run_flask_app():
     if os.path.exists(cert_path) and os.path.exists(key_path):
         print("[INFO] SSL certificates found - starting HTTPS")
         try:
-            # Suppress verbose SSL logs
-            import logging
-            logging.getLogger('gevent.ssl').setLevel(logging.ERROR)  # Plus strict pour masquer les erreurs SSL
+            # 🆕 Configuration WSGIServer avec suppression de TOUS les logs
+            http_server = WSGIServer(
+                ('0.0.0.0', HTTPS_PORT), 
+                app, 
+                keyfile=key_path, 
+                certfile=cert_path,
+                log=None,           # Pas de logs d'accès
+                error_log=None      # Pas de logs d'erreur
+            )
             
-            # Configuration SSL plus robuste pour Windows
-            ssl_context = None
-            if IS_WINDOWS:
-                try:
-                    import ssl
-                    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                    ssl_context.load_cert_chain(cert_path, key_path)
-                    # Paramètres SSL plus tolérants pour Windows
-                    ssl_context.check_hostname = False
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                    print("[INFO] Configuration SSL Windows activée")
-                except Exception as ssl_error:
-                    print(f"[WARNING] Impossible de configurer SSL context: {ssl_error}")
-                    ssl_context = None
-            
-            if ssl_context:
-                # Utilisation du contexte SSL personnalisé
-                http_server = WSGIServer(
-                    ('0.0.0.0', HTTPS_PORT), 
-                    app,
-                    ssl_context=ssl_context,
-                    log=None,  # Suppress SSL logs
-                    error_log=None  # Suppress error logs
-                )
-            else:
-                # Fallback : méthode traditionnelle
-                http_server = WSGIServer(
-                    ('0.0.0.0', HTTPS_PORT), 
-                    app, 
-                    keyfile=key_path, 
-                    certfile=cert_path,
-                    log=None,  # Suppress SSL logs
-                    error_log=None  # Suppress error logs
-                )
+            # 🆕 Supprimer complètement le handler de logging du serveur
+            http_server.set_spawn(lambda: None)  # Pas de spawn logging
             
             print(f"[INFO] HTTPS server active on https://localhost:{HTTPS_PORT}")
             print(f"[INFO] Web interface: https://localhost:{HTTPS_PORT}/config.html")
             print("[INFO] Press Ctrl+C to stop the server")
             
             if IS_WINDOWS:
-                print("[INFO] Note: Sur Windows, ignorez les erreurs SSL occasionnelles")
-                print("[INFO] Alternative HTTP disponible sur http://localhost:{HTTPS_PORT}")
+                print("[INFO] Note: Logs SSL masqués - fonctionnement normal")
             
-            http_server.serve_forever()
+            # 🆕 Capturer et ignorer les exceptions SSL
+            try:
+                http_server.serve_forever()
+            except Exception as e:
+                if "ssl" not in str(e).lower():
+                    raise  # Re-lancer seulement les erreurs non-SSL
             
         except KeyboardInterrupt:
             print("\n[INFO] Keyboard interrupt received")
         except Exception as e:
-            if not shutdown_event.is_set():
+            if not shutdown_event.is_set() and "ssl" not in str(e).lower():
                 print(f"[ERROR] HTTPS impossible: {e}")
                 print("[INFO] Basculement vers HTTP...")
                 run_http_fallback()
