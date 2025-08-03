@@ -5,7 +5,32 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="icon" type="image/svg+xml" href="favicon.svg">
-        <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMTk3NmQyO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMjU2YTM7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNSIgZmlsbD0idXJsKCNncmFkMSkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHBhdGggZD0iTTE2IDYgTDIwIDE0IEwxNiAxMiBMMTIgMTQgWiIgZmlsbD0iI2ZmZiIvPgogIDxwYXRoIGQ9Ik04IDE4IEwyNCAxOCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMCAyMiBMMjIgMjIiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMjYiIHI9IjEuNSIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4K">
+        <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmF            } else if (cleanData.substring(            } else if (cleanData.substring(3,6) === 'VTG') {
+                const parsed = parseVTG(parts);
+                if (parsed) {
+                    document.getElementById('cap').textContent = "Route fond : " + parsed.cap;
+                }
+            } else if (cleanData.substring(3,6) === 'HDT') {
+                const parsed = parseHDT(parts);
+                if (parsed) {
+                    document.getElementById('heading').textContent = "Cap : " + parsed.heading;
+                }
+            } else if (cleanData.substring(1,6) === 'AIVDM' || cleanData.substring(1,6) === 'AIVDO') {GA') {
+                clearHighlightClasses(pHeure, pLat, pLong, pAlt);
+                pHeure.classList.add('gga');
+                pLat.classList.add('gga');
+                pLong.classList.add('gga');
+                pAlt.classList.add('gga');
+                const parsed = parseGGA(parts);
+                if (parsed) {
+                    pHeure.innerHTML = "Heure UTC : " + parsed.time;
+                    pLat.innerHTML = "Latitude : " + parsed.lat;
+                    pLong.innerHTML = "Longitude : " + parsed.lon;
+                    pAlt.innerHTML = "Altitude : " + parsed.alt;
+                    // ✅ Mise à jour carte
+                    updateMapFromParts(parts, 2, 3, 4, 5);
+                }
+            } else if (cleanData.substring(3,6) === 'GLL') {hZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMTk3NmQyO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMjU2YTM7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNSIgZmlsbD0idXJsKCNncmFkMSkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHBhdGggZD0iTTE2IDYgTDIwIDE0IEwxNiAxMiBMMTIgMTQgWiIgZmlsbD0iI2ZmZiIvPgogIDxwYXRoIGQ9Ik04IDE4IEwyNCAxOCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMCAyMiBMMjIgMjIiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMjYiIHI9IjEuNSIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4K">
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
         <style>
         :root {
@@ -144,14 +169,14 @@
         <div class="NMEA">
             <h2>Données AIS (Navires à proximité)</h2>
             <div class="CalculResult">
-                <p class="defaut" id="ais-mmsi"></p>
-                <p class="defaut" id="ais-nom"></p>
-                <p class="defaut" id="ais-position"></p>
-                <p class="defaut" id="ais-vitesse"></p>
-                <p class="defaut" id="ais-cap"></p>
-                <p class="defaut" id="ais-type"></p>
-                <p class="defaut" id="ais-destination"></p>
-                <p class="defaut" id="ais-eta"></p>
+                <p class="defaut" id="ais-mmsi">MMSI : En attente...</p>
+                <p class="defaut" id="ais-nom">Navire : En attente...</p>
+                <p class="defaut" id="ais-position">Position : En attente...</p>
+                <p class="defaut" id="ais-vitesse">Vitesse AIS : En attente...</p>
+                <p class="defaut" id="ais-cap">Route AIS : En attente...</p>
+                <p class="defaut" id="ais-type">Type : En attente...</p>
+                <p class="defaut" id="ais-destination">Destination : En attente...</p>
+                <p class="defaut" id="ais-eta">ETA : En attente...</p>
             </div>
         </div>
         <!-- ✅ Carte Leaflet -->
@@ -223,6 +248,13 @@
             map.setView(latlng, map.getZoom());
         }
 
+        const aisFragmentCache = new Map(); // Cache pour les fragments AIS
+        
+        // Nettoyer le cache des fragments AIS toutes les 30 secondes
+        setInterval(() => {
+            aisFragmentCache.clear();
+        }, 90000);
+        
         socket.on('nmea_data', function(data) {
             
             // ✅ Nettoyage des préfixes de répéteur GPS
@@ -269,8 +301,8 @@
             // RMC Parser  $GPRMC,193715,A,4805.81126,N,00142.52088,W,000.0,,020725,000.8,E,A*20
             function parseRMC(parts) {
                 if (parts[2] !== 'A') return null;
-                heure = parts[1].match(/.{1,2}/g);
-                jour = parts[9].match(/.{1,2}/g);
+                const heure = parts[1].match(/.{1,2}/g);
+                const jour = parts[9].match(/.{1,2}/g);
                 return {
                     time: heure[0] + `h ` + heure[1] + `m ` + heure[2] + `s `,
                     lat: convertDMtoDMS_Lat(parseFloat(parts[3]), parts[4]),
@@ -282,7 +314,7 @@
             // GGA Parser
             function parseGGA(parts) {
                 if (parts[6] === '0') return null;
-                heure = parts[1].match(/.{1,2}/g);
+                const heure = parts[1].match(/.{1,2}/g);
                 return {
                     time: heure[0] + `h ` + heure[1] + `m ` + heure[2] + `s `,
                     lat: convertDMtoDMS_Lat(parseFloat(parts[2]), parts[3]),
@@ -292,7 +324,7 @@
             }
             //GLL Parser 
             function parseGLL(parts) {
-                heure = parts[5].match(/.{1,2}/g);
+                const heure = parts[5].match(/.{1,2}/g);
                 return {
                     lat: convertDMtoDMS_Lat(parseFloat(parts[1]), parts[2]),
                     lon: convertDMtoDMS_Lon(parseFloat(parts[3]), parts[4]),
@@ -344,13 +376,63 @@
                 return binaryData;
             }
             
-            // Parser principal AIS
+            // Parser principal AIS avec gestion des fragments
             function parseAIS(parts) {
                 try {
-                    // Structure trame AIS: !AIVDM,1,1,,B,payload,0*checksum
+                    // Structure trame AIS: !AIVDM,totalFragments,currentFragment,sequenceId,channel,payload,fillBits*checksum
                     if (parts.length < 6) return null;
                     
+                    const totalFragments = parseInt(parts[1]);
+                    const currentFragment = parseInt(parts[2]);
+                    const sequenceId = parts[3];
                     const payload = parts[5];
+                    
+                    // Si c'est un message multi-fragments
+                    if (totalFragments > 1) {
+                        // Créer une clé unique pour ce message
+                        const fragmentKey = `${sequenceId}_${totalFragments}`;
+                        
+                        // Récupérer ou créer l'entrée pour ce groupe de fragments
+                        let fragmentData = aisFragmentCache.get(fragmentKey) || {
+                            totalFragments: totalFragments,
+                            receivedFragments: new Map(),
+                            payload: ''
+                        };
+                        
+                        // Stocker ce fragment
+                        fragmentData.receivedFragments.set(currentFragment, payload);
+                        
+                        // Vérifier si on a tous les fragments
+                        if (fragmentData.receivedFragments.size === totalFragments) {
+                            // Reconstituer le payload complet dans l'ordre
+                            let completePayload = '';
+                            for (let i = 1; i <= totalFragments; i++) {
+                                completePayload += fragmentData.receivedFragments.get(i) || '';
+                            }
+                            
+                            // Nettoyer le cache
+                            aisFragmentCache.delete(fragmentKey);
+                            
+                            // Traiter le message complet
+                            return parseCompleteAISMessage(completePayload);
+                        } else {
+                            // Sauvegarder les fragments en attente
+                            aisFragmentCache.set(fragmentKey, fragmentData);
+                            return null; // Pas encore complet
+                        }
+                    } else {
+                        // Message en un seul fragment
+                        return parseCompleteAISMessage(payload);
+                    }
+                } catch (error) {
+                    console.log("Erreur parsing AIS fragments:", error);
+                    return null;
+                }
+            }
+            
+            // Fonction pour parser un message AIS complet
+            function parseCompleteAISMessage(payload) {
+                try {
                     const binaryData = decodeAisPayload(payload);
                     
                     if (binaryData.length < 8) return null;
@@ -386,13 +468,15 @@
                         result.cog = cog.toFixed(1);
                         result.heading = heading !== 511 ? heading.toString() : "N/A";
                         result.status = getNavStatus(navStatus);
+                        
+                        console.log(`AIS Position (Type ${messageType}): MMSI ${mmsi}, ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
                     }
                     
-                    // Type 5: Static and Voyage Related Data
+                    // Type 5: Static and Voyage Related Data (messages complets maintenant!)
                     if (messageType === 5 && binaryData.length >= 424) {
-                        const vesselName = decode6BitAscii(binaryData, 112, 120).replace(/@/g, '');
+                        const vesselName = decode6BitAscii(binaryData, 112, 120).replace(/@/g, '').trim();
                         const shipType = parseInt(binaryData.substr(232, 8), 2);
-                        const destination = decode6BitAscii(binaryData, 302, 120).replace(/@/g, '');
+                        const destination = decode6BitAscii(binaryData, 302, 120).replace(/@/g, '').trim();
                         const etaMonth = parseInt(binaryData.substr(274, 4), 2);
                         const etaDay = parseInt(binaryData.substr(278, 5), 2);
                         const etaHour = parseInt(binaryData.substr(283, 5), 2);
@@ -404,11 +488,13 @@
                         if (etaMonth > 0 && etaDay > 0) {
                             result.eta = `${etaDay}/${etaMonth} ${etaHour}:${etaMinute.toString().padStart(2, '0')}`;
                         }
+                        
+                        console.log(`AIS Static Data (Type 5): MMSI ${mmsi}, Nom: "${vesselName}", Type: ${getShipType(shipType)}, Destination: "${destination}"`);
                     }
                     
                     return result;
                 } catch (error) {
-                    console.log("Erreur parsing AIS:", error);
+                    console.log("Erreur parsing message AIS complet:", error);
                     return null;
                 }
             }
@@ -472,7 +558,7 @@
                 });
             }
                         
-            if (cleanDatasubstring(3,6) === 'RMC') {
+            if (cleanData.substring(3,6) === 'RMC') {
                 clearHighlightClasses(pDate, pHeure, pLat, pLong, pVitesse);
                 pDate.classList.add('rmc');
                 pHeure.classList.add('rmc');
@@ -490,7 +576,7 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 3, 4, 5, 6); // lat, latDir, lon, lonDir
                 }
-            } else if (cleanDatasubstring(3,6) === 'GGA') {
+            } else if (cleanData.substring(3,6) === 'GGA') {
                 clearHighlightClasses(pHeure, pLat, pLong, pAlt);
                 pHeure.classList.add('gga');
                 pLat.classList.add('gga');
@@ -505,7 +591,7 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 2, 3, 4, 5);
                 }
-            } else if (cleanDatasubstring(3,6) === 'GLL') {
+            } else if (cleanData.substring(3,6) === 'GLL') {
                 clearHighlightClasses(pHeure, pLat, pLong);
                 pHeure.classList.add('gll');
                 pLat.classList.add('gll');
@@ -518,17 +604,17 @@
                     // ✅ Mise à jour carte
                     updateMapFromParts(parts, 1, 2, 3, 4);
                 }
-            } else if (cleanDatasubstring(3,6) === 'VTG') {
+            } else if (cleanData.substring(3,6) === 'VTG') {
                 const parsed = parseVTG(parts);
                 if (parsed) {
                     document.getElementById('cap').textContent = "Route fond : " + parsed.cap;
                 }
-            } else if (cleanDatasubstring(3,6) === 'HDT') {
+            } else if (cleanData.substring(3,6) === 'HDT') {
                 const parsed = parseHDT(parts);
                 if (parsed) {
                     document.getElementById('heading').textContent = "Cap : " + parsed.heading;
                 }
-            } else if (cleanDatasubstring(1,6) === 'AIVDM' || cleanDatasubstring(1,6) === 'AIVDO') {
+            } else if (cleanData.substring(1,6) === 'AIVDM' || cleanData.substring(1,6) === 'AIVDO') {
                 // ✅ Traitement AIS amélioré avec cache
                 const parsed = parseAIS(parts);
                 if (parsed && parsed.mmsi) {
@@ -564,58 +650,35 @@
                 pAisDestination.classList.add('ais');
                 pAisEta.classList.add('ais');
                 
-                // Afficher toutes les données disponibles
-                pAisMmsi.textContent = "MMSI : " + vessel.mmsi;
+                // Afficher toutes les données avec valeurs par défaut si manquantes
+                pAisMmsi.textContent = "MMSI : " + (vessel.mmsi || "En attente...");
                 
-                if (vessel.vesselName) {
-                    pAisNom.textContent = "Navire : " + vessel.vesselName;
-                    pAisNom.style.display = 'block';
-                } else {
-                    pAisNom.textContent = "Navire : En attente du nom...";
-                    pAisNom.style.display = 'block';
-                }
+                pAisNom.textContent = "Navire : " + (vessel.vesselName || "En attente du nom...");
                 
                 if (vessel.latitude && vessel.longitude) {
                     pAisPosition.textContent = `Position : ${vessel.latitude}°, ${vessel.longitude}°`;
-                    pAisPosition.style.display = 'block';
                 } else {
-                    pAisPosition.style.display = 'none';
+                    pAisPosition.textContent = "Position : En attente...";
                 }
                 
-                if (vessel.sog) {
+                if (vessel.sog && vessel.sog !== "0.0") {
                     pAisVitesse.textContent = "Vitesse AIS : " + vessel.sog + " nœuds (" + (vessel.sog * 1.852).toFixed(1) + " km/h)";
-                    pAisVitesse.style.display = 'block';
                 } else {
-                    pAisVitesse.style.display = 'none';
+                    pAisVitesse.textContent = "Vitesse AIS : En attente...";
                 }
                 
-                if (vessel.cog) {
+                if (vessel.cog && vessel.cog !== "0.0") {
                     pAisCap.textContent = "Route AIS : " + vessel.cog + "°";
-                    pAisCap.style.display = 'block';
                 } else {
-                    pAisCap.style.display = 'none';
+                    pAisCap.textContent = "Route AIS : En attente...";
                 }
                 
-                if (vessel.shipType) {
-                    pAisType.textContent = "Type : " + vessel.shipType;
-                    pAisType.style.display = 'block';
-                } else {
-                    pAisType.style.display = 'none';
-                }
+                pAisType.textContent = "Type : " + (vessel.shipType || "En attente...");
                 
-                if (vessel.destination) {
-                    pAisDestination.textContent = "Destination : " + vessel.destination;
-                    pAisDestination.style.display = 'block';
-                } else {
-                    pAisDestination.style.display = 'none';
-                }
+                pAisDestination.textContent = "Destination : " + (vessel.destination || "En attente...");
                 
-                if (vessel.eta) {
-                    pAisEta.textContent = "ETA : " + vessel.eta;
-                    pAisEta.style.display = 'block';
-                } else {
-                    pAisEta.style.display = 'none';
-                }
+                pAisEta.textContent = "ETA : " + (vessel.eta || "En attente...");
+                
                 // ✅ Mettre à jour la liste directement ici (plus simple)
                 updateVesselList();
             }
@@ -626,11 +689,14 @@
                 const lon = parseFloat(vessel.longitude);
                 
                 if (!isNaN(lat) && !isNaN(lon)) {
+                    // Utiliser le nom du navire si disponible, sinon les 4 derniers chiffres du MMSI
+                    const displayName = vessel.vesselName || `${vessel.mmsi.slice(-4)}`;
+                    
                     const shipIcon = L.divIcon({
                         className: 'ship-icon',
-                        html: `<div style="background: #e91e63; color: white; border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: bold;">${vessel.mmsi.slice(-4)}</div>`,
-                        iconSize: [50, 20],
-                        iconAnchor: [25, 10]
+                        html: `<div style="background: #e91e63; color: white; border-radius: 3px; padding: 2px 5px; font-size: 10px; font-weight: bold; max-width: 120px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${displayName}</div>`,
+                        iconSize: [120, 20],
+                        iconAnchor: [60, 10]
                     });
                     
                     // Supprimer les anciens marqueurs de navires pour ce MMSI

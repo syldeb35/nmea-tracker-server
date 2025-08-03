@@ -125,36 +125,30 @@
                 <hr>
                 <div class="section-title">Network settings:</div>
                 <p>Configure the network settings for the connection:</p>
-                <i>Note: You can leave the fields blank to use the default settings.</i>
-                <!-- Remplacer les lignes 129-176 dans config.html par : -->
-
-                <hr>
-                <div class="section-title">Paramètres réseau:</div>
-                <p>Configuration des connexions réseau :</p>
 
                 <!-- Configuration UDP -->
                 <div style="background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px;">
                     <h4>📡 Configuration UDP</h4>
                     
-                    <label><input type="radio" name="udp_mode" value="server" checked> 
-                        📥 Mode Serveur (écoute sur un port)
+                    <label><input type="radio" name="udp_mode" value="server" {% if udp_mode == "server" %}checked{% endif %}> 
+                        📥 Mode Server (écoute sur un port)
                     </label>
-                    <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0;">
+                    <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'server' %}display:none;{% endif %}">
                         <label>Port d'écoute UDP:
                             <input type="number" name="udp_port" value="{{ udp_port }}" placeholder="50110">
                         </label>
                         <small>Le serveur écoute sur ce port pour recevoir les données NMEA</small>
                     </div>
                     
-                    <label><input type="radio" name="udp_mode" value="client"> 
+                    <label><input type="radio" name="udp_mode" value="client" {% if udp_mode == "client" %}checked{% endif %}> 
                         📤 Mode Client (se connecte à un GPS)
                     </label>
-                    <div id="udp-client-config" style="display:none; margin-left: 20px; margin: 10px 0;">
+                    <div id="udp-client-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'client' %}display:none;{% endif %}">
                         <label>IP du GPS:
-                            <input type="text" name="udp_target_ip" placeholder="192.168.1.100">
+                            <input type="text" name="udp_target_ip" value="{{ udp_target_ip }}" placeholder="192.168.1.100">
                         </label>
                         <label>Port du GPS:
-                            <input type="number" name="udp_target_port" placeholder="50110">
+                            <input type="number" name="udp_target_port" value="{{ udp_target_port }}" placeholder="50110">
                         </label>
                         <small>Se connecte directement au GPS pour recevoir les données</small>
                     </div>
@@ -164,25 +158,25 @@
                 <div style="background: #fff0f0; padding: 15px; margin: 10px 0; border-radius: 5px;">
                     <h4>🔗 Configuration TCP</h4>
                     
-                    <label><input type="radio" name="tcp_mode" value="server" checked> 
+                    <label><input type="radio" name="tcp_mode" value="server" {% if tcp_mode == "server" %}checked{% endif %}> 
                         📥 Mode Serveur (écoute sur un port)
                     </label>
-                    <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0;">
+                    <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'server' %}display:none;{% endif %}">
                         <label>Port d'écoute TCP:
                             <input type="number" name="tcp_port" value="{{ tcp_port }}" placeholder="7777">
                         </label>
                         <small>Le serveur écoute sur ce port pour recevoir les connexions</small>
                     </div>
                     
-                    <label><input type="radio" name="tcp_mode" value="client"> 
+                    <label><input type="radio" name="tcp_mode" value="client" {% if tcp_mode == "client" %}checked{% endif %}> 
                         📤 Mode Client (se connecte à un GPS)
                     </label>
-                    <div id="tcp-client-config" style="display:none; margin-left: 20px; margin: 10px 0;">
+                    <div id="tcp-client-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'client' %}display:none;{% endif %}">
                         <label>IP du GPS:
-                            <input type="text" name="tcp_target_ip" placeholder="192.168.1.100">
+                            <input type="text" name="tcp_target_ip" value="{{ tcp_target_ip }}" placeholder="192.168.1.100">
                         </label>
                         <label>Port du GPS:
-                            <input type="number" name="tcp_target_port" placeholder="50110">
+                            <input type="number" name="tcp_target_port" value="{{ tcp_target_port }}" placeholder="50110">
                         </label>
                         <small>Se connecte directement au GPS via TCP</small>
                     </div>
@@ -239,11 +233,6 @@
                 <button type="submit" onclick="event.preventDefault(); applyConfig();">Apply</button>
             </form>
             <hr>
-            <div class="section-title">📋 Informations de connexion :</div>
-                <ul class="info-list">
-                    <li id="udp-info">UDP Serveur : <code>0.0.0.0:{{ udp_port }}</code> (écoute toutes interfaces)</li>
-                    <li id="tcp-info">TCP Serveur : <code>0.0.0.0:{{ tcp_port }}</code> (écoute toutes interfaces)</li>
-                </ul>
             <div class="row mt-4">
                 <div class="col-12">
                     <h4>🔌 Connection Status</h4>
@@ -295,9 +284,16 @@
             updateConnectionIndicator(false);
         });
 
-        // Réception des données NMEA en temps réel (événement séparé)
+        // Réception des données NMEA en temps réel (événement avec source)
         socket.on('nmea_data_web', function(data) {
-            updateNMEADisplay(data);
+            // Data contient déjà { source, message, timestamp }
+            const webData = {
+                source: data.source,
+                message: data.message,
+                timestamp: data.timestamp,
+                formatted: `[${data.timestamp}][${data.source}] ${data.message}`
+            };
+            updateNMEADisplay(webData);
         });
 
         // Réception des mises à jour de statut
@@ -363,42 +359,15 @@
             }
         }
 
-        // Mettre à jour les infos selon la config
-        
-        function updateConnectionInfo() {
-            const udpMode = document.querySelector('input[name="udp_mode"]:checked').value;
-            const tcpMode = document.querySelector('input[name="tcp_mode"]:checked').value;
-            
-            const udpInfo = document.getElementById('udp-info');
-            const tcpInfo = document.getElementById('tcp-info');
-            
-            if (udpMode === 'server') {
-                const port = document.querySelector('input[name="udp_port"]').value || '50110';
-                udpInfo.innerHTML = `UDP Serveur : <code>0.0.0.0:${port}</code> (écoute toutes interfaces)`;
-            } else {
-                const ip = document.querySelector('input[name="udp_target_ip"]').value || '192.168.x.x';
-                const port = document.querySelector('input[name="udp_target_port"]').value || '50110';
-                udpInfo.innerHTML = `UDP Client : <code>${ip}:${port}</code> (connexion au GPS)`;
-            }
-            
-            if (tcpMode === 'server') {
-                const port = document.querySelector('input[name="tcp_port"]').value || '7777';
-                tcpInfo.innerHTML = `TCP Serveur : <code>0.0.0.0:${port}</code> (écoute toutes interfaces)`;
-            } else {
-                const ip = document.querySelector('input[name="tcp_target_ip"]').value || '192.168.x.x';
-                const port = document.querySelector('input[name="tcp_target_port"]').value || '50110';
-                tcpInfo.innerHTML = `TCP Client : <code>${ip}:${port}</code> (connexion au GPS)`;
-            }
-        }
-
         // Mettre à jour au changement des inputs
         document.querySelectorAll('input[name="udp_mode"], input[name="tcp_mode"], input[name="udp_port"], input[name="tcp_port"], input[name="udp_target_ip"], input[name="udp_target_port"], input[name="tcp_target_ip"], input[name="tcp_target_port"]').forEach(el => {
-            el.addEventListener('change', updateConnectionInfo);
-            el.addEventListener('input', updateConnectionInfo);
+            el.addEventListener('change', function() {
+                // Pas besoin de updateConnectionInfo car on a supprimé cette section
+            });
+            el.addEventListener('input', function() {
+                // Pas besoin de updateConnectionInfo car on a supprimé cette section
+            });
         });
-
-        // Initialiser les infos de connexion
-        updateConnectionInfo();
 
         // Fonction pour mettre à jour le statut de connexion
         // Cette fonction sera appelée par le serveur via WebSocket
