@@ -1,0 +1,20 @@
+# Requirements for NMEA Tracker Server - Enhanced versions
+# Base requirements from requirements.txt
+flask==3.0.3
+flask-socketio==5.3.6
+python-socketio==5.11.2
+pyserial==3.5
+gevent==23.9.1
+python-dotenv==1.0.1
+eventlet==0.35.2
+cryptography==42.0.8
+
+# Additional requirements for System Tray version
+pystray==0.19.5
+pillow==10.4.0
+
+# Additional requirements for Windows Service version
+pywin32==306; sys_platform=="win32"
+
+# Build requirements
+pyinstaller==6.9.0

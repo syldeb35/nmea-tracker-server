@@ -3,6 +3,8 @@
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com)
+[![Build Status](https://github.com/syldeb35/nmea-tracker-server/actions/workflows/build-system-tray.yml/badge.svg)](https://github.com/syldeb35/nmea-tracker-server/actions/workflows/build-system-tray.yml)
+[![Release](https://img.shields.io/github/v/release/syldeb35/nmea-tracker-server)](https://github.com/syldeb35/nmea-tracker-server/releases/latest)
 
 **Serveur NMEA/AIS temps réel avec interface web moderne pour le suivi de données GPS et navigation maritime.**
 
@@ -41,7 +43,17 @@
 
 ## 🚀 Installation rapide
 
-### Option 1: Exécutable (Recommandé)
+### 📦 Option 1: Téléchargement direct (Recommandé pour Windows)
+
+**Version System Tray (Interface discrète)** :
+[![Download System Tray](https://img.shields.io/badge/Download-System%20Tray%20Version-brightgreen?style=for-the-badge&logo=windows)](https://github.com/syldeb35/nmea-tracker-server/releases/latest/download/nmea_tracker_tray.exe)
+
+**Toutes les versions** :
+[![Download All](https://img.shields.io/badge/Download-All%20Versions-blue?style=for-the-badge&logo=github)](https://github.com/syldeb35/nmea-tracker-server/releases/latest)
+
+**Builds automatiques** : Tous les exécutables sont générés automatiquement via GitHub Actions à chaque release.
+
+### 🛠️ Option 2: Build depuis le code source
 
 **Méthode rapide avec menu interactif :**
 
@@ -73,7 +85,7 @@ scripts\windows\build.bat       # Compilation
 - 📁 `scripts/macos/` - Scripts pour macOS
 - 🚀 `run.sh` - Menu interactif principal (Linux/macOS)
 
-### Option 2: Installation Python manuelle
+### Option 3: Installation Python manuelle
 
 ```bash
 # Cloner le repository

@@ -1,0 +1,292 @@
+name: 🏗️ Build NMEA Tracker Server - System Tray
+
+on:
+  push:
+    #branches: [ main, develop ]
+    tags: [ 'v*' ]
+  #pull_request:
+    #branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_version:
+        description: 'Version to build'
+        required: true
+        default: 'system-tray'
+        type: choice
+        options:
+          - 'system-tray'
+          - 'console'
+          - 'service'
+          - 'all'
+
+env:
+  PYTHON_VERSION: '3.11'
+  APP_NAME: 'NMEA-Tracker-Server'
+
+jobs:
+  build-windows:
+    name: 🖥️ Build Windows System Tray
+    runs-on: windows-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements_enhanced.txt
+        
+    - name: 🔍 Verify Dependencies
+      run: |
+        echo "=== Python Environment ==="
+        python --version
+        pip --version
+        echo ""
+        echo "=== Installed Packages ==="
+        pip list
+        echo ""
+        echo "=== PyInstaller Version ==="
+        pyinstaller --version
+
+    - name: 🛠️ Create SSL Certificates
+      run: |
+        echo "Creating SSL certificates for build..."
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        import ipaddress
+        
+        # Generate private key
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        
+        # Create certificate
+        subject = issuer = x509.Name([
+            x509.NameAttribute(x509.NameOID.COUNTRY_NAME, 'FR'),
+            x509.NameAttribute(x509.NameOID.STATE_OR_PROVINCE_NAME, 'France'),
+            x509.NameAttribute(x509.NameOID.LOCALITY_NAME, 'Local'),
+            x509.NameAttribute(x509.NameOID.ORGANIZATION_NAME, 'NMEA Tracker'),
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost'),
+        ])
+        
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.utcnow()
+        ).not_valid_after(
+            datetime.utcnow() + timedelta(days=365)
+        ).add_extension(
+            x509.SubjectAlternativeName([
+                x509.DNSName('localhost'),
+                x509.IPAddress(ipaddress.IPv4Address('127.0.0.1')),
+            ]),
+            critical=False,
+        ).sign(private_key, hashes.SHA256())
+        
+        # Write certificate
+        with open('cert.pem', 'wb') as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        # Write private key
+        with open('key.pem', 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        print('SSL certificates created successfully')
+        "
+
+    - name: 🎯 Build System Tray Version
+      run: |
+        echo "=== Building NMEA Tracker Server - System Tray ==="
+        echo "Build started at: $(Get-Date)"
+        
+        # Create build directories
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        New-Item -ItemType Directory -Path "dist" -Force
+        New-Item -ItemType Directory -Path "build" -Force
+        
+        # Build with PyInstaller
+        pyinstaller nmea_server_tray.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_tracker_tray.exe") {
+            echo "✅ Build successful!"
+            $size = (Get-Item "dist/nmea_tracker_tray.exe").Length
+            echo "📁 File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+            echo "❌ Build failed!"
+            exit 1
+        }
+
+    - name: 🔍 Test Executable
+      run: |
+        echo "=== Testing Executable ==="
+        cd dist
+        # Test if executable runs (with timeout)
+        $process = Start-Process -FilePath ".\nmea_tracker_tray.exe" -ArgumentList "--console" -PassThru -NoNewWindow
+        Start-Sleep -Seconds 5
+        if (!$process.HasExited) {
+            echo "✅ Executable starts successfully"
+            Stop-Process -Id $process.Id -Force
+        } else {
+            echo "❌ Executable failed to start"
+            exit 1
+        }
+
+    - name: 📊 Generate Build Info
+      run: |
+        echo "=== Build Information ==="
+        $buildInfo = @{
+            "build_date" = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+            "python_version" = python --version
+            "git_commit" = git rev-parse HEAD
+            "git_branch" = git rev-parse --abbrev-ref HEAD
+            "build_type" = "system-tray"
+            "platform" = "windows"
+        }
+        
+        $buildInfo | ConvertTo-Json | Out-File -FilePath "dist/build_info.json" -Encoding UTF8
+        
+        # Create version info
+        echo "NMEA Tracker Server - System Tray Version" | Out-File -FilePath "dist/VERSION.txt" -Encoding UTF8
+        echo "Build: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath "dist/VERSION.txt" -Append -Encoding UTF8
+        echo "Commit: $(git rev-parse --short HEAD)" | Out-File -FilePath "dist/VERSION.txt" -Append -Encoding UTF8
+
+    - name: 📋 Create Release Notes
+      run: |
+        echo "# 🎯 NMEA Tracker Server - System Tray Release" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "## 🚀 Installation" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "1. Télécharger \`nmea_tracker_tray.exe\`" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "2. Double-cliquer pour lancer" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "3. L'icône apparaît dans la zone de notification" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "4. Clic droit sur l'icône pour accéder au menu" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "## 🌐 Interface Web" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- **Tableau de bord** : https://localhost:8443/" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- **Configuration** : https://localhost:8443/config.html" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "## ✨ Fonctionnalités" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Interface discrète (system tray)" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Support NMEA GPS/AIS" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Connexions UDP/TCP/Série" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Interface web complète" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Parsing AIS avancé avec fragments" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+
+    - name: 📤 Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-tray-windows
+        path: |
+          dist/nmea_tracker_tray.exe
+          dist/build_info.json
+          dist/VERSION.txt
+          dist/RELEASE_NOTES.md
+        retention-days: 30
+
+    - name: 🏷️ Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/nmea_tracker_tray.exe
+          dist/RELEASE_NOTES.md
+        name: "NMEA Tracker Server ${{ github.ref_name }} - System Tray"
+        body_path: dist/RELEASE_NOTES.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-all-versions:
+    name: 🎯 Build All Versions
+    runs-on: windows-latest
+    if: github.event.inputs.build_version == 'all' || startsWith(github.ref, 'refs/tags/')
+    
+    strategy:
+      matrix:
+        version: [
+          { name: "console", spec: "nmea_server.spec", exe: "nmea_tracker_server.exe" },
+          { name: "system-tray", spec: "nmea_server_tray.spec", exe: "nmea_tracker_tray.exe" },
+          { name: "service", spec: "nmea_server_service.spec", exe: "nmea_tracker_service.exe" }
+        ]
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements_enhanced.txt
+
+    - name: 🛠️ Create SSL Certificates
+      run: |
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        import ipaddress
+        
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        subject = issuer = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost')])
+        cert = x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(private_key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(datetime.utcnow()).not_valid_after(datetime.utcnow() + timedelta(days=365)).sign(private_key, hashes.SHA256())
+        
+        with open('cert.pem', 'wb') as f: f.write(cert.public_bytes(serialization.Encoding.PEM))
+        with open('key.pem', 'wb') as f: f.write(private_key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption()))
+        "
+
+    - name: 🏗️ Build ${{ matrix.version.name }}
+      run: |
+        echo "=== Building ${{ matrix.version.name }} version ==="
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        New-Item -ItemType Directory -Path "dist" -Force
+        
+        pyinstaller ${{ matrix.version.spec }} --clean --noconfirm
+        
+        if (Test-Path "dist/${{ matrix.version.exe }}") {
+            echo "✅ ${{ matrix.version.name }} build successful!"
+        } else {
+            echo "❌ ${{ matrix.version.name }} build failed!"
+            exit 1
+        }
+
+    - name: 📤 Upload ${{ matrix.version.name }} Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-${{ matrix.version.name }}-windows
+        path: dist/${{ matrix.version.exe }}
+        retention-days: 30

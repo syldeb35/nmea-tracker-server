@@ -1,6 +1,24 @@
 @echo off
 echo ===== NMEA Tracker Server - Build Script (Windows) =====
 echo.
+echo ⚠️  NOUVEAU: Versions avancées disponibles !
+echo.
+echo Ce script build la version console standard.
+echo Pour les versions System Tray et Service Windows, utilisez :
+echo   build_enhanced.bat (dans le répertoire principal)
+echo.
+echo Versions disponibles avec build_enhanced.bat :
+echo   1. Console (cette version)
+echo   2. System Tray (icône dans la zone de notification)
+echo   3. Service Windows (service en arrière-plan)
+echo.
+set /p continue="Continuer avec la version console ? (o/N): "
+if /i not "%continue%"=="o" if /i not "%continue%"=="oui" (
+    echo Annulé. Utilisez build_enhanced.bat pour plus d'options.
+    pause
+    exit /b 0
+)
+echo.
 
 REM Définir le répertoire du projet
 set "PROJECT_DIR=%~dp0..\.."

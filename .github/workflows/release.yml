@@ -1,0 +1,177 @@
+name: 🚀 Release NMEA Tracker Server
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.0)'
+        required: true
+        default: 'v1.2.0'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  release-builds:
+    name: 🎯 Build Release Versions
+    runs-on: windows-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements_enhanced.txt
+
+    - name: 🔐 Generate SSL Certificates
+      run: |
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        
+        # Generate key and certificate
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        subject = issuer = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost')])
+        cert = x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(private_key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(datetime.utcnow()).not_valid_after(datetime.utcnow() + timedelta(days=365)).sign(private_key, hashes.SHA256())
+        
+        # Save files
+        with open('cert.pem', 'wb') as f: f.write(cert.public_bytes(serialization.Encoding.PEM))
+        with open('key.pem', 'wb') as f: f.write(private_key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption()))
+        print('SSL certificates generated')
+        "
+
+    - name: 🏗️ Build All Versions
+      run: |
+        # Clean previous builds
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        New-Item -ItemType Directory -Path "dist" -Force
+        
+        # Build Console version
+        echo "🖥️ Building Console version..."
+        pyinstaller nmea_server.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_tracker_server.exe") {
+            Rename-Item "dist/nmea_tracker_server.exe" "nmea_tracker_server_console.exe"
+            echo "✅ Console version built"
+        }
+        
+        # Build System Tray version  
+        echo "🎯 Building System Tray version..."
+        pyinstaller nmea_server_tray.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_tracker_tray.exe") {
+            echo "✅ System Tray version built"
+        }
+        
+        # Build Service version
+        echo "🔧 Building Service version..."
+        pyinstaller nmea_server_service.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_tracker_service.exe") {
+            echo "✅ Service version built"
+        }
+
+    - name: 📋 Create Package
+      run: |
+        # Create release package structure
+        New-Item -ItemType Directory -Path "release_package" -Force
+        
+        # Copy executables
+        Copy-Item "dist/*.exe" "release_package/" -Force
+        
+        # Copy documentation
+        Copy-Item "README.md" "release_package/" -Force
+        Copy-Item "CHANGELOG.md" "release_package/" -Force
+        Copy-Item "WINDOWS_VERSIONS_GUIDE.md" "release_package/" -Force
+        
+        # Create quick start guide
+        echo "# NMEA Tracker Server - Quick Start" | Out-File -FilePath "release_package/QUICK_START.md" -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Files Included" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "- nmea_tracker_tray.exe - System Tray version (RECOMMENDED)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "- nmea_tracker_server_console.exe - Console version" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "- nmea_tracker_service.exe - Windows Service version" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Quick Start (System Tray - Recommended)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "1. Double-click nmea_tracker_tray.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "2. Look for the NMEA icon in your system tray" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "3. Right-click the icon to access the menu" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "4. Select Start Server to begin" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "5. Open https://localhost:8443/config.html to configure" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Web Interface" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "- Dashboard: https://localhost:8443/" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "- Configuration: https://localhost:8443/config.html" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+
+        # Create version info
+        $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "${{ github.event.inputs.version }}" }
+        echo "Version: $version" | Out-File -FilePath "release_package/VERSION.txt" -Encoding UTF8
+        echo "Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" | Out-File -FilePath "release_package/VERSION.txt" -Append -Encoding UTF8
+        echo "Commit: $(git rev-parse --short HEAD)" | Out-File -FilePath "release_package/VERSION.txt" -Append -Encoding UTF8
+
+    - name: 📦 Create ZIP Archive
+      run: |
+        $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "${{ github.event.inputs.version }}" }
+        Compress-Archive -Path "release_package/*" -DestinationPath "nmea-tracker-server-$version-windows.zip"
+
+    - name: 📤 Upload Release Assets
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          nmea-tracker-server-*.zip
+          release_package/nmea_tracker_tray.exe
+          release_package/nmea_tracker_server_console.exe
+          release_package/nmea_tracker_service.exe
+          release_package/QUICK_START.md
+        name: "NMEA Tracker Server ${{ github.event.release.tag_name }}"
+        body: |
+          ## 🎯 NMEA Tracker Server Release
+          
+          ### 📦 Downloads
+          
+          - **🥇 Recommended**: `nmea_tracker_tray.exe` - System Tray version
+          - **🖥️ Console**: `nmea_tracker_server_console.exe` - Standard console version
+          - **🔧 Service**: `nmea_tracker_service.exe` - Windows Service version
+          - **📁 Complete Package**: `nmea-tracker-server-*-windows.zip` - All versions + docs
+          
+          ### 🚀 Quick Start
+          
+          1. Download `nmea_tracker_tray.exe` (recommended)
+          2. Double-click to run
+          3. Look for icon in system tray
+          4. Right-click icon → "Start Server"
+          5. Open https://localhost:8443/config.html
+          
+          ### ✨ What's New
+          
+          - Enhanced system tray interface
+          - Improved AIS fragment handling
+          - Better configuration management
+          - Cleaner shutdown process
+          - Multiple deployment options
+          
+          See `CHANGELOG.md` for detailed changes.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📤 Upload Artifacts (Manual Trigger)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-server-all-versions
+        path: |
+          nmea-tracker-server-*.zip
+          release_package/
+        retention-days: 30
