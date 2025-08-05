@@ -30,60 +30,71 @@ signal_handler = None
 app = None
 socketio = None
 
+# Vérifier d'abord la disponibilité de gevent
 try:
-    from nmea_server import (
-        main_thread, cleanup_on_exit, shutdown_event, 
-        HTTPS_PORT, signal_handler, app, socketio
-    )
-    NMEA_SERVER_AVAILABLE = True
-    print("[INFO] Serveur NMEA principal chargé (avec gevent)")
-except ImportError as e:
-    if "gevent" in str(e):
-        print("[FALLBACK] gevent non disponible - utilisation du serveur HTTP alternatif")
-        try:
-            # Import dynamique du fallback
-            import importlib.util
-            import os
-            
-            # Chercher nmea_server_fallback.py dans le répertoire courant
-            fallback_path = None
-            possible_paths = [
-                "nmea_server_fallback.py",
-                os.path.join(os.path.dirname(__file__), "nmea_server_fallback.py"),
-                os.path.join(sys._MEIPASS if hasattr(sys, '_MEIPASS') else ".", "nmea_server_fallback.py")
-            ]
-            
-            for path in possible_paths:
-                if os.path.exists(path):
-                    fallback_path = path
-                    break
-            
-            if fallback_path:
-                # Charger le module fallback
-                spec = importlib.util.spec_from_file_location("nmea_server_fallback", fallback_path)
-                fallback_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(fallback_module)
-                
-                # Importer les fonctions nécessaires
-                main_thread = fallback_module.main_thread
-                cleanup_on_exit = fallback_module.cleanup_on_exit
-                shutdown_event = fallback_module.shutdown_event
-                HTTPS_PORT = fallback_module.HTTPS_PORT
-                signal_handler = fallback_module.signal_handler
-                app = fallback_module.app
-                socketio = fallback_module.socketio
-                
-                NMEA_SERVER_AVAILABLE = True
-                print("[INFO] Serveur NMEA fallback chargé (sans gevent)")
-            else:
-                print("[ERROR] nmea_server_fallback.py non trouvé")
-                NMEA_SERVER_AVAILABLE = False
-                
-        except Exception as fallback_error:
-            print(f"[ERROR] Erreur chargement fallback: {fallback_error}")
-            NMEA_SERVER_AVAILABLE = False
-    else:
+    import gevent
+    GEVENT_AVAILABLE = True
+except ImportError:
+    GEVENT_AVAILABLE = False
+
+# Importer le serveur approprié selon la disponibilité de gevent
+if GEVENT_AVAILABLE:
+    try:
+        from nmea_server import (
+            main_thread, cleanup_on_exit, shutdown_event, 
+            HTTPS_PORT, signal_handler, app, socketio
+        )
+        NMEA_SERVER_AVAILABLE = True
+        print("[INFO] Serveur NMEA principal chargé (avec gevent)")
+    except ImportError as e:
         print(f"[ERROR] Erreur import nmea_server: {e}")
+        NMEA_SERVER_AVAILABLE = False
+else:
+    print("[FALLBACK] gevent non disponible - utilisation du serveur HTTP alternatif")
+    try:
+        # Import dynamique du fallback
+        import importlib.util
+        import os
+        
+        # Chercher nmea_server_fallback.py dans le répertoire courant
+        fallback_path = None
+        possible_paths = [
+            "nmea_server_fallback.py",
+            os.path.join(os.path.dirname(__file__), "nmea_server_fallback.py"),
+            os.path.join(sys._MEIPASS if hasattr(sys, '_MEIPASS') else ".", "nmea_server_fallback.py")
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                fallback_path = path
+                break
+        
+        if fallback_path:
+            # Charger le module fallback
+            spec = importlib.util.spec_from_file_location("nmea_server_fallback", fallback_path)
+            fallback_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(fallback_module)
+            
+            # Importer les fonctions nécessaires
+            main_thread = fallback_module.main_thread
+            cleanup_on_exit = fallback_module.cleanup_on_exit
+            shutdown_event = fallback_module.shutdown_event
+            HTTPS_PORT = fallback_module.HTTPS_PORT
+            signal_handler = fallback_module.signal_handler
+            app = fallback_module.app
+            socketio = fallback_module.socketio
+            
+            NMEA_SERVER_AVAILABLE = True
+            print("[INFO] Serveur NMEA fallback chargé (sans gevent)")
+        else:
+            print("[ERROR] nmea_server_fallback.py non trouvé")
+            NMEA_SERVER_AVAILABLE = False
+            
+    except Exception as fallback_error:
+        print(f"[ERROR] Erreur chargement fallback: {fallback_error}")
+        print("[ERROR] Serveur NMEA non disponible")
+        print("Solution: installer gevent ou utiliser Python 3.11")
+        print("  pip install gevent")
         NMEA_SERVER_AVAILABLE = False
 
 class NMEAServerTray:
