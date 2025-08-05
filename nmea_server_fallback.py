@@ -113,8 +113,19 @@ main_logger.addHandler(main_console_handler)
 
 # === FLASK SERVER (sans gevent) ===
 app = Flask(__name__)
-# Utiliser le mode par défaut (auto-detection) plutôt que 'threading' explicite
-socketio = SocketIO(app, cors_allowed_origins="*")  # Mode auto-detection, évite 'threading' problématique
+# Configuration SocketIO compatible avec tous les environnements
+try:
+    # Essayer les modes supportés dans l'ordre de préférence
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+    print("[INFO] SocketIO configuré en mode eventlet")
+except Exception as e:
+    try:
+        socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+        print("[INFO] SocketIO configuré en mode threading")
+    except Exception as e2:
+        # Dernier recours: mode par défaut sans spécification
+        socketio = SocketIO(app, cors_allowed_origins="*")
+        print("[INFO] SocketIO configuré en mode par défaut")
 
 # Activer CORS seulement si disponible
 if CORS_AVAILABLE:

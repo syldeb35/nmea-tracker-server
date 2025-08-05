@@ -43,15 +43,12 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Try enhanced requirements first, fallback to alternative if gevent fails
-        try {
-          pip install -r requirements_enhanced_alt.txt
-          Write-Host "✅ Enhanced requirements installed successfully"
-        } catch {
-          Write-Host "⚠️ Fallback to basic requirements due to compatibility issues..."
-          pip install -r requirements.txt
-          pip install pystray pillow pyinstaller
-        }
+        # Install basic requirements without gevent to avoid conflicts
+        pip install flask flask-socketio python-socketio eventlet pyserial python-dotenv cryptography
+        pip install pystray pillow pyinstaller
+        # Explicitly install eventlet for fallback compatibility
+        pip install eventlet
+        Write-Host "✅ Dependencies installed successfully (without gevent)"
         
     - name: 🔍 Verify Dependencies
       run: |
@@ -257,15 +254,12 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Try enhanced requirements first, fallback to alternative if gevent fails
-        try {
-          pip install -r requirements_enhanced_alt.txt
-          Write-Host "✅ Enhanced requirements installed successfully"
-        } catch {
-          Write-Host "⚠️ Fallback to basic requirements due to compatibility issues..."
-          pip install -r requirements.txt
-          pip install pystray pillow pyinstaller
-        }
+        # Install basic requirements without gevent to avoid conflicts
+        pip install flask flask-socketio python-socketio eventlet pyserial python-dotenv cryptography
+        pip install pystray pillow pyinstaller
+        # Explicitly install eventlet for fallback compatibility
+        pip install eventlet
+        Write-Host "✅ Dependencies installed successfully (without gevent)"
 
     - name: 🛠️ Create SSL Certificates
       run: |
