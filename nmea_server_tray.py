@@ -30,12 +30,28 @@ signal_handler = None
 app = None
 socketio = None
 
-# Vérifier d'abord la disponibilité de gevent
-try:
-    import gevent
-    GEVENT_AVAILABLE = True
-except ImportError:
-    GEVENT_AVAILABLE = False
+# Vérifier d'abord la disponibilité de gevent avec test complet
+def test_gevent_compatibility():
+    try:
+        import gevent
+        # Test plus approfondi pour PyInstaller
+        try:
+            import gevent.socket
+            import gevent.monkey
+            # Test de création d'un greenlet simple
+            from gevent import Greenlet
+            def test_func():
+                return True
+            g = Greenlet(test_func)
+            g.start()
+            g.join(timeout=1)
+            return True
+        except Exception:
+            return False
+    except ImportError:
+        return False
+
+GEVENT_AVAILABLE = test_gevent_compatibility()
 
 # Importer le serveur approprié selon la disponibilité de gevent
 if GEVENT_AVAILABLE:
@@ -46,11 +62,15 @@ if GEVENT_AVAILABLE:
         )
         NMEA_SERVER_AVAILABLE = True
         print("[INFO] Serveur NMEA principal chargé (avec gevent)")
-    except ImportError as e:
+    except (ImportError, ValueError) as e:
         print(f"[ERROR] Erreur import nmea_server: {e}")
+        print("[INFO] Basculement vers le serveur de fallback")
         NMEA_SERVER_AVAILABLE = False
-else:
-    print("[FALLBACK] gevent non disponible - utilisation du serveur HTTP alternatif")
+        GEVENT_AVAILABLE = False
+
+# Si gevent n'est pas disponible ou si l'import a échoué, utiliser le fallback
+if not GEVENT_AVAILABLE or not NMEA_SERVER_AVAILABLE:
+    print("[FALLBACK] Utilisation du serveur HTTP alternatif")
     try:
         # Import dynamique du fallback
         import importlib.util
