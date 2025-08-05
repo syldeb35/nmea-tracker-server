@@ -28,19 +28,17 @@ datas = [
     (os.path.join(work_dir, 'diagnostic_executable.py'), '.'),  # Script de diagnostic
 ]
 
-# Modules cachés nécessaires
+# Modules cachés nécessaires (sans gevent pour compatibilité maximale)
 hiddenimports = [
     'flask',
     'flask_socketio', 
-    'flask_cors',  # Nécessaire pour le fallback
+    'flask_cors',  # Optionnel pour CORS
     'socketio',
     'eventlet',
     'eventlet.wsgi',
     'dns',
     'dns.resolver',
-    'gevent',
-    'gevent.socket',
-    'gevent._socket3',
+    # 'gevent', 'gevent.socket', 'gevent._socket3',  # Supprimé pour éviter les conflits
     'serial',
     'serial.tools.list_ports',
     'pystray',
@@ -51,7 +49,7 @@ hiddenimports = [
     'cryptography.hazmat.primitives.serialization',
     'cryptography.hazmat.primitives.asymmetric.rsa',
     'cryptography.x509',
-    'nmea_server_fallback',  # Inclure le module fallback
+    'nmea_server_fallback',  # Module fallback sans gevent
     'logging.handlers',  # Pour RotatingFileHandler
     'dotenv',  # Pour load_dotenv
     'threading',  # Pour les threads

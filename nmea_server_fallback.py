@@ -113,7 +113,8 @@ main_logger.addHandler(main_console_handler)
 
 # === FLASK SERVER (sans gevent) ===
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # Threading au lieu de gevent
+# Utiliser le mode par défaut (auto-detection) plutôt que 'threading' explicite
+socketio = SocketIO(app, cors_allowed_origins="*")  # Mode auto-detection, évite 'threading' problématique
 
 # Activer CORS seulement si disponible
 if CORS_AVAILABLE:
