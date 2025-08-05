@@ -103,4 +103,19 @@ echo.
 echo Test de fonctionnement (optionnel):
 echo   dist\nmea_tracker_tray.exe --console
 echo.
+
+REM Test rapide de l'executable si demande
+set /p test_choice="Tester l'executable maintenant ? (y/n): "
+if /i "%test_choice%"=="y" (
+    echo.
+    echo Test de l'executable System Tray...
+    if exist "dist\nmea_tracker_tray.exe" (
+        echo Lancement du test (arret automatique dans 10 secondes)...
+        timeout /t 2 >nul
+        start /wait /b dist\nmea_tracker_tray.exe --console
+    ) else (
+        echo Executable non trouve
+    )
+)
+
 pause

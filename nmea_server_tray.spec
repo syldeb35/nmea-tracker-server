@@ -24,6 +24,7 @@ datas = [
     (os.path.join(work_dir, 'cert.pem'), '.'),
     (os.path.join(work_dir, 'key.pem'), '.'),
     (os.path.join(work_dir, 'icon.ico'), '.'),
+    (os.path.join(work_dir, 'nmea_server_fallback.py'), '.'),  # Inclure le serveur fallback
 ]
 
 # Modules cachés nécessaires
@@ -48,6 +49,7 @@ hiddenimports = [
     'cryptography.hazmat.primitives.serialization',
     'cryptography.hazmat.primitives.asymmetric.rsa',
     'cryptography.x509',
+    'nmea_server_fallback',  # Inclure le module fallback
 ]
 
 # Binaires à exclure (pour réduire la taille)
