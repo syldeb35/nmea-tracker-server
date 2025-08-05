@@ -2,10 +2,10 @@ name: 🏗️ Build NMEA Tracker Server - System Tray
 
 on:
   push:
-    #branches: [ main, develop ]
+    branches: [ main, develop ]
     tags: [ 'v*' ]
-  #pull_request:
-    #branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       build_version:
