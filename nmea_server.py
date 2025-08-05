@@ -182,9 +182,13 @@ logging.getLogger('werkzeug.serving').disabled = True
 import sys
 class HTTPLogFilter:
     def __init__(self, original_stdout):
-        self.original_stdout = original_stdout
+        self.original_stdout = original_stdout if original_stdout is not None else sys.__stdout__
         
     def write(self, text):
+        # Protection contre stdout None
+        if self.original_stdout is None:
+            return
+            
         # Filtrer les logs HTTP (contiennent des patterns typiques)
         http_patterns = [
             'GET /', 'POST /', 'PUT /', 'DELETE /',
@@ -196,16 +200,29 @@ class HTTPLogFilter:
             return
         
         # Sinon, écrire vers stdout original
-        self.original_stdout.write(text)
+        try:
+            self.original_stdout.write(text)
+        except (AttributeError, OSError):
+            pass  # Ignorer si stdout n'est pas disponible
         
     def flush(self):
-        self.original_stdout.flush()
+        if self.original_stdout is not None:
+            try:
+                self.original_stdout.flush()
+            except (AttributeError, OSError):
+                pass
         
     def fileno(self):
-        return self.original_stdout.fileno()
+        if self.original_stdout is not None:
+            try:
+                return self.original_stdout.fileno()
+            except (AttributeError, OSError):
+                return -1
+        return -1
 
 # Appliquer le filtre HTTP uniquement sur Windows où c'est problématique
-if IS_WINDOWS:
+# Et seulement si stdout est disponible
+if IS_WINDOWS and sys.stdout is not None:
     sys.stdout = HTTPLogFilter(sys.stdout)
     # Le message sera affiché plus tard après la définition de main_logger
 
@@ -276,9 +293,13 @@ if IS_WINDOWS:
 class SSLErrorFilter:
     """Filtre pour supprimer les erreurs SSL spécifiques"""
     def __init__(self, original_stderr):
-        self.original_stderr = original_stderr
+        self.original_stderr = original_stderr if original_stderr is not None else sys.__stderr__
         
     def write(self, text):
+        # Protection contre stderr None
+        if self.original_stderr is None:
+            return
+            
         # 🆕 Liste étendue des patterns SSL à filtrer
         ssl_patterns = [
             'ssl:', 'sslv3_alert', 'certificate_unknown', 
@@ -293,16 +314,29 @@ class SSLErrorFilter:
             return  # Ignorer complètement
         
         # Écrire tout le reste vers stderr original
-        self.original_stderr.write(text)
+        try:
+            self.original_stderr.write(text)
+        except (AttributeError, OSError):
+            pass  # Ignorer si stderr n'est pas disponible
         
     def flush(self):
-        self.original_stderr.flush()
+        if self.original_stderr is not None:
+            try:
+                self.original_stderr.flush()
+            except (AttributeError, OSError):
+                pass
         
     def fileno(self):
-        return self.original_stderr.fileno()
+        if self.original_stderr is not None:
+            try:
+                return self.original_stderr.fileno()
+            except (AttributeError, OSError):
+                return -1
+        return -1
 
 # Appliquer le filtre SSL seulement sur Windows où c'est problématique
-if IS_WINDOWS:
+# Et seulement si stderr est disponible
+if IS_WINDOWS and sys.stderr is not None:
     sys.stderr = SSLErrorFilter(sys.stderr)
 
 main_logger.info("Système de logs initialisé")
