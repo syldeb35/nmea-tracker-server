@@ -223,10 +223,22 @@ def main():
         print("  pip install gevent")
         sys.exit(1)
         
-    if len(sys.argv) > 1 and sys.argv[1] == '--console':
-        # Mode console classique
-        print("[INFO] Mode console - utilisez Ctrl+C pour arrêter")
-        main_thread()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '--console':
+            # Mode console classique
+            print("[INFO] Mode console - utilisez Ctrl+C pour arrêter")
+            main_thread()
+        elif sys.argv[1] == '--diagnostic':
+            # Mode diagnostic pour debug
+            print("[INFO] Mode diagnostic")
+            try:
+                import diagnostic_executable
+            except ImportError:
+                print("[ERROR] Diagnostic non disponible")
+                sys.exit(1)
+        else:
+            print("[INFO] Arguments disponibles: --console, --diagnostic")
+            sys.exit(0)
     else:
         # Mode system tray
         if not TRAY_AVAILABLE:

@@ -22,7 +22,15 @@ import ipaddress
 import warnings
 from flask import Flask, Response, render_template, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit
-from flask_cors import CORS
+
+# Import CORS optionnel pour compatibilité maximale
+try:
+    from flask_cors import CORS
+    CORS_AVAILABLE = True
+except ImportError:
+    CORS_AVAILABLE = False
+    print("[WARNING] flask_cors non disponible - CORS désactivé")
+
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
@@ -106,7 +114,13 @@ main_logger.addHandler(main_console_handler)
 # === FLASK SERVER (sans gevent) ===
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # Threading au lieu de gevent
-CORS(app)
+
+# Activer CORS seulement si disponible
+if CORS_AVAILABLE:
+    CORS(app)
+    print("[INFO] CORS activé")
+else:
+    print("[WARNING] CORS non configuré - connexions cross-origin limitées")
 
 # === SHUTDOWN MANAGEMENT ===
 shutdown_event = threading.Event()

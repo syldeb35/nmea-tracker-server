@@ -25,6 +25,7 @@ datas = [
     (os.path.join(work_dir, 'key.pem'), '.'),
     (os.path.join(work_dir, 'icon.ico'), '.'),
     (os.path.join(work_dir, 'nmea_server_fallback.py'), '.'),  # Inclure le serveur fallback
+    (os.path.join(work_dir, 'diagnostic_executable.py'), '.'),  # Script de diagnostic
 ]
 
 # Modules cachés nécessaires
