@@ -22,11 +22,28 @@ except ImportError:
     SERVICE_AVAILABLE = False
     print("[WARNING] Modules win32 non disponibles - service non supporté")
 
-# Import du serveur NMEA principal
-from nmea_server import (
-    main_thread, cleanup_on_exit, shutdown_event, 
-    HTTPS_PORT, signal_handler
-)
+# Import du serveur NMEA principal avec fallback pour gevent
+try:
+    from nmea_server import (
+        main_thread, cleanup_on_exit, shutdown_event, 
+        HTTPS_PORT, signal_handler
+    )
+    NMEA_SERVER_AVAILABLE = True
+except ImportError as e:
+    if "gevent" in str(e):
+        print("[FALLBACK] gevent non disponible - utilisation du serveur HTTP alternatif")
+        try:
+            from nmea_server_fallback import (
+                main_thread, cleanup_on_exit, shutdown_event, 
+                HTTPS_PORT, signal_handler
+            )
+            NMEA_SERVER_AVAILABLE = True
+        except ImportError:
+            print("[ERROR] Aucun serveur NMEA disponible")
+            NMEA_SERVER_AVAILABLE = False
+    else:
+        print(f"[ERROR] Erreur import nmea_server: {e}")
+        NMEA_SERVER_AVAILABLE = False
 
 class NMEAServerService(win32serviceutil.ServiceFramework):
     """Service Windows pour le serveur NMEA"""

@@ -20,14 +20,36 @@ except ImportError:
     TRAY_AVAILABLE = False
     print("[WARNING] pystray et/ou PIL non disponibles - mode console uniquement")
 
-# Import du serveur NMEA principal
-from nmea_server import (
-    main_thread, cleanup_on_exit, shutdown_event, 
-    HTTPS_PORT, signal_handler, app, socketio
-)
+# Import du serveur NMEA principal avec fallback pour gevent
+try:
+    from nmea_server import (
+        main_thread, cleanup_on_exit, shutdown_event, 
+        HTTPS_PORT, signal_handler, app, socketio
+    )
+    NMEA_SERVER_AVAILABLE = True
+except ImportError as e:
+    if "gevent" in str(e):
+        print("[FALLBACK] gevent non disponible - utilisation du serveur HTTP alternatif")
+        # Import du serveur de fallback sans gevent
+        try:
+            from nmea_server_fallback import (
+                main_thread, cleanup_on_exit, shutdown_event, 
+                HTTPS_PORT, signal_handler, app, socketio
+            )
+            NMEA_SERVER_AVAILABLE = True
+        except ImportError:
+            print("[ERROR] Aucun serveur NMEA disponible")
+            NMEA_SERVER_AVAILABLE = False
+    else:
+        print(f"[ERROR] Erreur import nmea_server: {e}")
+        NMEA_SERVER_AVAILABLE = False
 
 class NMEAServerTray:
     def __init__(self):
+        if not NMEA_SERVER_AVAILABLE:
+            print("[ERROR] Serveur NMEA non disponible - impossible de démarrer le system tray")
+            return
+            
         self.icon = None
         self.server_thread = None
         self.running = False
@@ -153,14 +175,25 @@ class NMEAServerTray:
 
 def main():
     """Point d'entrée principal"""
+    if not NMEA_SERVER_AVAILABLE:
+        print("[ERROR] Serveur NMEA non disponible")
+        print("Solution: installer gevent ou utiliser Python 3.11")
+        print("  pip install gevent")
+        sys.exit(1)
+        
     if len(sys.argv) > 1 and sys.argv[1] == '--console':
         # Mode console classique
         print("[INFO] Mode console - utilisez Ctrl+C pour arrêter")
         main_thread()
     else:
         # Mode system tray
-        tray_app = NMEAServerTray()
-        tray_app.run()
+        if not TRAY_AVAILABLE:
+            print("[ERROR] pystray non disponible - basculement en mode console")
+            main_thread()
+        else:
+            tray_app = NMEAServerTray()
+            if NMEA_SERVER_AVAILABLE:
+                tray_app.run()
 
 if __name__ == "__main__":
     main()
