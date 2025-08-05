@@ -30,6 +30,8 @@ from dotenv import load_dotenv
 IS_WINDOWS = platform.system() == 'Windows'
 IS_LINUX = platform.system() == 'Linux'
 
+print("[FALLBACK] NMEA Server Fallback - Version sans gevent")
+
 # Conditional stderr redirection (safer on Windows)
 if not IS_WINDOWS:
     sys.stderr = open(os.devnull, 'w')  # Only on Linux

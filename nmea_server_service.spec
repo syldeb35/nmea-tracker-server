@@ -31,6 +31,7 @@ datas = [
 hiddenimports = [
     'flask',
     'flask_socketio', 
+    'flask_cors',  # Nécessaire pour le fallback
     'socketio',
     'eventlet',
     'eventlet.wsgi',
@@ -49,9 +50,13 @@ hiddenimports = [
     'servicemanager',
     'cryptography',
     'cryptography.hazmat.primitives.serialization',
-    'nmea_server_fallback',  # Inclure le module fallback
     'cryptography.hazmat.primitives.asymmetric.rsa',
     'cryptography.x509',
+    'nmea_server_fallback',  # Inclure le module fallback
+    'logging.handlers',  # Pour RotatingFileHandler
+    'dotenv',  # Pour load_dotenv
+    'threading',  # Pour les threads
+    'importlib.util',  # Pour l'import dynamique
 ]
 
 # Binaires à exclure (pour réduire la taille)
