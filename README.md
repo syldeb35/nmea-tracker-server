@@ -6,40 +6,40 @@
 [![Build Status](https://github.com/syldeb35/nmea-tracker-server/actions/workflows/build-system-tray.yml/badge.svg)](https://github.com/syldeb35/nmea-tracker-server/actions/workflows/build-system-tray.yml)
 [![Release](https://img.shields.io/github/v/release/syldeb35/nmea-tracker-server)](https://github.com/syldeb35/nmea-tracker-server/releases/latest)
 
-**Serveur NMEA/AIS temps réel avec interface web moderne pour le suivi de données GPS et navigation maritime.**
+**Real-time NMEA/AIS server with a modern web interface for GPS data tracking and maritime navigation.**
 
 ![NMEA Tracker Interface](https://img.shields.io/badge/Interface-Web%20HTTPS-brightgreen.svg)
 
-## 🌟 Fonctionnalités
+## 🌟 Features
 
-### 📡 Réception de données NMEA
+### 📡 NMEA Data Reception
 
-- ✅ **Série (Bluetooth/USB)** - Connexion directe aux récepteurs GPS
-- ✅ **UDP** - Réception réseau de données NMEA
-- ✅ **TCP** - Connexion TCP pour flux de données
-- ✅ **Auto-détection** des ports série Bluetooth
+- ✅ **Serial (Bluetooth/USB)** - Direct connection to GPS receivers
+- ✅ **UDP** - Network reception of NMEA data
+- ✅ **TCP** - TCP connection for data streams
+- ✅ **Auto-detection** of Bluetooth serial ports
 
-### 🗺️ Interface web temps réel
+### 🗺️ Real-time Web Interface
 
-- ✅ **Carte interactive** avec Leaflet.js
-- ✅ **Tracking GPS** en temps réel avec historique
-- ✅ **Décodage NMEA** (GGA, RMC, GLL, VTG, HDT)
-- ✅ **WebSocket** pour mise à jour instantanée
-- ✅ **Design responsive** adaptatif mobile/desktop
+- ✅ **Interactive map** with Leaflet.js
+- ✅ **Real-time GPS tracking** with history
+- ✅ **NMEA decoding** (GGA, RMC, GLL, VTG, HDT)
+- ✅ **WebSocket** for instant updates
+- ✅ **Responsive design** for mobile/desktop
 
-### 🔧 Configuration avancée
+### 🔧 Advanced Configuration
 
-- ✅ **Interface de configuration** web intuitive
-- ✅ **Serveur HTTPS** avec certificats SSL
-- ✅ **Logging rotatif** des trames NMEA
-- ✅ **Multi-plateforme** (Windows, Linux, macOS)
+- ✅ **Intuitive web configuration interface**
+- ✅ **HTTPS server** with SSL certificates
+- ✅ **Rotating logging** of NMEA frames
+- ✅ **Multi-platform** (Windows, Linux, macOS)
 
 ### 📦 Distribution
 
-- ✅ **Exécutable autonome** (PyInstaller)
-- ✅ **Aucune installation** requise sur la machine cible
-- ✅ **Icône personnalisée** professionnelle
-- ✅ **Arrêt propre** avec Ctrl+C
+- ✅ **Standalone executable** (PyInstaller)
+- ✅ **No installation** required on the target machine
+- ✅ **Professional custom icon**
+- ✅ **Clean shutdown** with Ctrl+C
 
 ## 🚀 Installation rapide
 
@@ -200,40 +200,40 @@ dist/nmea_tracker_server      # Linux/macOS
 
 ## 🐛 Résolution de problèmes
 
-### Port série non détecté
+### Serial port not detected
 
 ```bash
-# Linux : Permissions
+# Linux: Permissions
 sudo usermod -a -G dialout $USER
 sudo chmod 666 /dev/ttyUSB0
 
-# Windows : Vérifier Device Manager
-# Réinstaller les drivers Bluetooth si nécessaire
+# Windows: Check Device Manager
+# Reinstall Bluetooth drivers if necessary
 ```
 
-### Erreur "Address already in use"
+### "Address already in use" error
 
 ```bash
-# Tuer le processus existant
+# Kill the existing process
 sudo lsof -i :5000        # Linux/macOS
 netstat -ano | find "5000"  # Windows
 
-# Ou changer le port dans le code
+# Or change the port in the code
 HTTPS_PORT = 5001
 ```
 
-### Certificats SSL manquants
+### Missing SSL certificates
 
-L'application fonctionne automatiquement en HTTP si les certificats HTTPS sont absents.
+The application will automatically run in HTTP mode if HTTPS certificates are missing.
 
 ## 📈 Roadmap
 
-- [ ] 🔐 Interface d'authentification
-- [ ] 📊 Graphiques historiques des données
-- [ ] 🌍 Support multi-langues
-- [ ] 📱 Application mobile companion
-- [ ] ⚙️ API REST pour intégrations tierces
-- [ ] 📦 Package Docker
+- [ ] 🔐 Authentication interface
+- [ ] 📊 Historical data graphs
+- [ ] 🌍 Multi-language support
+- [ ] 📱 Mobile companion app
+- [ ] ⚙️ REST API for third-party integrations
+- [ ] 📦 Docker package
 - [ ] 🔄 Synchronisation cloud
 
 ## 🤝 Contribution
@@ -276,39 +276,39 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 ---
 
-## ⭐ Support le projet
+## ⭐ Support the Project
 
-Si ce projet vous aide, n'hésitez pas à lui donner une étoile !
+If this project helps you, feel free to give it a star!
 
-[![GitHub stars](https://img.shields.io/github/stars/VOTRE_USERNAME/nmea-tracker-server.svg?style=social&label=Star)](https://github.com/VOTRE_USERNAME/nmea-tracker-server)
+[![GitHub stars](https://img.shields.io/github/stars/YOUR_USERNAME/nmea-tracker-server.svg?style=social&label=Star)](https://github.com/YOUR_USERNAME/nmea-tracker-server)
 
-# NMEA Tracker Server - État du Projet
+# NMEA Tracker Server - Project Status
 
-## 📊 Résumé de l'Évolution
+## 📊 Evolution Summary
 
-### ✅ Tâches Complétées
+### ✅ Completed Tasks
 
-1. **Parser AIS** - Ajout d'un analyseur de messages AIS complet
-   - Décodage des messages AIVDM/AIVDO
-   - Extraction des coordonnées et informations navire
-   - Conversion 6-bit ASCII vers coordonnées GPS
+1. **AIS Parser** - Added a complete AIS message parser
+   - Decoding AIVDM/AIVDO messages
+   - Extracting coordinates and vessel information
+   - Converting 6-bit ASCII to GPS coordinates
 
-2. **Traduction Anglaise** - Interface utilisateur multilingue
-   - config.html entièrement traduit en anglais
-   - Correction de la syntaxe Jinja2
-   - Interface plus accessible internationalement
+2. **English Translation** - Multilingual user interface
+   - config.html fully translated to English
+   - Jinja2 syntax corrections
+   - More accessible international interface
 
-3. **Optimisation VS Code** - Performance améliorée
-   - Configuration .vscode/settings.json optimisée
-   - Exclusions Pylance pour éviter les blocages
-   - Limitations spell checker et file watcher
+3. **VS Code Optimization** - Improved performance
+   - Optimized .vscode/settings.json configuration
+   - Pylance exclusions to prevent blocking
+   - Spell checker and file watcher limitations
 
-4. **Scripts Cross-Platform** - Organisation des builds
-   - Répertoire scripts/ réorganisé par OS
-   - Scripts Linux, Windows, macOS séparés
-   - Scripts communs dans scripts/common/
+4. **Cross-Platform Scripts** - Build organization
+   - scripts/ directory reorganized by OS
+   - Separate scripts for Linux, Windows, macOS
+   - Common scripts in scripts/common/
 
-5. **GitHub Actions** - CI/CD multi-plateforme
+5. **GitHub Actions** - Multi-platform CI/CD
    - Workflow de build cross-platform fixé
    - Compatibilité PowerShell/Bash résolue
    - Builds automatiques Linux/Windows/macOS
