@@ -51,66 +51,66 @@ TCP_IP = os.getenv("TCP_IP", "0.0.0.0")
 TCP_PORT = int(os.getenv("TCP_PORT", "5006"))
 HTTPS_PORT = int(os.getenv("HTTPS_PORT", "5000"))
 
-# Nouvelles variables pour modes client/serveur
-UDP_MODE = os.getenv("UDP_MODE", "server")  # "server" ou "client"
-TCP_MODE = os.getenv("TCP_MODE", "server")  # "server" ou "client"
+ # New variables for client/server modes
+UDP_MODE = os.getenv("UDP_MODE", "server")  # "server" or "client"
+TCP_MODE = os.getenv("TCP_MODE", "server")  # "server" or "client"
 UDP_TARGET_IP = os.getenv("UDP_TARGET_IP", "")
 UDP_TARGET_PORT = int(os.getenv("UDP_TARGET_PORT", "50110"))
 TCP_TARGET_IP = os.getenv("TCP_TARGET_IP", "")
 TCP_TARGET_PORT = int(os.getenv("TCP_TARGET_PORT", "50110"))
 REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR|MMB|MDA)')
 
-# Ajouter ces variables globales après les imports et avant les autres variables
-# (vers la ligne 50-60, après les imports mais avant les variables globales)
+ # Add these global variables after imports and before other variables
+ # (around line 50-60, after imports but before global variables)
 
-# Variables globales pour les données NMEA en temps réel
-last_nmea_data = []  # Buffer des dernières données NMEA
-max_nmea_buffer = 50  # Garder les 50 dernières lignes
+ # Global variables for real-time NMEA data
+last_nmea_data = []  # Buffer for the latest NMEA data
+max_nmea_buffer = 50  # Keep the last 50 lines
 
 # === NMEA DATA EMISSION FUNCTION ===
 # Émettre les données NMEA via WebSocket et les stocker dans le buffer
 
 def emit_nmea_data(source, message):
-    """Émet les données NMEA via WebSocket et les stocke"""
+    """Emits NMEA data via WebSocket and stores it"""
     global last_nmea_data
     
     try:
-        # Vérifications des paramètres d'entrée
+        # Check input parameters
         if source is None or source == "":
             source = "UNKNOWN"
         if message is None or message == "":
             debug_logger.debug("Message NMEA vide - ignoré")
             return
             
-        # Nettoyer le message
+        # Clean the message
         message = str(message).strip()
         if not message or message == "undefined":
             debug_logger.debug(f"Message invalide ignoré: '{message}'")
             return
         
-        # Ajouter timestamp
+        # Add timestamp
         timestamp = time.strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}][{source}] {message}"
         
-        # Ajouter au buffer
+        # Add to buffer
         last_nmea_data.append(formatted_message)
         if len(last_nmea_data) > max_nmea_buffer:
             last_nmea_data.pop(0)
         
-        # 🆕 LOG NMEA dans fichier au lieu de console
+        # 🆕 LOG NMEA to file instead of console
         nmea_logger.info(f"{source}: {message}")
         
-        # 🆕 DEBUG seulement si activé ET en mode verbose
+        # 🆕 DEBUG only if enabled AND in verbose mode
         if DEBUG:
             debug_logger.debug(f"EMIT {source}: {message[:50]}...")
             
-        # Émettre pour Windy Plugin (chaîne NMEA pure)
+        # Emit for Windy Plugin (pure NMEA string)
         try:
             socketio.emit('nmea_data', message)
         except Exception as windy_error:
             error_logger.error(f"Erreur émission Windy: {windy_error}")
         
-        # Émettre pour l'interface web avec informations source
+        # Emit for the web interface with source information
         try:
             web_data = {
                 'source': source,
@@ -122,7 +122,7 @@ def emit_nmea_data(source, message):
             error_logger.error(f"Erreur émission WebSocket: {ws_error}")
                 
     except Exception as e:
-        error_logger.error(f"Erreur lors de l'émission NMEA: {e}")
+        error_logger.error(f"Error emitting NMEA: {e}")
 
 
 # === PYINSTALLER RESOURCE PATH HELPER ===
@@ -135,8 +135,8 @@ def get_resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-# === ENVIRONMENT CONFIG LOADING ADAPTED TO SYSTEM ===
-# Default serial port according to OS
+ # === ENVIRONMENT CONFIG LOADING ADAPTED TO SYSTEM ===
+ # Default serial port according to OS
 DEFAULT_SERIAL_PORT = "COM5" if IS_WINDOWS else "AUTO"
 SERIAL_PORT = os.getenv("SERIAL_PORT", DEFAULT_SERIAL_PORT).strip()
 SERIAL_BAUDRATE = int(os.getenv("SERIAL_BAUDRATE", 4800))
@@ -147,20 +147,20 @@ ENABLE_TCP = os.getenv("ENABLE_TCP", "True").lower() == "true"
 print(f"[INFO] System detected: {platform.system()}")
 print(f"[INFO] Default serial port: {SERIAL_PORT}")
 
-# === LOG CONFIGURATION AVANCÉE ===
-# 🆕 SUPPRESSION COMPLÈTE des logs HTTP/SSL/gevent sur TOUS les systèmes
+ # === ADVANCED LOG CONFIGURATION ===
+ # 🆕 COMPLETE SUPPRESSION of HTTP/SSL/gevent logs on ALL systems
 import logging
 import warnings
 import datetime
 import ipaddress
 from logging.handlers import RotatingFileHandler
 
-# Supprimer TOUS les logs HTTP (werkzeug/Flask)
+ # Remove ALL HTTP logs (werkzeug/Flask)
 logging.getLogger('werkzeug').setLevel(logging.CRITICAL + 1)
 logging.getLogger('werkzeug.serving').setLevel(logging.CRITICAL + 1)
 logging.getLogger('flask').setLevel(logging.ERROR)
 
-# Supprimer TOUS les logs SSL et gevent
+ # Remove ALL SSL and gevent logs
 logging.getLogger('gevent').setLevel(logging.CRITICAL + 1)  # Plus que CRITICAL
 logging.getLogger('gevent.ssl').setLevel(logging.CRITICAL + 1)
 logging.getLogger('gevent.baseserver').setLevel(logging.CRITICAL + 1)
@@ -168,13 +168,13 @@ logging.getLogger('gevent.server').setLevel(logging.CRITICAL + 1)
 logging.getLogger('gevent.pywsgi').setLevel(logging.CRITICAL + 1)
 logging.getLogger('ssl').setLevel(logging.CRITICAL + 1)
 
-# Supprimer les warnings Python SSL
+ # Remove Python SSL warnings
 warnings.filterwarnings('ignore', category=Warning)
 warnings.filterwarnings('ignore', message='.*SSL.*')
 warnings.filterwarnings('ignore', message='.*certificate.*')
 
-# 🆕 SUPPRESSION COMPLÈTE DES LOGS HTTP/WERKZEUG
-# Désactiver complètement Werkzeug et tous les logs HTTP
+ # 🆕 COMPLETE SUPPRESSION OF HTTP/WERKZEUG LOGS
+ # Completely disable Werkzeug and all HTTP logs
 logging.getLogger('werkzeug').disabled = True
 logging.getLogger('werkzeug.serving').disabled = True
 
@@ -185,25 +185,25 @@ class HTTPLogFilter:
         self.original_stdout = original_stdout if original_stdout is not None else sys.__stdout__
         
     def write(self, text):
-        # Protection contre stdout None
+        # Protection against None stdout
         if self.original_stdout is None:
             return
             
-        # Filtrer les logs HTTP (contiennent des patterns typiques)
+        # Filter HTTP logs (contain typical patterns)
         http_patterns = [
             'GET /', 'POST /', 'PUT /', 'DELETE /',
             'HTTP/1.1', 'socket.io', '127.0.0.1', 'localhost'
         ]
         
-        # Si le texte contient un pattern HTTP, l'ignorer
+        # If the text contains an HTTP pattern, ignore it
         if any(pattern in text for pattern in http_patterns):
             return
         
-        # Sinon, écrire vers stdout original
+        # Otherwise, write to original stdout
         try:
             self.original_stdout.write(text)
         except (AttributeError, OSError):
-            pass  # Ignorer si stdout n'est pas disponible
+            pass  # Ignore if stdout is not available
         
     def flush(self):
         if self.original_stdout is not None:
@@ -224,7 +224,7 @@ class HTTPLogFilter:
 # Et seulement si stdout est disponible
 if IS_WINDOWS and sys.stdout is not None:
     sys.stdout = HTTPLogFilter(sys.stdout)
-    # Le message sera affiché plus tard après la définition de main_logger
+    # The message will be displayed later after main_logger is defined
 
 # Supprimer urllib3 warnings si disponible
 try:
@@ -240,71 +240,71 @@ try:
 except ImportError:
     pass
 
-# 🆕 SYSTÈME DE LOGS STRUCTURÉ PAR FICHIERS
+ # 🆕 STRUCTURED LOG SYSTEM BY FILES
 os.makedirs("logs", exist_ok=True)
 
-# Formatter commun pour tous les logs - SANS caractères spéciaux
+ # Common formatter for all logs - WITHOUT special characters
 file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
 
-# 🆕 LOGGER POUR TRAMES NMEA (remplace les print EMIT-DEBUG)
+ # 🆕 LOGGER FOR NMEA FRAMES (replaces EMIT-DEBUG print)
 nmea_logger = logging.getLogger("nmea_data")
 nmea_logger.setLevel(logging.INFO)
 nmea_handler = RotatingFileHandler("logs/nmea_data.log", maxBytes=2*1024*1024, backupCount=5, encoding='utf-8')
 nmea_handler.setFormatter(file_formatter)
 nmea_logger.addHandler(nmea_handler)
 
-# 🆕 LOGGER POUR DEBUG GÉNÉRAL (remplace les print DEBUG)
+ # 🆕 LOGGER FOR GENERAL DEBUG (replaces DEBUG print)
 debug_logger = logging.getLogger("debug")
 debug_logger.setLevel(logging.DEBUG)
 debug_handler = RotatingFileHandler("logs/debug.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 debug_handler.setFormatter(file_formatter)
 debug_logger.addHandler(debug_handler)
 
-# 🆕 LOGGER POUR CONNEXIONS TCP/UDP (détails techniques)
+ # 🆕 LOGGER FOR TCP/UDP CONNECTIONS (technical details)
 network_logger = logging.getLogger("network")
 network_logger.setLevel(logging.INFO)
 network_handler = RotatingFileHandler("logs/network.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 network_handler.setFormatter(file_formatter)
 network_logger.addHandler(network_handler)
 
-# 🆕 LOGGER POUR ERREURS SYSTÈME
+ # 🆕 LOGGER FOR SYSTEM ERRORS
 error_logger = logging.getLogger("errors")
 error_logger.setLevel(logging.ERROR)
 error_handler = RotatingFileHandler("logs/errors.log", maxBytes=1024*1024, backupCount=5, encoding='utf-8')
 error_handler.setFormatter(file_formatter)
 error_logger.addHandler(error_handler)
 
-# 🆕 Logger principal pour les messages importants (console + fichier)
+ # 🆕 Main logger for important messages (console + file)
 main_logger = logging.getLogger("main")
 main_logger.setLevel(logging.INFO)
 
-# Handler fichier pour main avec UTF-8
+ # File handler for main with UTF-8
 main_file_handler = RotatingFileHandler("logs/main.log", maxBytes=1024*1024, backupCount=3, encoding='utf-8')
 main_file_handler.setFormatter(file_formatter)
 main_logger.addHandler(main_file_handler)
 
-# Handler console pour main (messages importants seulement)
+ # Console handler for main (important messages only)
 main_console_handler = logging.StreamHandler()
 main_console_handler.setFormatter(console_formatter)
 main_logger.addHandler(main_console_handler)
 
-# 🆕 Afficher les messages d'initialisation des filtres
+ # 🆕 Display filter initialization messages
 if IS_WINDOWS:
     main_logger.info("Filtre HTTP activé pour Windows")
 
 # 🆕 Redirection stderr pour SSL (conservée)
 class SSLErrorFilter:
-    """Filtre pour supprimer les erreurs SSL spécifiques"""
+    """Filter to remove specific SSL errors"""
     def __init__(self, original_stderr):
         self.original_stderr = original_stderr if original_stderr is not None else sys.__stderr__
         
     def write(self, text):
-        # Protection contre stderr None
+        # Protection against None stderr
         if self.original_stderr is None:
             return
             
-        # 🆕 Liste étendue des patterns SSL à filtrer
+        # 🆕 Extended list of SSL patterns to filter
         ssl_patterns = [
             'ssl:', 'sslv3_alert', 'certificate_unknown', 
             'gevent', 'greenlet', 'wrap_socket_and_handle',
@@ -313,15 +313,15 @@ class SSLErrorFilter:
             'wsgiserver', 'baseserver', 'pywsgi'
         ]
         
-        # Filtrer les erreurs SSL connues
+        # Filter known SSL errors
         if any(keyword in text.lower() for keyword in ssl_patterns):
             return  # Ignorer complètement
         
-        # Écrire tout le reste vers stderr original
+        # Write everything else to original stderr
         try:
             self.original_stderr.write(text)
         except (AttributeError, OSError):
-            pass  # Ignorer si stderr n'est pas disponible
+            pass  # Ignore if stderr is not available
         
     def flush(self):
         if self.original_stderr is not None:
@@ -343,7 +343,7 @@ class SSLErrorFilter:
 if IS_WINDOWS and sys.stderr is not None:
     sys.stderr = SSLErrorFilter(sys.stderr)
 
-main_logger.info("Système de logs initialisé")
+main_logger.info("Log system initialized")
 
 # === FLASK SERVER ===
 app = Flask(__name__)
@@ -351,11 +351,11 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 CORS(app)  # Allow all origins (wildcard origin *)
 
-# === BLUETOOTH GPS MANAGER (initialisé tôt pour éviter les erreurs de référence) ===
-# Déclaration en global - sera initialisé après la classe BluetoothGPSManager
+ # === BLUETOOTH GPS MANAGER (initialized early to avoid reference errors) ===
+ # Global declaration - will be initialized after BluetoothGPSManager class
 bluetooth_manager = None
 
-# === SHUTDOWN MANAGEMENT ===
+ # === SHUTDOWN MANAGEMENT ===
 shutdown_event = threading.Event()
 http_server = None
 
@@ -401,20 +401,20 @@ atexit.register(cleanup_on_exit)
 # === SIMPLE BLUETOOTH SERIAL PORT DETECTION ===
 def detect_bluetooth_serial_port():
     """
-    Détection automatique et connexion GPS Bluetooth.
-    Utilise le gestionnaire Bluetooth pour découverte et connexion automatiques.
-    Compatible avec Windows, macOS, Linux.
+    Automatic detection and connection of Bluetooth GPS.
+    Uses the Bluetooth manager for automatic discovery and connection.
+    Compatible with Windows, macOS, Linux.
     Returns the port name (e.g. /dev/rfcomm0 or COM4), or None.
     """
     global bluetooth_manager
-    # Sur Linux, utiliser le gestionnaire Bluetooth automatique
+    # On Linux, use the automatic Bluetooth manager
     if IS_LINUX:
         print("[AUTO-DETECT] Utilisation du gestionnaire Bluetooth automatique...")
         auto_port = bluetooth_manager.maintain_connection()
         if auto_port:
             return auto_port
     
-    # Fallback: méthode traditionnelle par énumération des ports
+    # Fallback: traditional method by enumerating ports
     print("[AUTO-DETECT] Recherche traditionnelle des ports série...")
     ports = list(serial.tools.list_ports.comports())
     
@@ -426,9 +426,9 @@ def detect_bluetooth_serial_port():
     for port in ports:
         print(f"  - {port.device}: {port.description}")
     
-    # Patterns adaptés selon l'OS
+    # Patterns adapted according to OS
     if IS_WINDOWS:
-        # Recherche plus large sur Windows
+        # Broader search on Windows
         bt_patterns = [
             re.compile(r"bluetooth", re.IGNORECASE),
             re.compile(r"bt", re.IGNORECASE),
@@ -453,7 +453,7 @@ def detect_bluetooth_serial_port():
                 print(f"[AUTO-DETECT] Port série détecté: {port_name} ({desc})")
                 return port_name
     
-    # Si rien trouvé, retourner le premier port disponible sur Windows
+    # If nothing found, return the first available port on Windows
     if IS_WINDOWS and ports:
         first_port = ports[0].device
         print(f"[AUTO-DETECT] Aucun port Bluetooth, utilisation du premier port: {first_port}")
@@ -484,7 +484,7 @@ bluetooth_monitor_stop = threading.Event()
 # It removes common repeater prefixes, cleans up double dollar signs, and strips control characters.
 # It is used to ensure that only valid NMEA sentences are processed and emitted.
 def clean_nmea_data(data):
-    """Nettoie les données NMEA des préfixes de répéteur"""
+    """Cleans NMEA data from repeater prefixes"""
     import re
     
     # Supprimer les préfixes courants des répéteurs
@@ -502,14 +502,14 @@ def clean_nmea_data(data):
 # Function to listen to UDP broadcasts in server mode
 # This function listens for UDP broadcasts on a specified port and emits the received NMEA data.
 def udp_listener(stop_event):
-    # 🆕 Forcer l'IP de binding
-    bind_ip = "0.0.0.0"  # Forcer pour Windows
+    # 🆕 Force binding IP
+    bind_ip = "0.0.0.0"  # Force for Windows
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     try:
-        sock.bind((bind_ip, UDP_PORT))  # Utiliser bind_ip au lieu de UDP_IP
+        sock.bind((bind_ip, UDP_PORT))  # Use bind_ip instead of UDP_IP
         print(f"[UDP] Listening on {bind_ip}:{UDP_PORT}")
         sock.settimeout(1.0)
         
@@ -545,7 +545,7 @@ def udp_listener(stop_event):
 # It uses a stop event to allow graceful shutdown of the listener thread.
 
 def udp_client_listener(target_ip, target_port, stop_event):
-    """Écoute UDP en mode client/broadcast"""
+    """UDP listening in client/broadcast mode"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     # Configuration pour recevoir les broadcasts
@@ -579,7 +579,7 @@ def udp_client_listener(target_ip, target_port, stop_event):
     print("[UDP-CLIENT] Stopped.")
 
 def tcp_listener(stop_event):
-    """Écoute TCP en mode serveur avec logs structurés"""
+    """TCP listening in server mode with structured logs"""
     global TCP_PORT
     
     bind_ip = "0.0.0.0"
@@ -671,7 +671,7 @@ def tcp_listener(stop_event):
     network_logger.info("TCP server stopped")
 
 def tcp_client(stop_event):
-    """Connexion TCP en mode client"""
+    """TCP connection in client mode"""
     global TCP_TARGET_IP, TCP_TARGET_PORT
     
     main_logger.info(f"TCP Client connecting to {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
@@ -734,7 +734,7 @@ def tcp_client(stop_event):
             time.sleep(0.1)
 
 def tcp_client_listener(target_ip, target_port, stop_event):
-    """Connexion TCP en mode client vers un GPS"""
+    """TCP connection in client mode to a GPS"""
     print(f"[TCP-CLIENT] Tentative connexion à {target_ip}:{target_port}")
     
     retry_interval = 10  # Reconnexion toutes les 10 secondes
@@ -900,14 +900,14 @@ def serial_listener(port, baudrate, stop_event):
 
 def bluetooth_monitor(stop_event):
     """
-    Thread de surveillance Bluetooth qui maintient la connexion GPS automatiquement
+    Bluetooth monitoring thread that automatically maintains GPS connection
     """
     global bluetooth_manager, serial_thread
-    print("[BLUETOOTH-MONITOR] Démarrage de la surveillance Bluetooth...")
+    print("[BLUETOOTH-MONITOR] Starting Bluetooth monitoring...")
     
-    # S'assurer que bluetooth_manager est initialisé
+    # Make sure bluetooth_manager is initialized
     if bluetooth_manager is None:
-        print("[BLUETOOTH-MONITOR] Erreur: bluetooth_manager non initialisé")
+        print("[BLUETOOTH-MONITOR] Error: bluetooth_manager not initialized")
         return
     
     check_counter = 0
@@ -916,68 +916,68 @@ def bluetooth_monitor(stop_event):
             if ENABLE_SERIAL and IS_LINUX:
                 check_counter += 1
                 
-                # Log périodique pour montrer que le monitoring est actif
-                if check_counter % 10 == 1:  # Tous les 10 cycles (10 minutes)
-                    print(f"[BLUETOOTH-MONITOR] Cycle {check_counter} - vérification connexion...")
+                # Periodic log to show monitoring is active
+                if check_counter % 10 == 1:  # Every 10 cycles (10 minutes)
+                    print(f"[BLUETOOTH-MONITOR] Cycle {check_counter} - checking connection...")
                 
-                # Vérifier et maintenir la connexion Bluetooth
+                # Check and maintain Bluetooth connection
                 port = bluetooth_manager.maintain_connection()
                 if port:
-                    # Mettre à jour le port série global si nécessaire
+                    # Update global serial port if necessary
                     global SERIAL_PORT
                     current_port = SERIAL_PORT if SERIAL_PORT != "AUTO" else None
                     
-                    # En mode AUTO, toujours vérifier si le thread série tourne
+                    # In AUTO mode, always check if the serial thread is running
                     if SERIAL_PORT == "AUTO" or current_port != port:
-                        print(f"[BLUETOOTH-MONITOR] Connexion GPS détectée: {port}")
+                        print(f"[BLUETOOTH-MONITOR] GPS connection detected: {port}")
                         
-                        # Arrêter le thread série existant s'il y en a un
+                        # Stop existing serial thread if any
                         if serial_thread and serial_thread.is_alive():
-                            print("[BLUETOOTH-MONITOR] Arrêt du thread série existant...")
+                            print("[BLUETOOTH-MONITOR] Stopping existing serial thread...")
                             serial_stop.set()
                             serial_thread.join(timeout=2)
                         
-                        # Attendre un peu pour s'assurer que le port est libéré
-                        print("[BLUETOOTH-MONITOR] Attente libération du port...")
+                        # Wait a bit to ensure the port is released
+                        print("[BLUETOOTH-MONITOR] Waiting for port release...")
                         time.sleep(5)
                         
-                        # Démarrer le nouveau thread série
-                        print(f"[BLUETOOTH-MONITOR] Démarrage thread série sur {port}...")
+                        # Start new serial thread
+                        print(f"[BLUETOOTH-MONITOR] Starting serial thread on {port}...")
                         serial_stop.clear()
                         serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                         serial_thread.start()
                         
-                        # Mettre à jour la variable globale pour l'interface web (seulement si pas en mode AUTO)
+                        # Update global variable for web interface (only if not in AUTO mode)
                         if SERIAL_PORT != "AUTO":
                             SERIAL_PORT = port
                     elif not (serial_thread and serial_thread.is_alive()):
-                        # Le port n'a pas changé mais le thread série n'est pas actif
-                        print(f"[BLUETOOTH-MONITOR] Redémarrage thread série sur {port}...")
+                        # Port hasn't changed but serial thread is not active
+                        print(f"[BLUETOOTH-MONITOR] Restarting serial thread on {port}...")
                         serial_stop.clear()
                         serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                         serial_thread.start()
                 elif SERIAL_PORT == "AUTO":
-                    # En mode AUTO, arrêter le thread série s'il n'y a plus de connexion
+                    # In AUTO mode, stop serial thread if no connection
                     if serial_thread and serial_thread.is_alive():
-                        print("[BLUETOOTH-MONITOR] Aucune connexion GPS - arrêt du thread série")
+                        print("[BLUETOOTH-MONITOR] No GPS connection - stopping serial thread")
                         serial_stop.set()
                         serial_thread.join(timeout=2)
             
-            # Attendre 60 secondes avant la prochaine vérification
-            for _ in range(600):  # 60 secondes en incréments de 0.1s
+            # Wait 60 seconds before next check
+            for _ in range(600):  # 60 seconds in 0.1s increments
                 if stop_event.is_set():
                     break
                 time.sleep(0.1)
                 
         except Exception as e:
-            print(f"[BLUETOOTH-MONITOR] Erreur: {e}")
-            time.sleep(10)  # Pause plus longue en cas d'erreur
+            print(f"[BLUETOOTH-MONITOR] Error: {e}")
+            time.sleep(10)  # Longer pause in case of error
     
-    # Nettoyer la connexion rfcomm en sortie
+    # Clean up rfcomm connection on exit
     if IS_LINUX:
         bluetooth_manager.cleanup_rfcomm()
     
-    print("[BLUETOOTH-MONITOR] Arrêt de la surveillance Bluetooth.")
+    print("[BLUETOOTH-MONITOR] Bluetooth monitoring stopped.")
 
 # === THREAD MANAGEMENT FUNCTION ===
 # Remplacer la fonction manage_threads() par cette version avec debug :
@@ -1421,47 +1421,47 @@ def config():
 # === BLUETOOTH GPS AUTO-MANAGEMENT ===
 class BluetoothGPSManager:
     """
-    Gestionnaire automatique pour GPS Bluetooth avec auto-découverte et connexion
+    Automatic manager for Bluetooth GPS with auto-discovery and connection
     """
     def __init__(self):
-        self.target_mac = None  # Adresse MAC du GPS trouvé
-        self.target_channel = None  # Canal SPP trouvé
-        self.rfcomm_device = 0  # Numéro du device rfcomm (0 = /dev/rfcomm0)
+        self.target_mac = None  # MAC address of found GPS
+        self.target_channel = None  # Found SPP channel
+        self.rfcomm_device = 0  # rfcomm device number (0 = /dev/rfcomm0)
         self.is_connected = False
         self.last_scan_time = 0
-        self.scan_interval = 60  # Scan toutes les minutes
-        self.connection_timeout = 10  # Timeout de connexion
+        self.scan_interval = 60  # Scan every minute
+        self.connection_timeout = 10  # Connection timeout
         
     def run_command(self, cmd, timeout=10):
-        """Exécute une commande shell avec timeout"""
+        """Executes a shell command with timeout"""
         try:
             result = subprocess.run(cmd, shell=True, capture_output=True, 
                                   text=True, timeout=timeout)
             return result.returncode == 0, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
-            print(f"[BLUETOOTH] Commande timeout: {cmd}")
+            print(f"[BLUETOOTH] Command timeout: {cmd}")
             return False, "", "Timeout"
         except Exception as e:
-            print(f"[BLUETOOTH] Erreur commande: {e}")
+            print(f"[BLUETOOTH] Command error: {e}")
             return False, "", str(e)
     
     def scan_bluetooth_devices(self):
-        """Scan des appareils Bluetooth à proximité"""
-        print("[BLUETOOTH] Scan des appareils Bluetooth...")
+        """Scan for nearby Bluetooth devices"""
+        print("[BLUETOOTH] Scanning for Bluetooth devices...")
         
-        # Vérifier que Bluetooth est disponible
+        # Check that Bluetooth is available
         success, stdout, stderr = self.run_command("which hciconfig", 5)
         if not success:
             print("[BLUETOOTH] hciconfig non trouvé - Bluetooth non supporté")
             return []
         
-        # Vérifier et activer Bluetooth
+        # Check and activate Bluetooth
         success, stdout, stderr = self.run_command("hciconfig", 5)
         if not success:
             print("[BLUETOOTH] Bluetooth non disponible")
             return []
         
-        # Essayer d'activer l'interface Bluetooth
+        # Try to activate the Bluetooth interface
         success, stdout, stderr = self.run_command("sudo hciconfig hci0 up", 5)
         if not success:
             print(f"[BLUETOOTH] Impossible d'activer Bluetooth: {stderr}")
@@ -1471,8 +1471,8 @@ class BluetoothGPSManager:
                 print("[BLUETOOTH] Bluetooth non accessible - vérifiez les permissions")
                 return []
         
-        # Scan des appareils avec timeout plus long
-        print("[BLUETOOTH] Scan en cours... (peut prendre 10-15 secondes)")
+        # Scan devices with longer timeout
+        print("[BLUETOOTH] Scanning... (may take 10-15 seconds)")
         success, stdout, stderr = self.run_command("hcitool scan", 20)
         if not success:
             print(f"[BLUETOOTH] Échec du scan: {stderr}")
@@ -1487,79 +1487,79 @@ class BluetoothGPSManager:
                     mac = parts[0].strip()
                     name = parts[1].strip()
                     devices.append((mac, name))
-                    print(f"[BLUETOOTH] Trouvé: {mac} - {name}")
+                    print(f"[BLUETOOTH] Found: {mac} - {name}")
         
-        print(f"[BLUETOOTH] {len(devices)} appareil(s) détecté(s)")
+        print(f"[BLUETOOTH] {len(devices)} device(s) detected")
         return devices
     
     def find_spp_channel(self, mac_address):
-        """Trouve le canal SPP pour un appareil donné"""
-        print(f"[BLUETOOTH] Recherche canal SPP pour {mac_address}...")
+        """Finds the SPP channel for a given device"""
+        print(f"[BLUETOOTH] Searching SPP channel for {mac_address}...")
         
         success, stdout, stderr = self.run_command(f"sdptool browse {mac_address}", 10)
         if not success:
             print(f"[BLUETOOTH] Échec browse: {stderr}")
             return None
         
-        # Chercher le canal SPP dans la sortie
+        # Search for SPP channel in output
         lines = stdout.split('\n')
         in_spp_service = False
         
         for i, line in enumerate(lines):
             if 'Serial Port' in line or 'SPP' in line:
                 in_spp_service = True
-                print(f"[BLUETOOTH] Service Serial Port trouvé")
+                print(f"[BLUETOOTH] Serial Port service found")
             elif in_spp_service and 'Channel:' in line:
                 try:
                     channel = int(line.split('Channel:')[1].strip())
-                    print(f"[BLUETOOTH] Canal SPP trouvé: {channel}")
+                    print(f"[BLUETOOTH] SPP channel found: {channel}")
                     return channel
                 except (ValueError, IndexError):
                     continue
             elif in_spp_service and line.strip() == "":
                 in_spp_service = False
         
-        print("[BLUETOOTH] Aucun canal SPP trouvé")
+        print("[BLUETOOTH] No SPP channel found")
         return None
     
     def setup_rfcomm(self, mac_address, channel):
-        """Configure la connexion rfcomm"""
-        print(f"[BLUETOOTH] Configuration rfcomm{self.rfcomm_device} -> {mac_address}:{channel}")
+        """Configures rfcomm connection"""
+        print(f"[BLUETOOTH] Configuring rfcomm{self.rfcomm_device} -> {mac_address}:{channel}")
         
-        # Libérer d'abord le device rfcomm s'il existe
+        # First release rfcomm device if it exists
         self.cleanup_rfcomm()
         
-        # Créer la nouvelle connexion
+        # Create new connection
         cmd = f"sudo rfcomm bind {self.rfcomm_device} {mac_address} {channel}"
         success, stdout, stderr = self.run_command(cmd, 10)
         
         if success:
-            # Attendre que le device soit créé et stabilisé
+            # Wait for device to be created and stabilized
             rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
-            for i in range(10):  # Attendre jusqu'à 5 secondes
+            for i in range(10):  # Wait up to 5 seconds
                 if os.path.exists(rfcomm_path):
-                    # Attendre encore un peu pour la stabilisation
+                    # Wait a bit more for stabilization
                     time.sleep(2)
-                    print(f"[BLUETOOTH] rfcomm configuré: {rfcomm_path}")
+                    print(f"[BLUETOOTH] rfcomm configured: {rfcomm_path}")
                     return rfcomm_path
                 time.sleep(0.5)
             
-            print(f"[BLUETOOTH] Device {rfcomm_path} non créé après timeout")
+            print(f"[BLUETOOTH] Device {rfcomm_path} not created after timeout")
             return None
         else:
-            print(f"[BLUETOOTH] Échec configuration rfcomm: {stderr}")
+            print(f"[BLUETOOTH] rfcomm configuration failed: {stderr}")
             return None
     
     def cleanup_rfcomm(self):
-        """Nettoie la connexion rfcomm"""
+        """Cleans up rfcomm connection"""
         cmd = f"sudo rfcomm release {self.rfcomm_device}"
         success, stdout, stderr = self.run_command(cmd, 5)
         if success:
-            print(f"[BLUETOOTH] rfcomm{self.rfcomm_device} libéré")
+            print(f"[BLUETOOTH] rfcomm{self.rfcomm_device} released")
         
     def test_gps_connection(self, port_path):
-        """Test si le port GPS fonctionne en lisant quelques trames"""
-        print(f"[BLUETOOTH] Test connexion GPS sur {port_path}")
+        """Tests if the GPS port works by reading a few frames"""
+        print(f"[BLUETOOTH] Testing GPS connection on {port_path}")
         
         # Attendre un peu que le device soit prêt
         time.sleep(2)
@@ -1568,10 +1568,10 @@ class BluetoothGPSManager:
         try:
             # Test rapide avec gestion explicite de la fermeture
             ser = serial.Serial(port_path, 4800, timeout=5)
-            print("[BLUETOOTH] Port ouvert, lecture des données...")
+            print("[BLUETOOTH] Port opened, reading data...")
             
-            # Test plus court - juste 10 secondes max
-            for i in range(10):  # Max 10 tentatives = 50 secondes
+            # Shorter test - just max 10 attempts = 50 seconds
+            for i in range(10):
                 try:
                     line = ser.readline().decode('ascii', errors='ignore').strip()
                     if line:
@@ -1591,14 +1591,14 @@ class BluetoothGPSManager:
                     print(f"[BLUETOOTH] Erreur lecture: {e}")
                     continue
             
-            print("[BLUETOOTH] Aucune trame NMEA GPS valide reçue")
+            print("[BLUETOOTH] No valid NMEA GPS frame received")
             return False
             
         except Exception as e:
-            print(f"[BLUETOOTH] Erreur test connexion: {e}")
+            print(f"[BLUETOOTH] Error testing connection: {e}")
             return False
         finally:
-            # S'assurer que le port est fermé dans tous les cas
+            # Make sure the port is closed in all cases
             if ser and ser.is_open:
                 try:
                     ser.close()
@@ -1607,57 +1607,57 @@ class BluetoothGPSManager:
                     pass
     
     def auto_discover_and_connect(self):
-        """Découverte automatique et connexion au GPS Bluetooth"""
+        """Automatic discovery and connection to Bluetooth GPS"""
         if not IS_LINUX:
-            print("[BLUETOOTH] Auto-découverte disponible uniquement sur Linux")
+            print("[BLUETOOTH] Auto-discovery only available on Linux")
             return None
             
-        print("[BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===")
+        print("[BLUETOOTH] === AUTOMATIC GPS DISCOVERY ===")
         
-        # Scan des appareils
+        # Scan devices
         devices = self.scan_bluetooth_devices()
         if not devices:
             print("[BLUETOOTH] Aucun appareil trouvé")
             return None
         
-        # Tester chaque appareil pour GPS/SPP
+        # Test each device for GPS/SPP
         for mac, name in devices:
             print(f"[BLUETOOTH] Test appareil: {name} ({mac})")
             
-            # Chercher le canal SPP
+            # Search for SPP channel
             channel = self.find_spp_channel(mac)
             if channel is None:
                 continue
                 
-            # Essayer de configurer rfcomm
+            # Try to configure rfcomm
             rfcomm_path = self.setup_rfcomm(mac, channel)
             if rfcomm_path is None:
                 continue
                 
-            # Tester la connexion GPS
+            # Test GPS connection
             if self.test_gps_connection(rfcomm_path):
-                print(f"[BLUETOOTH] OK GPS trouve: {name} ({mac}) sur canal {channel}")
+                print(f"[BLUETOOTH] OK GPS found: {name} ({mac}) on channel {channel}")
                 self.target_mac = mac
                 self.target_channel = channel
                 self.is_connected = True
                 return rfcomm_path
             else:
-                print(f"[BLUETOOTH] ERROR Pas de GPS: {name}")
+                print(f"[BLUETOOTH] ERROR No GPS: {name}")
                 self.cleanup_rfcomm()
         
-        print("[BLUETOOTH] Aucun GPS Bluetooth trouvé")
+        print("[BLUETOOTH] No Bluetooth GPS found")
         return None
     
     def detect_existing_rfcomm(self):
-        """Détecte si un rfcomm est déjà configuré et fonctionnel"""
-        print("[BLUETOOTH] Vérification des connexions rfcomm existantes...")
+        """Detects if an rfcomm is already configured and working"""
+        print("[BLUETOOTH] Checking for existing rfcomm connections...")
         
-        # Vérifier si /dev/rfcomm0 existe
+        # Check if /dev/rfcomm0 exists
         rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
         if os.path.exists(rfcomm_path):
-            print(f"[BLUETOOTH] Device {rfcomm_path} trouve")
+            print(f"[BLUETOOTH] Device {rfcomm_path} found")
             
-            # Tester si c'est un GPS fonctionnel
+            # Test if it's a working GPS
             if self.test_gps_connection(rfcomm_path):
                 print(f"[BLUETOOTH] OK GPS fonctionnel detecte sur {rfcomm_path}")
                 self.is_connected = True
@@ -1668,37 +1668,37 @@ class BluetoothGPSManager:
         return None
     
     def check_connection_status(self):
-        """Vérifie l'état de la connexion actuelle"""
+        """Checks the status of the current connection"""
         if not self.is_connected:
             return False
             
         rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
         
-        # Vérifier que le device existe
+        # Check that the device exists
         if not os.path.exists(rfcomm_path):
             print("[BLUETOOTH] Device rfcomm disparu")
             self.is_connected = False
             return False
         
-        # Test plus léger - juste vérifier que le fichier est accessible
+        # Lighter test - just check that the file is accessible
         try:
-            # Au lieu d'ouvrir le port série, juste vérifier l'accès au fichier
+            # Instead of opening the serial port, just check file access
             import stat
             st = os.stat(rfcomm_path)
             if stat.S_ISCHR(st.st_mode):  # Vérifier que c'est un device caractère
                 return True
         except Exception as e:
-            print(f"[BLUETOOTH] Erreur vérification device: {e}")
+            print(f"[BLUETOOTH] Error checking device: {e}")
             
-        print("[BLUETOOTH] Connexion GPS perdue")
+        print("[BLUETOOTH] GPS connection lost")
         self.is_connected = False
         return False
     
     def maintain_connection(self):
-        """Maintient la connexion GPS (appelé périodiquement)"""
+        """Maintains GPS connection (called periodically)"""
         current_time = time.time()
         
-        # Si connecté, vérifier l'état moins fréquemment
+        # If connected, check status less frequently
         if self.is_connected:
             if self.check_connection_status():
                 # Connexion OK, pas besoin de rescanner
@@ -1710,17 +1710,17 @@ class BluetoothGPSManager:
                 # Attendre un peu avant de reconnecter
                 time.sleep(5)
         
-        # Vérifier d'abord s'il y a une connexion rfcomm existante
+        # First check if there is an existing rfcomm connection
         existing_connection = self.detect_existing_rfcomm()
         if existing_connection:
             return existing_connection
         
-        # Vérifier si c'est le moment de scanner (seulement si pas connecté)
+        # Check if it's time to scan (only if not connected)
         if current_time - self.last_scan_time < self.scan_interval:
             return None
             
         self.last_scan_time = current_time
-        print("[BLUETOOTH] Tentative de reconnexion automatique...")
+        print("[BLUETOOTH] Attempting automatic reconnection...")
         
         # Tentative de (re)connexion
         return self.auto_discover_and_connect()
@@ -1995,10 +1995,10 @@ def api_update_config():
             'error': str(e)
         }), 500
 
-# Mettre à jour l'endpoint status pour utiliser les variables globales
+ # Update the status endpoint to use global variables
 @app.route('/api/status')
 def api_status():
-    """API endpoint pour obtenir le statut des connexions"""
+    """API endpoint to get the status of connections"""
     try:
         status = get_current_status()
         
@@ -2022,50 +2022,50 @@ def api_status():
 
 @app.route('/api/nmea_history')
 def api_nmea_history():
-    """Récupérer l'historique des données NMEA"""
+    """Retrieve the history of NMEA data"""
     return jsonify({
         'success': True,
-        'data': last_nmea_data[-20:],  # Les 20 dernières
+        'data': last_nmea_data[-20:],  # Last 20 entries
         'count': len(last_nmea_data)
     })
 
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():
-    """Gérer les nouvelles connexions WebSocket"""
-    print(f"[WEBSOCKET] Client connecté: {request.sid}")
+    """Handle new WebSocket connections"""
+    print(f"[WEBSOCKET] Client connected: {request.sid}")
     
-    # Envoyer les dernières données NMEA au client qui se connecte
-    # Format simple pour compatibilité avec le plugin Windy
-    for formatted_data in last_nmea_data[-10:]:  # Les 10 dernières
-        # Extraire la trame NMEA pure du message formaté
+    # Send the latest NMEA data to the client that connects
+    # Simple format for compatibility with the Windy plugin
+    for formatted_data in last_nmea_data[-10:]:  # Last 10 entries
+        # Extract the pure NMEA frame from the formatted message
         if '] ' in formatted_data:
             # Format: [timestamp][source] message
             nmea_message = formatted_data.split('] ', 2)[-1] if '] ' in formatted_data else formatted_data
         else:
             nmea_message = formatted_data
         
-        # Envoyer la trame NMEA pure pour le plugin Windy
+        # Send the pure NMEA frame for the Windy plugin
         socketio.emit('nmea_data', nmea_message, room=request.sid)
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Gérer les déconnexions WebSocket"""
-    print(f"[WEBSOCKET] Client déconnecté: {request.sid}")
+    """Handle WebSocket disconnections"""
+    print(f"[WEBSOCKET] Client disconnected: {request.sid}")
 
 @socketio.on('request_status')
 def handle_request_status():
-    """Gérer les demandes de statut via WebSocket"""
+    """Handle status requests via WebSocket"""
     try:
         status = get_current_status()
         emit('status_update', status)
         
         if DEBUG:
-            print(f"[WEBSOCKET] Status envoyé: {status}")
+            print(f"[WEBSOCKET] Status sent: {status}")
             
     except Exception as e:
         if DEBUG:
-            print(f"[WEBSOCKET] Erreur envoi status: {e}")
+            print(f"[WEBSOCKET] Error sending status: {e}")
         emit('status_update', {
             'udp_active': False,
             'tcp_active': False,
@@ -2074,21 +2074,20 @@ def handle_request_status():
             'error': str(e)
         })
 
-# Initialiser le gestionnaire Bluetooth
+ # Initialize the Bluetooth manager
 if bluetooth_manager is None:
     bluetooth_manager = BluetoothGPSManager()
 
-# Initialiser le watcher de configuration
+ # Initialize the config watcher
 config_watcher = ConfigWatcher(".env", reload_configuration)
 
-# Corriger la partie main
+ # Main entry point
 if __name__ == "__main__":
-    # Démarrer le watcher de configuration
+    # Start the config watcher
     config_watcher.start_watching()
-    
     try:
         print("[MAIN] Starting NMEA Server...")
-        main_thread()  # Utiliser la fonction main_thread() existante
+        main_thread()  # Use the existing main_thread() function
     except KeyboardInterrupt:
         print("[MAIN] Received interrupt signal")
     finally:
