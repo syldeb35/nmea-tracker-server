@@ -1286,10 +1286,10 @@ def test_ports_separately():
     try:
         udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_sock.bind(('0.0.0.0', UDP_PORT))
-        print(f"[TEST] ✅ UDP port {UDP_PORT} disponible")
+        print(f"[TEST] OK UDP port {UDP_PORT} disponible")
         udp_sock.close()
     except Exception as e:
-        print(f"[TEST] ❌ UDP port {UDP_PORT} problème: {e}")
+        print(f"[TEST] ERROR UDP port {UDP_PORT} probleme: {e}")
     
     # Test TCP
     try:
@@ -1297,10 +1297,10 @@ def test_ports_separately():
         tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         tcp_sock.bind(('0.0.0.0', TCP_PORT))
         tcp_sock.listen(1)
-        print(f"[TEST] ✅ TCP port {TCP_PORT} disponible")
+        print(f"[TEST] OK TCP port {TCP_PORT} disponible")
         tcp_sock.close()
     except Exception as e:
-        print(f"[TEST] ❌ TCP port {TCP_PORT} problème: {e}")
+        print(f"[TEST] ERROR TCP port {TCP_PORT} probleme: {e}")
 
 # Appeler cette fonction dans main_thread() avant manage_threads()
 
@@ -1312,12 +1312,12 @@ def main_thread():
     print(f"  - Serial: {ENABLE_SERIAL} (Port: {SERIAL_PORT})")
     print(f"  - UDP: {ENABLE_UDP} (Mode: {UDP_MODE}, Port: {UDP_PORT})")
     if UDP_MODE == "client":
-        print(f"    → Target: {UDP_TARGET_IP}:{UDP_TARGET_PORT}")
+        print(f"    -> Target: {UDP_TARGET_IP}:{UDP_TARGET_PORT}")
     print(f"  - TCP: {ENABLE_TCP} (Mode: {TCP_MODE}, Port: {TCP_PORT})")
     if TCP_MODE == "client":
-        print(f"    → Target: {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
+        print(f"    -> Target: {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
     print()
-    print("🛑 Pour arrêter le serveur : Ctrl+C (ou Ctrl+Break sur Windows)")
+    print("STOP Pour arreter le serveur : Ctrl+C (ou Ctrl+Break sur Windows)")
     print()
     
     # Auto-detection of serial port if necessary
@@ -1636,13 +1636,13 @@ class BluetoothGPSManager:
                 
             # Tester la connexion GPS
             if self.test_gps_connection(rfcomm_path):
-                print(f"[BLUETOOTH] ✅ GPS trouvé: {name} ({mac}) sur canal {channel}")
+                print(f"[BLUETOOTH] OK GPS trouve: {name} ({mac}) sur canal {channel}")
                 self.target_mac = mac
                 self.target_channel = channel
                 self.is_connected = True
                 return rfcomm_path
             else:
-                print(f"[BLUETOOTH] ❌ Pas de GPS: {name}")
+                print(f"[BLUETOOTH] ERROR Pas de GPS: {name}")
                 self.cleanup_rfcomm()
         
         print("[BLUETOOTH] Aucun GPS Bluetooth trouvé")
@@ -1655,15 +1655,15 @@ class BluetoothGPSManager:
         # Vérifier si /dev/rfcomm0 existe
         rfcomm_path = f"/dev/rfcomm{self.rfcomm_device}"
         if os.path.exists(rfcomm_path):
-            print(f"[BLUETOOTH] Device {rfcomm_path} trouvé")
+            print(f"[BLUETOOTH] Device {rfcomm_path} trouve")
             
             # Tester si c'est un GPS fonctionnel
             if self.test_gps_connection(rfcomm_path):
-                print(f"[BLUETOOTH] ✅ GPS fonctionnel détecté sur {rfcomm_path}")
+                print(f"[BLUETOOTH] OK GPS fonctionnel detecte sur {rfcomm_path}")
                 self.is_connected = True
                 return rfcomm_path
             else:
-                print(f"[BLUETOOTH] ❌ {rfcomm_path} ne répond pas comme un GPS")
+                print(f"[BLUETOOTH] ERROR {rfcomm_path} ne repond pas comme un GPS")
         
         return None
     
@@ -1971,12 +1971,12 @@ def api_update_config():
         if UDP_MODE == 'server':
             print(f"  - UDP Serveur: {ENABLE_UDP} ({UDP_IP}:{UDP_PORT})")
         else:
-            print(f"  - UDP Client: {ENABLE_UDP} → {UDP_TARGET_IP}:{UDP_TARGET_PORT}")
+            print(f"  - UDP Client: {ENABLE_UDP} -> {UDP_TARGET_IP}:{UDP_TARGET_PORT}")
         
         if TCP_MODE == 'server':
             print(f"  - TCP Serveur: {ENABLE_TCP} ({TCP_IP}:{TCP_PORT})")
         else:
-            print(f"  - TCP Client: {ENABLE_TCP} → {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
+            print(f"  - TCP Client: {ENABLE_TCP} -> {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
         
         print(f"  - Serial: {ENABLE_SERIAL} ({SERIAL_PORT})")
         
