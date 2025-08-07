@@ -1,52 +1,35 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import os
-from pathlib import Path
-
 block_cipher = None
 
-# Fonction pour vérifier et ajouter des fichiers optionnels
-def add_optional_file(file_path, dest_dir):
-    """Ajoute un fichier seulement s'il existe"""
-    if os.path.exists(file_path):
-        return (file_path, dest_dir)
-    else:
-        print(f"⚠️  Fichier optionnel manquant: {file_path}")
-        return None
-
-# Liste des fichiers de données avec vérification
-datas = [
-    ('templates/config.html', 'templates'),
-    ('templates/index.html', 'templates'),
-    ('templates/favicon.svg', 'templates'),
-]
-
-# Ajout des fichiers optionnels
-optional_files = [
-    ('cert.pem', '.'),
-    ('key.pem', '.'),
-    ('.env', '.'),
-]
-
-for file_path, dest_dir in optional_files:
-    optional_file = add_optional_file(file_path, dest_dir)
-    if optional_file:
-        datas.append(optional_file)
-
 a = Analysis(
-    ['nmea_server.py'],
+    ['nmea_server_test.py'],
     pathex=[],
     binaries=[],
-    datas=datas,
+    datas=[
+        ('templates', 'templates'),
+        ('cert.pem', '.'),
+        ('key.pem', '.'),
+        ('icon.ico', '.'),
+        ('icon.png', '.'),
+    ],
     hiddenimports=[
-        # Core Flask et extensions
+        # Gevent - moteur asynchrone principal
         'gevent',
         'gevent.socket',
-        'gevent.ssl',
+        'gevent.select',
+        'gevent.threading',
+        'gevent.time',
+        'gevent.queue',
+        'gevent.pool',
+        'gevent.event',
         'gevent.pywsgi',
         'gevent.monkey',
         'gevent._util',
         'gevent.greenlet',
+        'gevent.subprocess',
+        
+        # Flask et extensions
         'flask',
         'flask_socketio',
         'flask_cors',
@@ -69,9 +52,15 @@ a = Analysis(
         'serial.tools.list_ports',
         'serial.serialutil',
         
-        # Bluetooth et subprocess pour Linux
-        'subprocess',
-        'subprocess.run',
+        # System tray support
+        'pystray',
+        'PIL',
+        'PIL.Image',
+        'PIL.ImageDraw',
+        'PIL.ImageFont',
+        'tkinter',
+        'tkinter.messagebox',
+        'tkinter.simpledialog',
         
         # Modules système
         'pkg_resources.py2_warn',
@@ -92,24 +81,8 @@ a = Analysis(
         'hashlib',
         'urllib',
         'urllib.parse',
-        'urllib3',
-        'urllib3.exceptions',
-        
-        # Modules cryptography pour SSL/TLS
-        'cryptography',
-        'cryptography.fernet',
-        'cryptography.hazmat',
-        'cryptography.hazmat.backends',
-        'cryptography.hazmat.backends.openssl',
-        'cryptography.hazmat.primitives',
-        'cryptography.hazmat.primitives.asymmetric',
-        'cryptography.hazmat.primitives.asymmetric.rsa',
-        'cryptography.hazmat.primitives.ciphers',
-        'cryptography.hazmat.primitives.hashes',
-        'cryptography.hazmat.primitives.serialization',
-        'cryptography.x509',
-        'cryptography.x509.oid',
-        'cffi',
+        'ipaddress',
+        'warnings',
         
         # Modules supplémentaires pour Flask-SocketIO
         'dns',
@@ -125,7 +98,7 @@ a = Analysis(
         'jinja2.ext',
         'markupsafe',
         
-        # Importations implicites détectées
+        # Importations implicites
         'importlib',
         'importlib.util',
         'importlib.metadata',
@@ -134,19 +107,21 @@ a = Analysis(
         'queue',
         'functools',
         'inspect',
-        'warnings',
+        'webbrowser',
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'tkinter',
         'matplotlib',
         'numpy',
         'scipy',
         'pandas',
-        'PIL',
         'cv2',
+        'PyQt5',
+        'PyQt6',
+        'PySide2',
+        'PySide6',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -163,17 +138,17 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='nmea_tracker_server',
+    name='nmea_tracker_server_enhanced',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,
+    console=True,  # True = console mode par défaut
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',  # Icône personnalisée de l'application
+    icon='icon.ico',
 )

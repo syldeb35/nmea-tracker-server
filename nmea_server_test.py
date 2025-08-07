@@ -230,13 +230,9 @@ if IS_WINDOWS and sys.stdout is not None:
 try:
     import urllib3
     urllib3.disable_warnings()
-    # Désactiver seulement les warnings qui existent dans cette version d'urllib3
-    if hasattr(urllib3.exceptions, 'InsecureRequestWarning'):
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    if hasattr(urllib3.exceptions, 'SNIMissingWarning'):
-        urllib3.disable_warnings(urllib3.exceptions.SNIMissingWarning)
-    if hasattr(urllib3.exceptions, 'InsecurePlatformWarning'):
-        urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    urllib3.disable_warnings(urllib3.exceptions.SNIMissingWarning)
+    urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
 except ImportError:
     pass
 
@@ -347,8 +343,29 @@ main_logger.info("Système de logs initialisé")
 
 # === FLASK SERVER ===
 app = Flask(__name__)
-# socketio = SocketIO(app, cors_allowed_origins="*")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+
+# Configuration SocketIO adaptative selon l'environnement
+def setup_socketio():
+    try:
+        # Essayer gevent en premier (performance optimale)
+        socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+        main_logger.info("SocketIO configuré avec gevent (performance optimale)")
+        return socketio
+    except (ValueError, ImportError) as e:
+        main_logger.warning(f"Gevent non disponible ({e}), utilisation du mode threading")
+        try:
+            # Fallback vers threading (compatible PyInstaller)
+            socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+            main_logger.info("SocketIO configuré avec threading (compatible PyInstaller)")
+            return socketio
+        except Exception as e2:
+            main_logger.warning(f"Threading échoué ({e2}), mode par défaut")
+            # Dernier recours
+            socketio = SocketIO(app, cors_allowed_origins="*")
+            main_logger.info("SocketIO configuré en mode par défaut")
+            return socketio
+
+socketio = setup_socketio()
 CORS(app)  # Allow all origins (wildcard origin *)
 
 # === BLUETOOTH GPS MANAGER (initialisé tôt pour éviter les erreurs de référence) ===
