@@ -1,194 +1,225 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# GitHub Actions pour créer des exécutables multi-plateformes
-# GitHub Actions pour build cross-platform
-name: Build Cross-Platform Executables
+# GitHub Actions to build NMEA Tracker Server executables
+name: 🏗️ Build NMEA Tracker Server
 
 on:
   push:
     tags:
       - 'v*'
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'server-only'
+          - 'tray-only'
+          - 'test-only'
+          - 'manager-only'
+
+env:
+  PYTHON_VERSION: '3.13'
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false  # Continue même si un job échoue
-      matrix:
-        include:
-          # - os: ubuntu-latest
-          #   arch: linux
-          #   ext: ""
-          #   separator: ":"
-          - os: windows-latest
-            arch: windows
-            ext: ".exe"
-            separator: ";"
-          # - os: macos-latest
-          #   arch: macos
-          #   ext: ""
-          #   separator: ":"
-          # - os: macos-13  # Intel Mac
-          #   arch: macos-intel
-          #   ext: ""
-          #   separator: ":"
-
+  build-windows:
+    name: 🖥️ Build Windows Applications
+    runs-on: windows-latest
+    
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
+    - name: 🐍 Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
     
-    - name: Upgrade pip
+    - name: 📦 Install dependencies
       run: |
-        python -m pip install --upgrade pip --quiet
-        pip --version
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
     
-    - name: Verify project structure (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        echo "=== Project Structure ==="
-        ls -la
-        echo "=== Templates directory ==="
-        ls -la templates/ || echo "Templates directory not found"
-        echo "=== Python files ==="
-        ls -la *.py || echo "No Python files found"
-    
-    - name: Verify project structure (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: 🔍 Verify project structure
       run: |
         echo "=== Project Structure ==="
         Get-ChildItem -Force
-        echo "=== Templates directory ==="
-        if (Test-Path "templates") { Get-ChildItem templates -Force } else { echo "Templates directory not found" }
+        echo ""
         echo "=== Python files ==="
-        if (Get-ChildItem "*.py" -ErrorAction SilentlyContinue) { Get-ChildItem "*.py" } else { echo "No Python files found" }
-      shell: pwsh
-    
-    - name: Create missing files if needed (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        echo "=== Creating missing SSL certificates ==="
-        if [ ! -f "cert.pem" ]; then
-          echo "Creating dummy cert.pem"
-          echo "# Dummy certificate for build" > cert.pem
-        fi
-        if [ ! -f "key.pem" ]; then
-          echo "Creating dummy key.pem"
-          echo "# Dummy key for build" > key.pem
-        fi
-      shell: bash
-    
-    - name: Create missing files if needed (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "=== Creating missing SSL certificates ==="
-        if (-not (Test-Path "cert.pem")) {
-          echo "Creating dummy cert.pem"
-          "# Dummy certificate for build" | Out-File -FilePath "cert.pem" -Encoding UTF8
-        }
-        if (-not (Test-Path "key.pem")) {
-          echo "Creating dummy key.pem"
-          "# Dummy key for build" | Out-File -FilePath "key.pem" -Encoding UTF8
+        Get-ChildItem "*.py" | Select-Object Name, Length
+        echo ""
+        echo "=== Spec files ==="
+        Get-ChildItem "*.spec" | Select-Object Name, Length
+        echo ""
+        echo "=== Templates directory ==="
+        if (Test-Path "templates") { 
+          Get-ChildItem templates -Force | Select-Object Name, Length
+        } else { 
+          echo "Templates directory not found" 
         }
       shell: pwsh
     
-    - name: Install dependencies
+    - name: 🔐 Create SSL certificates
       run: |
-        python -m pip install --upgrade pip --quiet
-        pip install -r requirements.txt --quiet
-        pip install pyinstaller --quiet
+        echo "Creating SSL certificates for build..."
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        
+        # Generate private key
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        
+        # Create certificate
+        subject = issuer = x509.Name([
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost'),
+        ])
+        
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.utcnow()
+        ).not_valid_after(
+            datetime.utcnow() + timedelta(days=365)
+        ).sign(private_key, hashes.SHA256())
+        
+        # Save certificate and private key
+        with open('cert.pem', 'wb') as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        with open('key.pem', 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        print('SSL certificates created successfully')
+        "
     
-    - name: Build executable (Unix)
-      if: matrix.os != 'windows-latest'
+    - name: 🏗️ Build NMEA Server (Console)
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'server-only' || github.event.inputs.build_target == '' }}
       run: |
-        # Créer un fichier .spec personnalisé pour cette plateforme
-        cp nmea_server.spec "nmea_tracker_server_${{ matrix.arch }}.spec"
+        echo "Building NMEA Server (Console version)..."
+        pyinstaller nmea_server.spec --clean --noconfirm
         
-        # Modifier le nom de l'exécutable dans le .spec (compatible macOS/Linux)
-        python3 scripts/common/modify_spec.py "nmea_tracker_server_${{ matrix.arch }}.spec" "${{ matrix.arch }}"
-        
-        # Build avec le fichier .spec
-        pyinstaller "nmea_tracker_server_${{ matrix.arch }}.spec"
-    
-    - name: Build executable (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        # Créer un fichier .spec personnalisé pour Windows
-        copy nmea_server.spec "nmea_tracker_server_${{ matrix.arch }}.spec"
-        
-        # Modifier le nom de l'exécutable dans le .spec (PowerShell)
-        (Get-Content "nmea_tracker_server_${{ matrix.arch }}.spec") -replace "name='nmea_tracker_server'", "name='nmea_tracker_server_${{ matrix.arch }}'" | Set-Content "nmea_tracker_server_${{ matrix.arch }}.spec"
-        
-        # Build avec le fichier .spec
-        pyinstaller "nmea_tracker_server_${{ matrix.arch }}.spec"
-      shell: pwsh
-    
-    - name: Verify build (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        echo "=== Build verification ==="
-        ls -la dist/
-        
-        # Construct filename based on actual matrix arch value
-        file_name="nmea_tracker_server_${{ matrix.arch }}"
-        
-        echo "Looking for file: $file_name"
-        if [ -f "dist/$file_name" ]; then
-          echo "[OK] Build successful: $file_name"
-          ls -lh "dist/$file_name"
-        else
-          echo "[FAIL] Build failed: $file_name not found"
-          echo "Available files in dist/:"
-          ls -la dist/
-          exit 1
-        fi
-      shell: bash
-    
-    - name: Verify build (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "=== Build verification ==="
-        Get-ChildItem dist
-        
-        # Construct filename for Windows using matrix values
-        $file_name = "nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}"
-        
-        Write-Output "Looking for file: $file_name"
-        if (Test-Path "dist\$file_name") {
-          Write-Output "[OK] Build successful: $file_name"
-          Get-ChildItem "dist\$file_name"
+        if (Test-Path "dist/nmea_tracker_server.exe") {
+          echo "✅ NMEA Server build successful"
+          $size = (Get-Item "dist/nmea_tracker_server.exe").Length
+          echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-          Write-Output "[FAIL] Build failed: $file_name not found"
-          Write-Output "Available files in dist/:"
-          Get-ChildItem dist
+          echo "❌ NMEA Server build failed"
           exit 1
         }
       shell: pwsh
     
-    - name: Upload artifacts (Linux)
-      if: matrix.os == 'ubuntu-latest'
+    - name: 🎯 Build NMEA Server Tray
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'tray-only' || github.event.inputs.build_target == '' }}
+      run: |
+        echo "Building NMEA Server System Tray..."
+        pyinstaller nmea_server_tray.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_server_tray.exe") {
+          echo "✅ NMEA Server Tray build successful"
+          $size = (Get-Item "dist/nmea_server_tray.exe").Length
+          echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+          echo "❌ NMEA Server Tray build failed"
+          exit 1
+        }
+      shell: pwsh
+    
+    - name: 🧪 Build NMEA Server Test
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'test-only' || github.event.inputs.build_target == '' }}
+      run: |
+        echo "Building NMEA Server Test version..."
+        pyinstaller nmea_server_test.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_server_test.exe") {
+          echo "✅ NMEA Server Test build successful"
+          $size = (Get-Item "dist/nmea_server_test.exe").Length
+          echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+          echo "❌ NMEA Server Test build failed"
+          exit 1
+        }
+      shell: pwsh
+    
+    - name: 🔧 Build NMEA Server Manager
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'manager-only' || github.event.inputs.build_target == '' }}
+      run: |
+        echo "Building NMEA Server Manager..."
+        pyinstaller nmea_server_manager.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_server_manager.exe") {
+          echo "✅ NMEA Server Manager build successful"
+          $size = (Get-Item "dist/nmea_server_manager.exe").Length
+          echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+          echo "❌ NMEA Server Manager build failed"
+          exit 1
+        }
+      shell: pwsh
+    
+    - name: 📋 Build summary
+      run: |
+        echo "=== Build Summary ==="
+        echo ""
+        echo "Built executables:"
+        if (Test-Path "dist") {
+          Get-ChildItem "dist/*.exe" | ForEach-Object {
+            $size = [math]::Round($_.Length/1MB, 2)
+            echo "  ✅ $($_.Name) - ${size} MB"
+          }
+        } else {
+          echo "  ❌ No executables found in dist/ directory"
+        }
+        echo ""
+        echo "Build completed successfully!"
+      shell: pwsh
+    
+    - name: 📤 Upload NMEA Server
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'server-only' || github.event.inputs.build_target == '' }}
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_${{ matrix.arch }}
-        path: dist/nmea_tracker_server_${{ matrix.arch }}
+        name: nmea-tracker-server-console
+        path: dist/nmea_tracker_server.exe
         retention-days: 30
     
-    - name: Upload artifacts (macOS)
-      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+    - name: 📤 Upload NMEA Server Tray
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'tray-only' || github.event.inputs.build_target == '' }}
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_${{ matrix.arch }}
-        path: dist/nmea_tracker_server_${{ matrix.arch }}
+        name: nmea-tracker-server-tray
+        path: dist/nmea_server_tray.exe
         retention-days: 30
     
-    - name: Upload artifacts (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: 📤 Upload NMEA Server Test
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'test-only' || github.event.inputs.build_target == '' }}
       uses: actions/upload-artifact@v4
       with:
-        name: nmea_tracker_server_${{ matrix.arch }}
-        path: dist/nmea_tracker_server_${{ matrix.arch }}${{ matrix.ext }}
+        name: nmea-tracker-server-test
+        path: dist/nmea_server_test.exe
+        retention-days: 30
+    
+    - name: 📤 Upload NMEA Server Manager
+      if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'manager-only' || github.event.inputs.build_target == '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-server-manager
+        path: dist/nmea_server_manager.exe
         retention-days: 30

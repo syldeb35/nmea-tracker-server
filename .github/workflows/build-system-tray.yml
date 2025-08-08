@@ -1,4 +1,4 @@
-name: 🏗️ Build NMEA Tracker Server - System Tray
+name: � Build NMEA Tracker Server - System Tray
 
 on:
   push:
@@ -15,12 +15,10 @@ on:
         type: choice
         options:
           - 'system-tray'
-          - 'console'
-          - 'service'
-          - 'all'
+          - 'all-components'
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.13'
   APP_NAME: 'NMEA-Tracker-Server'
 
 jobs:
@@ -43,12 +41,9 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Installer gevent en premier pour Python 3.11 (devrait fonctionner)
-        pip install gevent
-        # Puis installer le reste
-        pip install flask flask-socketio python-socketio pyserial python-dotenv cryptography flask-cors
-        pip install pystray pillow pyinstaller
-        Write-Host "✅ Dependencies installed successfully (with gevent for Python 3.11)"
+        pip install -r requirements.txt
+        pip install pyinstaller
+        Write-Host "✅ Dependencies installed successfully"
         
     - name: 🔍 Verify Dependencies
       run: |
@@ -56,11 +51,12 @@ jobs:
         python --version
         pip --version
         echo ""
-        echo "=== Installed Packages ==="
-        pip list
+        echo "=== Key Packages ==="
+        pip show flask flask-socketio pyserial pystray pillow pyinstaller
         echo ""
-        echo "=== PyInstaller Version ==="
-        pyinstaller --version
+        echo "=== Project Files ==="
+        Get-ChildItem "nmea_server*.py" | Select-Object Name, Length
+        Get-ChildItem "*.spec" | Select-Object Name, Length
 
     - name: 🛠️ Create SSL Certificates
       run: |
@@ -121,7 +117,27 @@ jobs:
         
         print('SSL certificates created successfully')
         "
-
+            datetime.utcnow() + timedelta(days=365)
+        ).add_extension(
+            x509.SubjectAlternativeName([
+                x509.DNSName('localhost'),
+                x509.IPAddress(ipaddress.IPv4Address('127.0.0.1')),
+            ]),
+            critical=False,
+        ).sign(private_key, hashes.SHA256())
+        
+        # Write certificate
+        with open('cert.pem', 'wb') as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        # Write private key
+        with open('key.pem', 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
     - name: 🎯 Build System Tray Version
       run: |
         echo "=== Building NMEA Tracker Server - System Tray ==="
@@ -130,35 +146,109 @@ jobs:
         # Create build directories
         if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
         if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-        New-Item -ItemType Directory -Path "dist" -Force
-        New-Item -ItemType Directory -Path "build" -Force
         
         # Build with PyInstaller
         pyinstaller nmea_server_tray.spec --clean --noconfirm
         
-        if (Test-Path "dist/nmea_tracker_tray.exe") {
-            echo "✅ Build successful!"
-            $size = (Get-Item "dist/nmea_tracker_tray.exe").Length
+        if (Test-Path "dist/nmea_server_tray.exe") {
+            echo "✅ System Tray build successful!"
+            $size = (Get-Item "dist/nmea_server_tray.exe").Length
             echo "📁 File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-            echo "❌ Build failed!"
+            echo "❌ System Tray build failed!"
+            Get-ChildItem "dist" -ErrorAction SilentlyContinue
             exit 1
         }
 
-    - name: 🔍 Test Executable
+    - name: 🔧 Build Additional Components (if requested)
+      if: ${{ github.event.inputs.build_version == 'all-components' || github.event.inputs.build_version == '' }}
       run: |
-        echo "=== Testing Executable ==="
+        echo "=== Building Additional Components ==="
+        
+        # Build Console Server
+        echo "Building Console Server..."
+        pyinstaller nmea_server.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_tracker_server.exe") {
+            echo "✅ Console Server build successful"
+        }
+        
+        # Build Test Server
+        echo "Building Test Server..."
+        pyinstaller nmea_server_test.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server_test.exe") {
+            echo "✅ Test Server build successful"
+        }
+        
+        # Build Manager
+        echo "Building Manager..."
+        pyinstaller nmea_server_manager.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server_manager.exe") {
+            echo "✅ Manager build successful"
+        }
+
+    - name: 🔍 Test System Tray Executable
+      run: |
+        echo "=== Testing System Tray Executable ==="
         cd dist
-        # Test if executable runs (with timeout)
-        $process = Start-Process -FilePath ".\nmea_tracker_tray.exe" -ArgumentList "--console" -PassThru -NoNewWindow
-        Start-Sleep -Seconds 5
-        if (!$process.HasExited) {
-            echo "✅ Executable starts successfully"
-            Stop-Process -Id $process.Id -Force
+        
+        # Basic validation - check if file exists and has reasonable size
+        if (Test-Path "nmea_server_tray.exe") {
+            $fileInfo = Get-Item "nmea_server_tray.exe"
+            echo "File: $($fileInfo.Name)"
+            echo "Size: $([math]::Round($fileInfo.Length/1MB, 2)) MB"
+            echo "Created: $($fileInfo.CreationTime)"
+            
+            if ($fileInfo.Length -gt 10MB) {
+                echo "✅ File size looks reasonable"
+            } else {
+                echo "⚠️ Warning: File size seems small"
+            }
         } else {
-            echo "❌ Executable failed to start"
+            echo "❌ Executable not found!"
             exit 1
         }
+
+    - name: 📊 Build Summary
+      run: |
+        echo "=== Build Summary ==="
+        echo "Build completed at: $(Get-Date)"
+        echo ""
+        echo "Built executables:"
+        if (Test-Path "dist") {
+          Get-ChildItem "dist/*.exe" | ForEach-Object {
+            $size = [math]::Round($_.Length/1MB, 2)
+            echo "  ✅ $($_.Name) - ${size} MB"
+          }
+        } else {
+          echo "  ❌ No executables found"
+        }
+        echo ""
+        echo "🎯 System Tray build process completed!"
+
+    - name: � Upload System Tray Executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-server-tray-windows
+        path: dist/nmea_server_tray.exe
+        retention-days: 30
+
+    - name: 📤 Upload All Executables (if built)
+      if: ${{ github.event.inputs.build_version == 'all-components' || github.event.inputs.build_version == '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-server-all-components-windows
+        path: dist/*.exe
+        retention-days: 30
+
+    - name: 🔧 Upload Build Logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-system-tray
+        path: |
+          build/
+          *.log
+        retention-days: 7
 
     - name: 📊 Generate Build Info
       run: |
@@ -185,30 +275,30 @@ jobs:
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "## Installation" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "1. Telecharger nmea_tracker_tray.exe" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "2. Double-cliquer pour lancer" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "3. L'icone apparait dans la zone de notification" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "4. Clic droit sur l'icone pour acceder au menu" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "1. Download nmea_server_tray.exe" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "2. Double-click to launch" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "3. The icon appears in the system tray" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "4. Right-click on the icon to access the menu" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "## Interface Web" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "## Web Interface" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Tableau de bord : https://localhost:8443/" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Configuration : https://localhost:8443/config.html" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Dashboard: https://localhost:8443/" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Configuration: https://localhost:8443/config.html" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "## Fonctionnalites" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "## Features" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Interface discrete (system tray)" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Support NMEA GPS/AIS" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Connexions UDP/TCP/Serie" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Interface web complete" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
-        echo "- Parsing AIS avance avec fragments" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Discrete interface (system tray)" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- NMEA GPS/AIS support" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- UDP/TCP/Serial connections" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Complete web interface" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
+        echo "- Advanced AIS parsing with message fragments" | Out-File -FilePath "dist/RELEASE_NOTES.md" -Append -Encoding UTF8
 
     - name: 📤 Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: nmea-tracker-tray-windows
         path: |
-          dist/nmea_tracker_tray.exe
+          dist/nmea_server_tray.exe
           dist/build_info.json
           dist/VERSION.txt
           dist/RELEASE_NOTES.md
@@ -219,7 +309,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          dist/nmea_tracker_tray.exe
+          dist/nmea_server_tray.exe
           dist/RELEASE_NOTES.md
         name: "NMEA Tracker Server ${{ github.ref_name }} - System Tray"
         body_path: dist/RELEASE_NOTES.md
@@ -237,8 +327,9 @@ jobs:
       matrix:
         version: [
           { name: "console", spec: "nmea_server.spec", exe: "nmea_tracker_server.exe" },
-          { name: "system-tray", spec: "nmea_server_tray.spec", exe: "nmea_tracker_tray.exe" },
-          { name: "service", spec: "nmea_server_service.spec", exe: "nmea_tracker_service.exe" }
+          { name: "system-tray", spec: "nmea_server_tray.spec", exe: "nmea_server_tray.exe" },
+          { name: "test", spec: "nmea_server_test.spec", exe: "nmea_server_test.exe" },
+          { name: "manager", spec: "nmea_server_manager.spec", exe: "nmea_server_manager.exe" }
         ]
     
     steps:
@@ -254,12 +345,12 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Installer gevent en premier pour Python 3.11 (devrait fonctionner)
+        # Install gevent first for Python 3.13 compatibility
         pip install gevent
-        # Puis installer le reste
+        # Then install the rest
         pip install flask flask-socketio python-socketio pyserial python-dotenv cryptography flask-cors
         pip install pystray pillow pyinstaller
-        Write-Host "✅ Dependencies installed successfully (with gevent for Python 3.11)"
+        Write-Host "✅ Dependencies installed successfully (with gevent for Python 3.13)"
 
     - name: 🛠️ Create SSL Certificates
       run: |

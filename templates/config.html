@@ -114,7 +114,7 @@
     <body>
         <div class="container">
             <h2>NMEA / AIS Connection</h2>
-            <!-- Modifier le formulaire pour avoir l'ID correct -->
+            <!-- Modify form to have correct ID -->
             <form id="configForm" method="POST" action="/select_connection">
                 <div class="section-title">Connection type:</div>
                 <p>Choose the connection(s) type(s) you want to enable:</p>
@@ -126,18 +126,18 @@
                 <div class="section-title">Network settings:</div>
                 <p>Configure the network settings for the connection:</p>
 
-                <!-- Configuration UDP -->
+                <!-- UDP Configuration -->
                 <div style="background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px;">
-                    <h4>📡 Configuration UDP</h4>
+                    <h4>📡 UDP Configuration</h4>
                     
                     <label><input type="radio" name="udp_mode" value="server" {% if udp_mode == "server" %}checked{% endif %}> 
-                        📥 Mode Server (écoute sur un port)
+                        📥 Server Mode (listen on a port)
                     </label>
                     <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'server' %}display:none;{% endif %}">
-                        <label>Port d'écoute UDP:
+                        <label>UDP listening port:
                             <input type="number" name="udp_port" value="{{ udp_port }}" placeholder="50110">
                         </label>
-                        <small>Le serveur écoute sur ce port pour recevoir les données NMEA</small>
+                        <small>The server listens on this port to receive NMEA data</small>
                     </div>
                     
                     <label><input type="radio" name="udp_mode" value="client" {% if udp_mode == "client" %}checked{% endif %}> 
@@ -150,22 +150,22 @@
                         <label>Port du GPS:
                             <input type="number" name="udp_target_port" value="{{ udp_target_port }}" placeholder="50110">
                         </label>
-                        <small>Se connecte directement au GPS pour recevoir les données</small>
+                        <small>Connects directly to GPS to receive data</small>
                     </div>
                 </div>
 
-                <!-- Configuration TCP -->
+                <!-- TCP Configuration -->
                 <div style="background: #fff0f0; padding: 15px; margin: 10px 0; border-radius: 5px;">
-                    <h4>🔗 Configuration TCP</h4>
+                    <h4>🔗 TCP Configuration</h4>
                     
                     <label><input type="radio" name="tcp_mode" value="server" {% if tcp_mode == "server" %}checked{% endif %}> 
-                        📥 Mode Serveur (écoute sur un port)
+                        📥 Server Mode (listen on a port)
                     </label>
                     <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'server' %}display:none;{% endif %}">
-                        <label>Port d'écoute TCP:
+                        <label>TCP listening port:
                             <input type="number" name="tcp_port" value="{{ tcp_port }}" placeholder="7777">
                         </label>
-                        <small>Le serveur écoute sur ce port pour recevoir les connexions</small>
+                        <small>The server listens on this port to receive connections</small>
                     </div>
                     
                     <label><input type="radio" name="tcp_mode" value="client" {% if tcp_mode == "client" %}checked{% endif %}> 
@@ -183,7 +183,7 @@
                 </div>
 
                 <script>
-                    // Gestion de l'affichage des configurations selon le mode
+                    // Manage configuration display according to mode
                     document.querySelectorAll('input[name="udp_mode"]').forEach(radio => {
                         radio.addEventListener('change', function() {
                             const isClient = this.value === 'client';
@@ -264,11 +264,11 @@
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
         <script>
-        // Configuration WebSocket
+        // WebSocket configuration
         const socket = io();
         let isConnected = false;
 
-        // Connexion WebSocket
+        // WebSocket connection
         socket.on('connect', function() {
             console.log('WebSocket connecté');
             isConnected = true;
@@ -284,9 +284,9 @@
             updateConnectionIndicator(false);
         });
 
-        // Réception des données NMEA en temps réel (événement avec source)
+        // Real-time NMEA data reception (event with source)
         socket.on('nmea_data_web', function(data) {
-            // Data contient déjà { source, message, timestamp }
+            // Data already contains { source, message, timestamp }
             const webData = {
                 source: data.source,
                 message: data.message,
@@ -296,7 +296,7 @@
             updateNMEADisplay(webData);
         });
 
-        // Réception des mises à jour de statut
+        // Receiving status updates
         socket.on('status_update', function(status) {
             updateConnectionStatus(status);
         });
@@ -342,24 +342,24 @@
                     line.style.color = '#0ff'; // Cyan
                     break;
                 default:
-                    line.style.color = '#888'; // Gris pour l'historique
+                    line.style.color = '#888'; // Gray for history
             }
             
             // Ajouter au début de l'affichage
             display.insertBefore(line, display.firstChild);
             
-            // Garder seulement les 100 dernières lignes
+            // Keep only the last 100 lines
             while (display.children.length > 100) {
                 display.removeChild(display.lastChild);
             }
             
-            // Auto-scroll vers le haut pour voir les nouvelles données
+            // Auto-scroll to top to see new data
             if (display.children.length === 1) {
                 display.scrollTop = 0;
             }
         }
 
-        // Mettre à jour au changement des inputs
+        // Update on input changes
         document.querySelectorAll('input[name="udp_mode"], input[name="tcp_mode"], input[name="udp_port"], input[name="tcp_port"], input[name="udp_target_ip"], input[name="udp_target_port"], input[name="tcp_target_ip"], input[name="tcp_target_port"]').forEach(el => {
             el.addEventListener('change', function() {
                 // Pas besoin de updateConnectionInfo car on a supprimé cette section
@@ -369,12 +369,12 @@
             });
         });
 
-        // Fonction pour mettre à jour le statut de connexion
-        // Cette fonction sera appelée par le serveur via WebSocket
+        // Function to update connection status
+        // This function will be called by the server via WebSocket
         function updateConnectionStatus(status) {
             console.log('Status update:', status);
             
-            // Mettre à jour les indicateurs
+            // Update indicators
             const indicators = {
                 'serial-status': status.serial_connected,
                 'udp-status': status.udp_active,
@@ -389,10 +389,10 @@
                 }
             }
             
-            // Mettre à jour le compteur de connexions
+            // Update connection counter
             const activeCount = status.connections_active || 0;
             const countElement = document.getElementById('connection-count') || createConnectionCounter();
-            countElement.textContent = `${activeCount} connexion(s) active(s)`;
+            countElement.textContent = `${activeCount} active connection(s)`;
         }
 
         function createConnectionCounter() {
@@ -429,11 +429,11 @@
                     });
                 }
             } catch (error) {
-                console.error('Erreur chargement historique:', error);
+                console.error('Error loading history:', error);
             }
         }
 
-        // Demander le statut toutes les 5 secondes
+        // Request status every 5 seconds
         setInterval(() => {
             if (isConnected) {
                 socket.emit('request_status');
@@ -447,14 +447,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadNMEAHistory();
             
-            // Ajouter un message initial
+            // Add initial message
             setTimeout(() => {
                 if (document.getElementById('nmea-data').children.length === 0) {
                     updateNMEADisplay({
                         source: 'SYSTEM',
-                        message: 'En attente des données NMEA...',
+                        message: 'Waiting for NMEA data...',
                         timestamp: new Date().toLocaleTimeString(),
-                        formatted: '[SYSTEM] En attente des données NMEA...'
+                        formatted: '[SYSTEM] Waiting for NMEA data...'
                     });
                 }
             }, 1000);
@@ -469,13 +469,13 @@
                 updateConnectionStatus(status);
                 
                 if (status.connections_active > 0) {
-                    showStatus('✅ Server actif avec de nouvelles configurations!', 'success');
+                    showStatus('✅ Server active with new configurations!', 'success');
                 } else {
-                    showStatus('⚠️ Configuration appliquée mais aucune connexion active', 'warning');
+                    showStatus('⚠️ Configuration applied but no active connection', 'warning');
                 }
                 
             } catch (error) {
-                showStatus('⚠️ Impossible de vérifier le statut du serveur', 'warning');
+                showStatus('⚠️ Unable to verify server status', 'warning');
             }
         }
 
@@ -506,7 +506,7 @@
             const formData = new FormData(document.getElementById('configForm'));
             
             try {
-                showStatus('Application de la configuration...', 'info');
+                showStatus('Applying configuration...', 'info');
                 
                 const response = await fetch('/api/config', {
                     method: 'POST',
@@ -516,7 +516,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus('✅ Configuration appliquée ! Redémarrage des connexions...', 'success');
+                    showStatus('✅ Configuration applied! Restarting connections...', 'success');
                     
                     // Demander le nouveau statut après 2 secondes
                     setTimeout(() => {
@@ -528,11 +528,11 @@
                     }, 2000);
                     
                 } else {
-                    showStatus('❌ Erreur: ' + result.error, 'error');
+                    showStatus('❌ Error: ' + result.error, 'error');
                 }
                 
             } catch (error) {
-                showStatus('❌ Erreur réseau: ' + error.message, 'error');
+                showStatus('❌ Network error: ' + error.message, 'error');
             }
         }
 

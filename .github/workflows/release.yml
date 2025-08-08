@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.2.0)'
+        description: 'Release version (e.g., v1.3.0)'
         required: true
-        default: 'v1.2.0'
+        default: 'v1.3.0'
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.13'
 
 jobs:
   release-builds:
@@ -30,7 +30,8 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements_enhanced.txt
+        pip install -r requirements.txt
+        pip install pyinstaller
 
     - name: 🔐 Generate SSL Certificates
       run: |
@@ -57,26 +58,33 @@ jobs:
         if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
         New-Item -ItemType Directory -Path "dist" -Force
         
-        # Build Console version
-        echo "🖥️ Building Console version..."
+        # Build Console Server version
+        echo "🖥️ Building Console Server version..."
         pyinstaller nmea_server.spec --clean --noconfirm
         if (Test-Path "dist/nmea_tracker_server.exe") {
-            Rename-Item "dist/nmea_tracker_server.exe" "nmea_tracker_server_console.exe"
-            echo "✅ Console version built"
+            Rename-Item "dist/nmea_tracker_server.exe" "dist/nmea_tracker_server_console.exe"
+            echo "✅ Console Server version built"
         }
         
         # Build System Tray version  
         echo "🎯 Building System Tray version..."
         pyinstaller nmea_server_tray.spec --clean --noconfirm
-        if (Test-Path "dist/nmea_tracker_tray.exe") {
+        if (Test-Path "dist/nmea_server_tray.exe") {
             echo "✅ System Tray version built"
         }
         
-        # Build Service version
-        echo "🔧 Building Service version..."
-        pyinstaller nmea_server_service.spec --clean --noconfirm
-        if (Test-Path "dist/nmea_tracker_service.exe") {
-            echo "✅ Service version built"
+        # Build Test Server version
+        echo "🧪 Building Test Server version..."
+        pyinstaller nmea_server_test.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server_test.exe") {
+            echo "✅ Test Server version built"
+        }
+        
+        # Build Manager version
+        echo "🔧 Building Manager version..."
+        pyinstaller nmea_server_manager.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server_manager.exe") {
+            echo "✅ Manager version built"
         }
 
     - name: 📋 Create Package
@@ -88,31 +96,55 @@ jobs:
         Copy-Item "dist/*.exe" "release_package/" -Force
         
         # Copy documentation
-        Copy-Item "README.md" "release_package/" -Force
-        Copy-Item "CHANGELOG.md" "release_package/" -Force
-        Copy-Item "WINDOWS_VERSIONS_GUIDE.md" "release_package/" -Force
+        if (Test-Path "README.md") { Copy-Item "README.md" "release_package/" -Force }
+        if (Test-Path "CHANGELOG.md") { Copy-Item "CHANGELOG.md" "release_package/" -Force }
+        if (Test-Path "LICENSE") { Copy-Item "LICENSE" "release_package/" -Force }
+        
+        # Copy templates and configuration files
+        if (Test-Path "templates") { 
+          Copy-Item "templates" "release_package/" -Recurse -Force 
+        }
         
         # Create quick start guide
-        echo "# NMEA Tracker Server - Quick Start" | Out-File -FilePath "release_package/QUICK_START.md" -Encoding UTF8
+        echo "# NMEA Tracker Server - Quick Start Guide" | Out-File -FilePath "release_package/QUICK_START.md" -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "## Files Included" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Available Applications" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "- nmea_tracker_tray.exe - System Tray version (RECOMMENDED)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "- nmea_tracker_server_console.exe - Console version" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "- nmea_tracker_service.exe - Windows Service version" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "### 🎯 nmea_server_tray.exe (RECOMMENDED)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "System Tray Application - Runs in the background with system tray icon" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Best for most users - Easy to use, starts/stops server from tray menu" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Features: System tray management, web interface access, automatic startup" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "## Quick Start (System Tray - Recommended)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "### 🖥️ nmea_tracker_server_console.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Console Application - Main server application" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "For advanced users - Direct server execution with console output" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Features: Full server functionality, console logging, command-line options" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "1. Double-click nmea_tracker_tray.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "2. Look for the NMEA icon in your system tray" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "3. Right-click the icon to access the menu" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "4. Select Start Server to begin" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "5. Open https://localhost:8443/config.html to configure" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "### 🧪 nmea_server_test.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Test Version - Development and testing server" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "For developers - Enhanced debugging and testing features" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Features: Debug mode, extended logging, development tools" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "## Web Interface" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "### 🔧 nmea_server_manager.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "GUI Manager - Graphical interface for server management" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "For users who prefer GUI - Visual interface for configuration and control" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Features: GUI configuration, server status monitoring, log viewing" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "- Dashboard: https://localhost:8443/" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "- Configuration: https://localhost:8443/config.html" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Quick Start" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "1. Easy Start: Double-click nmea_server_tray.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "2. Access Interface: Right-click tray icon → Open Web Interface" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "3. Configure: Go to http://localhost:8080/config" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "4. Connect GPS: Configure your GPS connection (Serial/UDP/TCP)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## System Requirements" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "Windows 10/11" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "No additional installations required (all dependencies included)" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "## Support" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "For support and documentation, visit: https://github.com/syldeb35/nmea-tracker-server" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
 
         # Create version info
         $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "${{ github.event.inputs.version }}" }
@@ -123,17 +155,46 @@ jobs:
     - name: 📦 Create ZIP Archive
       run: |
         $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "${{ github.event.inputs.version }}" }
-        Compress-Archive -Path "release_package/*" -DestinationPath "nmea-tracker-server-$version-windows.zip"
+        $zipName = "NMEA-Tracker-Server-$version-Windows.zip"
+        
+        # Create ZIP archive
+        Compress-Archive -Path "release_package/*" -DestinationPath $zipName -Force
+        
+        echo "📦 Created release package: $zipName"
+        echo "Size: $([math]::Round((Get-Item $zipName).Length/1MB, 2)) MB"
+
+    - name: 📊 Release Summary
+      run: |
+        echo "=== Release Build Summary ==="
+        echo ""
+        echo "Built Applications:"
+        Get-ChildItem "dist/*.exe" | ForEach-Object {
+          $size = [math]::Round($_.Length/1MB, 2)
+          echo "  ✅ $($_.Name) - ${size} MB"
+        }
+        echo ""
+        echo "Package Contents:"
+        Get-ChildItem "release_package" -Recurse | ForEach-Object {
+          if (-not $_.PSIsContainer) {
+            echo "  📄 $($_.FullName.Replace((Get-Location).Path + '\release_package\', ''))"
+          }
+        }
+        echo ""
+        echo "🚀 Release package ready for deployment!"
+
+    - name: 📤 Upload Release Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: NMEA-Tracker-Server-Release
+        path: "*.zip"
+        retention-days: 90
 
     - name: 📤 Upload Release Assets
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          nmea-tracker-server-*.zip
-          release_package/nmea_tracker_tray.exe
-          release_package/nmea_tracker_server_console.exe
-          release_package/nmea_tracker_service.exe
+          *.zip
           release_package/QUICK_START.md
         name: "NMEA Tracker Server ${{ github.event.release.tag_name }}"
         body: |
@@ -141,28 +202,29 @@ jobs:
           
           ### 📦 Downloads
           
-          - **🥇 Recommended**: `nmea_tracker_tray.exe` - System Tray version
-          - **🖥️ Console**: `nmea_tracker_server_console.exe` - Standard console version
-          - **🔧 Service**: `nmea_tracker_service.exe` - Windows Service version
-          - **📁 Complete Package**: `nmea-tracker-server-*-windows.zip` - All versions + docs
+          - **🥇 Recommended**: System Tray version - Easy to use with system tray management
+          - **🖥️ Console**: Standard console version - Direct server execution with console output  
+          - **🧪 Test**: Development version - Enhanced debugging and testing features
+          - **🔧 Manager**: GUI Manager - Visual interface for server management
+          - **📁 Complete Package**: Full release with all versions and documentation
           
           ### 🚀 Quick Start
           
-          1. Download `nmea_tracker_tray.exe` (recommended)
-          2. Double-click to run
+          1. Download and extract the complete package
+          2. Run nmea_server_tray.exe (recommended)
           3. Look for icon in system tray
           4. Right-click icon → "Start Server"
-          5. Open https://localhost:8443/config.html
+          5. Open http://localhost:8080/config for configuration
           
-          ### ✨ What's New
+          ### ✨ Features
           
           - Enhanced system tray interface
           - Improved AIS fragment handling
           - Better configuration management
-          - Cleaner shutdown process
           - Multiple deployment options
+          - Internationalization support (English)
           
-          See `CHANGELOG.md` for detailed changes.
+          See QUICK_START.md for detailed instructions.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -172,6 +234,6 @@ jobs:
       with:
         name: nmea-tracker-server-all-versions
         path: |
-          nmea-tracker-server-*.zip
+          *.zip
           release_package/
         retention-days: 30

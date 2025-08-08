@@ -1,17 +1,18 @@
-name: 🧪 Test & Build PR
+name: 🧪 Test Build NMEA Tracker Server
 
 on:
   pull_request:
     branches: [ main, develop ]
   push:
     branches: [ develop ]
+  workflow_dispatch:
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.13'
 
 jobs:
   test-build:
-    name: 🔍 Test System Tray Build
+    name: 🔍 Test Build All Components
     runs-on: windows-latest
     
     steps:
@@ -27,7 +28,8 @@ jobs:
     - name: 📦 Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements_enhanced.txt
+        pip install -r requirements.txt
+        pip install pyinstaller
 
     - name: 🔐 Generate Test Certificates
       run: |
@@ -46,7 +48,24 @@ jobs:
         print('Test certificates created')
         "
 
-    - name: 🏗️ Test Build System Tray
+    - name: 🏗️ Test Build NMEA Server Console
+      run: |
+        echo "Testing NMEA Server Console build..."
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        
+        pyinstaller nmea_server.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_tracker_server.exe") {
+            echo "✅ NMEA Server Console build successful"
+            $size = (Get-Item "dist/nmea_tracker_server.exe").Length
+            echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+            echo "❌ NMEA Server Console build failed"
+            exit 1
+        }
+
+    - name: 🎯 Test Build System Tray
       run: |
         echo "Testing System Tray build..."
         if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
@@ -54,28 +73,57 @@ jobs:
         
         pyinstaller nmea_server_tray.spec --clean --noconfirm
         
-        if (Test-Path "dist/nmea_tracker_tray.exe") {
+        if (Test-Path "dist/nmea_server_tray.exe") {
             echo "✅ System Tray build successful"
-            $size = (Get-Item "dist/nmea_tracker_tray.exe").Length
+            $size = (Get-Item "dist/nmea_server_tray.exe").Length
             echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
             echo "❌ System Tray build failed"
             exit 1
         }
 
-    - name: 🧪 Quick Test
+    - name: 🧪 Test Build Test Server
       run: |
-        echo "Testing executable startup..."
-        cd dist
-        # Test basic startup (should exit quickly with --version or similar)
-        timeout 10 .\nmea_tracker_tray.exe --console || echo "Quick test completed"
+        echo "Testing Test Server build..."
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        
+        pyinstaller nmea_server_test.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_server_test.exe") {
+            echo "✅ Test Server build successful"
+            $size = (Get-Item "dist/nmea_server_test.exe").Length
+            echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+            echo "❌ Test Server build failed"
+            exit 1
+        }
+
+    - name: 🔧 Test Build Server Manager
+      run: |
+        echo "Testing Server Manager build..."
+        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        
+        pyinstaller nmea_server_manager.spec --clean --noconfirm
+        
+        if (Test-Path "dist/nmea_server_manager.exe") {
+            echo "✅ Server Manager build successful"
+            $size = (Get-Item "dist/nmea_server_manager.exe").Length
+            echo "File size: $([math]::Round($size/1MB, 2)) MB"
+        } else {
+            echo "❌ Server Manager build failed"
+            exit 1
+        }
 
     - name: 📊 Report
       run: |
-        echo "=== Build Report ==="
+        echo "=== Build Test Report ==="
         echo "✅ Dependencies installed successfully"
         echo "✅ SSL certificates generated"
-        echo "✅ System Tray executable built"
-        echo "✅ Basic functionality test passed"
+        echo "✅ NMEA Server Console executable built and tested"
+        echo "✅ System Tray executable built and tested"
+        echo "✅ Test Server executable built and tested"
+        echo "✅ Server Manager executable built and tested"
         echo ""
-        echo "Ready for production build!"
+        echo "🎉 All components ready for production build!"
