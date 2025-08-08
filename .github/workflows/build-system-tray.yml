@@ -117,26 +117,6 @@ jobs:
         
         print('SSL certificates created successfully')
         "
-            datetime.utcnow() + timedelta(days=365)
-        ).add_extension(
-            x509.SubjectAlternativeName([
-                x509.DNSName('localhost'),
-                x509.IPAddress(ipaddress.IPv4Address('127.0.0.1')),
-            ]),
-            critical=False,
-        ).sign(private_key, hashes.SHA256())
-        
-        # Write certificate
-        with open('cert.pem', 'wb') as f:
-            f.write(cert.public_bytes(serialization.Encoding.PEM))
-        
-        # Write private key
-        with open('key.pem', 'wb') as f:
-            f.write(private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
         
     - name: 🎯 Build System Tray Version
       run: |
