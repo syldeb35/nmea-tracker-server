@@ -23,8 +23,8 @@ datas = [
 
 # Ajout des fichiers optionnels
 optional_files = [
-    ('nmea_tracker_server2.exe', '.'),
-    ('nmea_server_test.py', '.'),
+    ('nmea_tracker_server.exe', '.'),
+    ('nmea_server.py', '.'),
 ]
 
 for file_path, dest_dir in optional_files:

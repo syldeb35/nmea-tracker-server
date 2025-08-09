@@ -25,10 +25,10 @@ pip install pyinstaller
 
 echo.
 echo [4/5] Compilation du serveur NMEA principal...
-if exist "build\nmea_server_test" rmdir /s /q "build\nmea_server_test"
-if exist "dist\nmea_tracker_server2.exe" del "dist\nmea_tracker_server2.exe"
+if exist "build\nmea_server" rmdir /s /q "build\nmea_server"
+if exist "dist\nmea_tracker_server.exe" del "dist\nmea_tracker_server.exe"
 
-pyinstaller nmea_server_test.spec
+pyinstaller nmea_server.spec
 if errorlevel 1 (
     echo ERREUR: Échec de la compilation du serveur principal
     pause
@@ -36,8 +36,8 @@ if errorlevel 1 (
 )
 
 REM Copier l'exécutable dans le répertoire principal pour que le tray le trouve
-if exist "dist\nmea_tracker_server2.exe" (
-    copy "dist\nmea_tracker_server2.exe" "nmea_tracker_server2.exe"
+if exist "dist\nmea_tracker_server.exe" (
+    copy "dist\nmea_tracker_server.exe" "nmea_tracker_server.exe"
     echo ✓ Serveur principal compilé avec succès
 ) else (
     echo ERREUR: L'exécutable du serveur principal n'a pas été généré
@@ -72,7 +72,7 @@ echo           COMPILATION TERMINÉE
 echo ========================================
 echo.
 echo Fichiers générés:
-echo - nmea_tracker_server2.exe (serveur principal)
+echo - nmea_tracker_server.exe (serveur principal)
 echo - nmea_server_tray.exe (gestionnaire system tray)
 echo.
 echo Pour utiliser:

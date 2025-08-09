@@ -34,8 +34,8 @@ class NMEAServerTray:
         self.server_process = None
         self.server_running = False
         self.icon = None
-        self.server_script = "nmea_server_test.py"
-        self.server_executable = "nmea_tracker_server2.exe"
+        self.server_script = "nmea_server.py"
+        self.server_executable = "nmea_tracker_server.exe"
         
         # Check if the executable exists, otherwise use the Python script
         if os.path.exists(self.server_executable):
@@ -220,8 +220,8 @@ class NMEAServerTray:
                     # Look for processes that match our server
                     if proc.info['cmdline']:
                         cmdline = ' '.join(proc.info['cmdline'])
-                        if ('nmea_server_test.py' in cmdline or 
-                            'nmea_tracker_server2.exe' in cmdline):
+                        if ('nmea_server.py' in cmdline or 
+                            'nmea_tracker_server.exe' in cmdline):
                             logging.info(f"Stopping remaining process: PID {proc.info['pid']}")
                             proc.kill()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):

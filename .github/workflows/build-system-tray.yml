@@ -154,8 +154,8 @@ jobs:
         
         # Build Test Server
         echo "Building Test Server..."
-        pyinstaller nmea_server_test.spec --clean --noconfirm
-        if (Test-Path "dist/nmea_server_test.exe") {
+        pyinstaller nmea_server.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server.exe") {
             echo "✅ Test Server build successful"
         }
         
@@ -308,7 +308,7 @@ jobs:
         version: [
           { name: "console", spec: "nmea_server.spec", exe: "nmea_tracker_server.exe" },
           { name: "system-tray", spec: "nmea_server_tray.spec", exe: "nmea_server_tray.exe" },
-          { name: "test", spec: "nmea_server_test.spec", exe: "nmea_server_test.exe" },
+          { name: "test", spec: "nmea_server.spec", exe: "nmea_server.exe" },
           { name: "manager", spec: "nmea_server_manager.spec", exe: "nmea_server_manager.exe" }
         ]
     

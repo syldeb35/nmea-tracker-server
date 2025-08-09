@@ -75,8 +75,8 @@ jobs:
         
         # Build Test Server version
         echo "🧪 Building Test Server version..."
-        pyinstaller nmea_server_test.spec --clean --noconfirm
-        if (Test-Path "dist/nmea_server_test.exe") {
+        pyinstaller nmea_server.spec --clean --noconfirm
+        if (Test-Path "dist/nmea_server.exe") {
             echo "✅ Test Server version built"
         }
         
@@ -120,7 +120,7 @@ jobs:
         echo "For advanced users - Direct server execution with console output" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "Features: Full server functionality, console logging, command-line options" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
-        echo "### 🧪 nmea_server_test.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
+        echo "### 🧪 nmea_server.exe" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "Test Version - Development and testing server" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "For developers - Enhanced debugging and testing features" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8
         echo "Features: Debug mode, extended logging, development tools" | Out-File -FilePath "release_package/QUICK_START.md" -Append -Encoding UTF8

@@ -34,7 +34,7 @@ for file_path, dest_dir in optional_files:
         datas.append(optional_file)
 
 a = Analysis(
-    ['nmea_server_test.py'],
+    ['nmea_server.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -163,7 +163,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='nmea_tracker_server2',
+    name='nmea_tracker_server',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

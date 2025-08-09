@@ -88,11 +88,11 @@ jobs:
         if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
         if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
         
-        pyinstaller nmea_server_test.spec --clean --noconfirm
+        pyinstaller nmea_server.spec --clean --noconfirm
         
-        if (Test-Path "dist/nmea_server_test.exe") {
+        if (Test-Path "dist/nmea_server.exe") {
             echo "✅ Test Server build successful"
-            $size = (Get-Item "dist/nmea_server_test.exe").Length
+            $size = (Get-Item "dist/nmea_server.exe").Length
             echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
             echo "❌ Test Server build failed"

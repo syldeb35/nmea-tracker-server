@@ -32,8 +32,8 @@ class NMEAServerTraySimple:
         self.server_process = None
         self.server_running = False
         self.root = None
-        self.server_script = "nmea_server_test.py"
-        self.server_executable = "nmea_tracker_server2.exe"
+        self.server_script = "nmea_server.py"
+        self.server_executable = "nmea_tracker_server.exe"
         
         # Vérifier si l'exécutable existe, sinon utiliser le script Python
         if os.path.exists(self.server_executable):

@@ -100,12 +100,12 @@ cd nmea-tracker-server
 pip install -r requirements.txt
 
 # Start the server
-python nmea_server_test.py
+python nmea_server.py
 ```
 
 ## 🌐 Usage
 
-1. **Starting**: Launch the executable or `python nmea_server_test.py`
+1. **Starting**: Launch the executable or `python nmea_server.py`
 2. **Configuration**: Open `https://localhost:5000/config.html`
 3. **Visualization**: Access `https://localhost:5000/` to see real-time data
 4. **Stopping**: Use `Ctrl+C` for a clean shutdown
@@ -208,8 +208,8 @@ logs/
 
 ```text
 nmea-tracker-server/
-├── 📄 nmea_server_test.py     # Main server application
-├── 📄 nmea_server_test.spec   # PyInstaller configuration
+├── 📄 nmea_server.py     # Main server application
+├── 📄 nmea_server.spec   # PyInstaller configuration
 ├── 📁 templates/              # Web interface
 │   ├── index.html             # Main viewer
 │   ├── config.html            # Configuration page
@@ -231,7 +231,7 @@ nmea-tracker-server/
 pip install pyinstaller
 
 # Build
-pyinstaller nmea_server_test.spec --clean --noconfirm
+pyinstaller nmea_server.spec --clean --noconfirm
 
 # Result
 dist/nmea_tracker_server.exe  # Windows
@@ -256,7 +256,7 @@ The server supports silent background operation:
 SERVICE_MODE=True
 
 # Start in background (no console output)
-python nmea_server_test.py
+python nmea_server.py
 
 # Check service logs
 tail -f logs/main.log
@@ -323,7 +323,7 @@ ENABLE_TCP=False
 
 ```bash
 # Check if running in service mode
-ps aux | grep nmea_server_test  # Linux/macOS
+ps aux | grep nmea_server  # Linux/macOS
 tasklist | findstr nmea        # Windows
 
 # Service logs location

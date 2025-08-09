@@ -147,11 +147,11 @@ jobs:
       if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'test-only' || github.event.inputs.build_target == '' }}
       run: |
         echo "Building NMEA Server Test version..."
-        pyinstaller nmea_server_test.spec --clean --noconfirm
+        pyinstaller nmea_server.spec --clean --noconfirm
         
-        if (Test-Path "dist/nmea_server_test.exe") {
+        if (Test-Path "dist/nmea_server.exe") {
           echo "✅ NMEA Server Test build successful"
-          $size = (Get-Item "dist/nmea_server_test.exe").Length
+          $size = (Get-Item "dist/nmea_server.exe").Length
           echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
           echo "❌ NMEA Server Test build failed"
@@ -213,7 +213,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: nmea-tracker-server-test
-        path: dist/nmea_server_test.exe
+        path: dist/nmea_server.exe
         retention-days: 30
     
     - name: 📤 Upload NMEA Server Manager
