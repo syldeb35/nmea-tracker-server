@@ -5,23 +5,23 @@ from pathlib import Path
 
 block_cipher = None
 
-# Fonction pour vérifier et ajouter des fichiers optionnels
+# Function to check and add optional files
 def add_optional_file(file_path, dest_dir):
-    """Ajoute un fichier seulement s'il existe"""
+    """Add a file only if it exists"""
     if os.path.exists(file_path):
         return (file_path, dest_dir)
     else:
-        print(f"⚠️  Fichier optionnel manquant: {file_path}")
+        print(f"Optional file missing: {file_path}")
         return None
 
-# Liste des fichiers de données avec vérification
+# Data files list with verification
 datas = [
     ('icon.png', '.'),
     ('icon.ico', '.'),
     ('icon.svg', '.'),
 ]
 
-# Ajout des fichiers optionnels
+# Optional files addition
 optional_files = [
     ('nmea_tracker_server.exe', '.'),
     ('nmea_server.py', '.'),
@@ -38,7 +38,7 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=[
-        # Core GUI et system tray
+        # Core GUI and system tray
         'tkinter',
         'tkinter.messagebox',
         'PIL',
@@ -110,10 +110,10 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Mode sans console pour le system tray
+    console=False,  # No console mode for system tray
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',  # Icône personnalisée de l'application
+    icon='icon.ico',  # Custom application icon
 )
