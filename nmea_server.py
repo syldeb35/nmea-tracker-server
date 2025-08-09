@@ -67,14 +67,32 @@ REJECTED_PATTERN = re.compile(r'^\$([A-Z][A-Z])(GS[A-Z]|XDR|AMAID|AMCLK|AMSA|SGR
 last_nmea_data = []  # Buffer des dernières données NMEA
 max_nmea_buffer = 50  # Garder les 50 dernières lignes
 
+# Variables pour le rate limiting (éviter le flooding du serveur)
+last_emit_time = 0
+emit_counter = 0
+emit_rate_limit = 100  # Max 100 messages par seconde
+
 # === NMEA DATA EMISSION FUNCTION ===
 # Émettre les données NMEA via WebSocket et les stocker dans le buffer
 
 def emit_nmea_data(source, message):
     """Émet les données NMEA via WebSocket et les stocke"""
-    global last_nmea_data
+    global last_nmea_data, last_emit_time, emit_counter
     
     try:
+        # Rate limiting pour éviter le flooding du serveur
+        current_time = time.time()
+        if current_time - last_emit_time >= 1.0:
+            # Reset counter every second
+            last_emit_time = current_time
+            emit_counter = 0
+        
+        emit_counter += 1
+        if emit_counter > emit_rate_limit:
+            # Skip emission if rate limit exceeded
+            debug_logger.debug(f"Rate limit exceeded, skipping {source}: {message[:30]}...")
+            return
+        
         # Vérifications des paramètres d'entrée
         if source is None or source == "":
             source = "UNKNOWN"
@@ -104,20 +122,37 @@ def emit_nmea_data(source, message):
         if DEBUG:
             debug_logger.debug(f"EMIT {source}: {message[:50]}...")
             
-        # Émettre pour Windy Plugin (chaîne NMEA pure)
+        # Émettre pour Windy Plugin (chaîne NMEA pure) - NON-BLOCKING
         try:
-            socketio.emit('nmea_data', message)
+            # Use threading to make emission non-blocking and prevent server freezing
+            def emit_windy():
+                try:
+                    socketio.emit('nmea_data', message)
+                except:
+                    pass  # Silent fail to prevent server freeze
+            
+            # Run emission in background thread with daemon=True
+            import threading
+            threading.Thread(target=emit_windy, daemon=True).start()
         except Exception as windy_error:
             error_logger.error(f"Erreur émission Windy: {windy_error}")
         
-        # Émettre pour l'interface web avec informations source
+        # Émettre pour l'interface web avec informations source - NON-BLOCKING
         try:
             web_data = {
                 'source': source,
                 'message': message,
                 'timestamp': datetime.datetime.now().strftime('%H:%M:%S')
             }
-            socketio.emit('nmea_data_web', web_data)
+            
+            def emit_web():
+                try:
+                    socketio.emit('nmea_data_web', web_data)
+                except:
+                    pass  # Silent fail to prevent server freeze
+            
+            # Run emission in background thread with daemon=True
+            threading.Thread(target=emit_web, daemon=True).start()
         except Exception as ws_error:
             error_logger.error(f"Erreur émission WebSocket: {ws_error}")
                 
@@ -347,8 +382,15 @@ main_logger.info("Système de logs initialisé")
 
 # === FLASK SERVER ===
 app = Flask(__name__)
-# socketio = SocketIO(app, cors_allowed_origins="*")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+# Configure SocketIO with better stability settings
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode='gevent',
+    ping_timeout=10,           # Detect dead clients faster
+    ping_interval=5,           # Send ping every 5 seconds
+    max_http_buffer_size=1e6   # Limit buffer size to prevent memory issues
+)
 CORS(app)  # Allow all origins (wildcard origin *)
 
 # === BLUETOOTH GPS MANAGER (initialisé tôt pour éviter les erreurs de référence) ===
@@ -688,15 +730,23 @@ def tcp_client(stop_event):
             main_logger.info(f"TCP Client connected to {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
             network_logger.info(f"TCP client connection established")
             
+            # Connection monitoring variables
+            last_data_time = time.time()
+            connection_start = time.time()
+            data_count = 0
+            
             # Boucle de réception des données
             buffer = ""
             while not stop_event.is_set() and not shutdown_event.is_set():
                 try:
                     data = sock.recv(1024).decode('utf-8', errors='ignore')
                     if not data:
-                        main_logger.warning("TCP connection closed by server")
+                        connection_duration = time.time() - connection_start
+                        main_logger.warning(f"TCP connection closed by server after {connection_duration:.1f}s, processed {data_count} messages")
+                        network_logger.warning(f"TCP connection closed - duration: {connection_duration:.1f}s, messages: {data_count}")
                         break
                     
+                    last_data_time = time.time()
                     buffer += data
                     lines = buffer.split('\n')
                     buffer = lines[-1]  # Garder la dernière ligne incomplète
@@ -704,21 +754,30 @@ def tcp_client(stop_event):
                     for line in lines[:-1]:
                         message = line.strip()
                         if message and (message.startswith('$') or message.startswith('!')):
+                            data_count += 1
                             debug_logger.debug(f"TCP Client received: {message}")
                             emit_nmea_data("TCP", message)
                             
                 except socket.timeout:
+                    # Check for data silence (no data for over 30 seconds)
+                    if time.time() - last_data_time > 30:
+                        main_logger.warning(f"TCP data silence detected: {time.time() - last_data_time:.1f}s since last data")
                     continue
                 except Exception as e:
-                    error_logger.error(f"TCP client receive error: {e}")
+                    connection_duration = time.time() - connection_start
+                    error_logger.error(f"TCP client receive error after {connection_duration:.1f}s: {e}")
+                    network_logger.error(f"TCP receive error - duration: {connection_duration:.1f}s, messages: {data_count}, error: {e}")
                     break
                     
         except socket.timeout:
             error_logger.error(f"TCP connection timeout to {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
+            network_logger.error(f"TCP connection timeout - will retry in 2 seconds")
         except ConnectionRefusedError:
             error_logger.error(f"TCP connection refused to {TCP_TARGET_IP}:{TCP_TARGET_PORT}")
+            network_logger.error(f"TCP connection refused - server may be down, will retry in 2 seconds")
         except Exception as e:
             error_logger.error(f"TCP client error: {e}")
+            network_logger.error(f"TCP client error: {e} - will retry in 2 seconds")
         
         finally:
             try:
@@ -726,9 +785,9 @@ def tcp_client(stop_event):
             except:
                 pass
         
-        # Attendre avant de reconnecter
-        main_logger.info("TCP client will retry in 10 seconds...")
-        for _ in range(100):  # 10 secondes en boucles de 0.1s
+        # Attendre avant de reconnecter (réduit à 2 secondes)
+        main_logger.info("TCP client will retry in 2 seconds...")
+        for _ in range(20):  # 2 secondes en boucles de 0.1s
             if stop_event.is_set():
                 break
             time.sleep(0.1)
