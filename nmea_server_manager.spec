@@ -11,7 +11,7 @@ def add_optional_file(file_path, dest_dir):
     if os.path.exists(file_path):
         return (file_path, dest_dir)
     else:
-        print(f"⚠️  Fichier optionnel manquant: {file_path}")
+        print(f"WARNING: Fichier optionnel manquant: {file_path}")
         return None
 
 # Liste des fichiers de données avec vérification

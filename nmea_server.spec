@@ -11,7 +11,7 @@ def add_optional_file(file_path, dest_dir):
     if os.path.exists(file_path):
         return (file_path, dest_dir)
     else:
-        print(f"⚠️  Fichier optionnel manquant: {file_path}")
+        print(f"WARNING: Fichier optionnel manquant: {file_path}")
         return None
 
 # Liste des fichiers de données avec vérification
@@ -170,7 +170,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # RESTORED: Silent background execution for system tray
+    console=True,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,

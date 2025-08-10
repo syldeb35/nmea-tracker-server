@@ -1,4 +1,4 @@
-name: � Build NMEA Tracker Server - System Tray
+name: Build NMEA Tracker Server - System Tray
 
 on:
   push:
@@ -23,29 +23,29 @@ env:
 
 jobs:
   build-windows:
-    name: 🖥️ Build Windows System Tray
+    name: Build Windows System Tray
     runs-on: windows-latest
     
     steps:
-    - name: 📥 Checkout Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: 🐍 Setup Python
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
 
-    - name: 📦 Install Dependencies
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller cryptography
-        Write-Host "✅ Dependencies installed successfully"
+        Write-Host "Dependencies installed successfully"
         
-    - name: 🔍 Verify Dependencies
+    - name: Verify Dependencies
       run: |
         echo "=== Python Environment ==="
         python --version
@@ -131,11 +131,11 @@ jobs:
         pyinstaller nmea_server_tray.spec --clean --noconfirm
         
         if (Test-Path "dist/nmea_server_tray.exe") {
-            echo "✅ System Tray build successful!"
+            echo "SUCCESS: System Tray build successful!"
             $size = (Get-Item "dist/nmea_server_tray.exe").Length
-            echo "📁 File size: $([math]::Round($size/1MB, 2)) MB"
+            echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-            echo "❌ System Tray build failed!"
+            echo "ERROR: System Tray build failed!"
             Get-ChildItem "dist" -ErrorAction SilentlyContinue
             exit 1
         }
@@ -149,17 +149,17 @@ jobs:
         echo "Building Console Server..."
         pyinstaller nmea_server.spec --clean --noconfirm
         if (Test-Path "dist/nmea_tracker_server.exe") {
-            echo "✅ Console Server build successful"
+            echo "SUCCESS: Console Server build successful"
         }
         
         # Build Manager
         echo "Building Manager..."
         pyinstaller nmea_server_manager.spec --clean --noconfirm
         if (Test-Path "dist/nmea_server_manager.exe") {
-            echo "✅ Manager build successful"
+            echo "SUCCESS: Manager build successful"
         }
 
-    - name: 🔍 Test System Tray Executable
+    - name: Test System Tray Executable
       run: |
         echo "=== Testing System Tray Executable ==="
         cd dist
@@ -172,12 +172,12 @@ jobs:
             echo "Created: $($fileInfo.CreationTime)"
             
             if ($fileInfo.Length -gt 10MB) {
-                echo "✅ File size looks reasonable"
+                echo "SUCCESS: File size looks reasonable"
             } else {
-                echo "⚠️ Warning: File size seems small"
+                echo "WARNING: File size seems small"
             }
         } else {
-            echo "❌ Executable not found!"
+            echo "ERROR: Executable not found!"
             exit 1
         }
 
@@ -190,10 +190,10 @@ jobs:
         if (Test-Path "dist") {
           Get-ChildItem "dist/*.exe" | ForEach-Object {
             $size = [math]::Round($_.Length/1MB, 2)
-            echo "  ✅ $($_.Name) - ${size} MB"
+            echo "  SUCCESS: $($_.Name) - ${size} MB"
           }
         } else {
-          echo "  ❌ No executables found"
+          echo "  ERROR: No executables found"
         }
         echo ""
         echo "🎯 System Tray build process completed!"
@@ -322,7 +322,7 @@ jobs:
         # Then install the rest
         pip install flask flask-socketio python-socketio pyserial python-dotenv cryptography flask-cors
         pip install pystray pillow pyinstaller
-        Write-Host "✅ Dependencies installed successfully (with gevent for Python 3.13)"
+        Write-Host "SUCCESS: Dependencies installed successfully (with gevent for Python 3.13)"
 
     - name: 🛠️ Create SSL Certificates
       run: |
@@ -351,9 +351,9 @@ jobs:
         pyinstaller ${{ matrix.version.spec }} --clean --noconfirm
         
         if (Test-Path "dist/${{ matrix.version.exe }}") {
-            echo "✅ ${{ matrix.version.name }} build successful!"
+            echo "SUCCESS: ${{ matrix.version.name }} build successful!"
         } else {
-            echo "❌ ${{ matrix.version.name }} build failed!"
+            echo "ERROR: ${{ matrix.version.name }} build failed!"
             exit 1
         }
 

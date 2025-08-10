@@ -27,26 +27,26 @@ env:
 
 jobs:
   build-windows:
-    name: 🖥️ Build Windows Applications
+    name: Build Windows Applications
     runs-on: windows-latest
     
     steps:
-    - name: 📥 Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: 🐍 Set up Python
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
     
-    - name: 📦 Install dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller cryptography
     
-    - name: 🔍 Verify project structure
+    - name: Verify project structure
       run: |
         echo "=== Project Structure ==="
         Get-ChildItem -Force
@@ -117,11 +117,11 @@ jobs:
         pyinstaller nmea_server.spec --clean --noconfirm
         
         if (Test-Path "dist/nmea_tracker_server.exe") {
-          echo "✅ NMEA Server build successful"
+          echo "SUCCESS: NMEA Server build successful"
           $size = (Get-Item "dist/nmea_tracker_server.exe").Length
           echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-          echo "❌ NMEA Server build failed"
+          echo "ERROR: NMEA Server build failed"
           exit 1
         }
       shell: pwsh
@@ -133,11 +133,11 @@ jobs:
         pyinstaller nmea_server_tray.spec --clean --noconfirm
         
         if (Test-Path "dist/nmea_server_tray.exe") {
-          echo "✅ NMEA Server Tray build successful"
+          echo "SUCCESS: NMEA Server Tray build successful"
           $size = (Get-Item "dist/nmea_server_tray.exe").Length
           echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-          echo "❌ NMEA Server Tray build failed"
+          echo "ERROR: NMEA Server Tray build failed"
           exit 1
         }
       shell: pwsh
@@ -149,11 +149,11 @@ jobs:
         pyinstaller nmea_server_manager.spec --clean --noconfirm
         
         if (Test-Path "dist/nmea_server_manager.exe") {
-          echo "✅ NMEA Server Manager build successful"
+          echo "SUCCESS: NMEA Server Manager build successful"
           $size = (Get-Item "dist/nmea_server_manager.exe").Length
           echo "File size: $([math]::Round($size/1MB, 2)) MB"
         } else {
-          echo "❌ NMEA Server Manager build failed"
+          echo "ERROR: NMEA Server Manager build failed"
           exit 1
         }
       shell: pwsh
@@ -166,10 +166,10 @@ jobs:
         if (Test-Path "dist") {
           Get-ChildItem "dist/*.exe" | ForEach-Object {
             $size = [math]::Round($_.Length/1MB, 2)
-            echo "  ✅ $($_.Name) - ${size} MB"
+            echo "  SUCCESS: $($_.Name) - ${size} MB"
           }
         } else {
-          echo "  ❌ No executables found in dist/ directory"
+          echo "  ERROR: No executables found in dist/ directory"
         }
         echo ""
         echo "Build completed successfully!"
