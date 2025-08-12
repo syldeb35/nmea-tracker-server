@@ -363,3 +363,208 @@ jobs:
         name: nmea-tracker-${{ matrix.version.name }}-windows
         path: dist/${{ matrix.version.exe }}
         retention-days: 30
+
+  build-linux:
+    name: Build Linux System Tray
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk python3-dev libgtk-3-dev
+        
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller cryptography
+        echo "Dependencies installed successfully"
+
+    - name: Create SSL Certificates
+      run: |
+        echo "Creating SSL certificates for build..."
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        import ipaddress
+        
+        # Generate private key
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        
+        # Create certificate
+        subject = issuer = x509.Name([
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost'),
+        ])
+        
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.utcnow()
+        ).not_valid_after(
+            datetime.utcnow() + timedelta(days=365)
+        ).sign(private_key, hashes.SHA256())
+        
+        # Save certificate and private key
+        with open('cert.pem', 'wb') as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        with open('key.pem', 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        print('SSL certificates created successfully')
+        "
+
+    - name: Build System Tray (Linux)
+      run: |
+        echo "=== Building NMEA Tracker Server - System Tray for Linux ==="
+        
+        # Clean build directories
+        rm -rf dist build
+        
+        # Build with PyInstaller
+        pyinstaller --onefile --name nmea_server_tray_linux nmea_server_tray.py \
+          --add-data "templates:templates" \
+          --add-data "cert.pem:." \
+          --add-data "key.pem:." \
+          --add-data "icon.png:." \
+          --clean --noconfirm
+        
+        if [ -f "dist/nmea_server_tray_linux" ]; then
+          echo "SUCCESS: System Tray Linux build successful!"
+          ls -lh dist/nmea_server_tray_linux
+        else
+          echo "ERROR: System Tray Linux build failed!"
+          exit 1
+        fi
+
+    - name: Upload Linux System Tray
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-tray-linux
+        path: dist/nmea_server_tray_linux
+        retention-days: 30
+
+  build-macos:
+    name: Build macOS System Tray
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller cryptography
+        echo "Dependencies installed successfully"
+
+    - name: Create SSL Certificates
+      run: |
+        echo "Creating SSL certificates for build..."
+        python -c "
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from datetime import datetime, timedelta
+        
+        # Generate private key
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        
+        # Create certificate
+        subject = issuer = x509.Name([
+            x509.NameAttribute(x509.NameOID.COMMON_NAME, 'localhost'),
+        ])
+        
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.utcnow()
+        ).not_valid_after(
+            datetime.utcnow() + timedelta(days=365)
+        ).sign(private_key, hashes.SHA256())
+        
+        # Save certificate and private key
+        with open('cert.pem', 'wb') as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        
+        with open('key.pem', 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        
+        print('SSL certificates created successfully')
+        "
+
+    - name: Build System Tray (macOS ${{ matrix.arch }})
+      run: |
+        echo "=== Building NMEA Tracker Server - System Tray for macOS ${{ matrix.arch }} ==="
+        
+        # Clean build directories
+        rm -rf dist build
+        
+        # Build with PyInstaller
+        pyinstaller --onefile --name nmea_server_tray_macos_${{ matrix.arch }} nmea_server_tray.py \
+          --add-data "templates:templates" \
+          --add-data "cert.pem:." \
+          --add-data "key.pem:." \
+          --add-data "icon.png:." \
+          --clean --noconfirm
+        
+        if [ -f "dist/nmea_server_tray_macos_${{ matrix.arch }}" ]; then
+          echo "SUCCESS: System Tray macOS ${{ matrix.arch }} build successful!"
+          ls -lh dist/nmea_server_tray_macos_${{ matrix.arch }}
+        else
+          echo "ERROR: System Tray macOS ${{ matrix.arch }} build failed!"
+          exit 1
+        fi
+
+    - name: Upload macOS System Tray
+      uses: actions/upload-artifact@v4
+      with:
+        name: nmea-tracker-tray-macos-${{ matrix.arch }}
+        path: dist/nmea_server_tray_macos_${{ matrix.arch }}
+        retention-days: 30
