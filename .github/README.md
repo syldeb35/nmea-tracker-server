@@ -1,102 +1,103 @@
-# 🤖 GitHub Actions - NMEA Tracker Server
 
-Ce répertoire contient les workflows GitHub Actions pour automatiser le build et la release du serveur NMEA.
+# GitHub Actions - NMEA Tracker Server
 
-## 📋 Workflows Disponibles
+This directory contains GitHub Actions workflows to automate the build, testing, and release of the NMEA server.
 
-### 1. 🏗️ Build System Tray (`build-system-tray.yml`)
-**Déclenché par** : Push sur `main`/`develop`, Tags `v*`, PR vers `main`
+## Available Workflows
 
-**Fonctionnalités** :
-- ✅ Build automatique de la version System Tray
-- ✅ Test de l'exécutable généré
-- ✅ Upload des artifacts (30 jours de rétention)
-- ✅ Création automatique de releases pour les tags
+### 1. Build System Tray (`build-system-tray.yml`)
+**Triggers** : Push on `main`/`develop`, Tags `v*`, PR to `main`
 
-**Artifacts produits** :
-- `nmea_tracker_tray.exe` - Version System Tray
-- `build_info.json` - Informations de build
-- `VERSION.txt` - Information de version
-- `RELEASE_NOTES.md` - Notes de release
+**Features** :
+- Automatic build of System Tray version
+- Test of generated executable
+- Upload artifacts (30 days retention)
+- Automatic release creation for tags
 
-### 2. 🚀 Release (`release.yml`)
-**Déclenché par** : Création de release, Manuel
+**Produced artifacts** :
+- `nmea_tracker_tray.exe` - System Tray version
+- `build_info.json` - Build information
+- `VERSION.txt` - Version information
+- `RELEASE_NOTES.md` - Release notes
 
-**Fonctionnalités** :
-- ✅ Build de toutes les versions (Console, System Tray, Service)
-- ✅ Création d'un package complet avec documentation
-- ✅ Upload automatique vers la release GitHub
-- ✅ Génération de notes de release
+### 2. Release (`release.yml`)
+**Triggered by** : Release creation, Manual
 
-**Produits** :
-- `nmea_tracker_tray.exe` - Version System Tray (recommandée)
-- `nmea_tracker_server_console.exe` - Version Console
-- `nmea_tracker_service.exe` - Version Service Windows
-- `nmea-tracker-server-vX.X.X-windows.zip` - Package complet
-- `QUICK_START.md` - Guide de démarrage rapide
+**Features** :
+- Build all versions (Console, System Tray, Service)
+- Create complete package with documentation
+- Automatic upload to GitHub release
+- Generate release notes
 
-### 3. 🧪 Test & Build PR (`test-build.yml`)
-**Déclenché par** : PR vers `main`/`develop`, Push sur `develop`
+**Products** :
+- `nmea_tracker_tray.exe` - System Tray version (recommended)
+- `nmea_tracker_server_console.exe` - Console version
+- `nmea_tracker_service.exe` - Windows Service version
+- `nmea-tracker-server-vX.X.X-windows.zip` - Complete package
+- `QUICK_START.md` - Quick start guide
 
-**Fonctionnalités** :
-- ✅ Validation des builds sur les PR
-- ✅ Test rapide de fonctionnement
-- ✅ Feedback automatique sur les PR
+### 3. Test & Build PR (`test-build.yml`)
+**Triggered by** : PR to `main`/`develop`, Push on `develop`
 
-## 🎯 Utilisation
+**Features** :
+- Build validation on PRs
+- Quick functionality test
+- Automatic feedback on PRs
 
-### Déclenchement Manuel des Builds
+## Usage
 
-#### Build System Tray uniquement
+### Manual Build Triggers
+
+#### Build System Tray only
 ```bash
-# Via l'interface GitHub
+# Via GitHub interface
 Actions → Build NMEA Tracker Server - System Tray → Run workflow
 ```
 
-#### Build de toutes les versions
+#### Build all versions
 ```bash
-# Via l'interface GitHub
+# Via GitHub interface
 Actions → Release NMEA Tracker Server → Run workflow
-# Choisir la version (ex: v1.2.0)
+# Choose version (e.g.: v1.2.0)
 ```
 
-### Création d'une Release
+### Creating a Release
 
-1. **Créer un tag** :
+1. **Create a tag** :
 ```bash
 git tag v1.2.0
 git push origin v1.2.0
 ```
 
-2. **Ou créer une release via GitHub** :
-   - Aller dans "Releases"
-   - Cliquer "Create a new release"
-   - Choisir le tag `v1.2.0`
-   - Le workflow se déclenche automatiquement
+2. **Or create a release via GitHub** :
+   - Go to "Releases"
+   - Click "Create a new release"
+   - Choose the tag `v1.2.0`
+   - The workflow triggers automatically
 
-### Workflow pour les Développeurs
+### Workflow for Developers
 
-1. **Développement** : Les push sur `develop` déclenchent les tests
-2. **Pull Request** : Validation automatique du build
-3. **Merge vers main** : Build et artifacts générés
-4. **Tag/Release** : Release complète avec tous les exécutables
+1. **Development** : Pushes on `develop` trigger tests
+2. **Pull Request** : Automatic build validation
+3. **Merge to main** : Build and artifacts generated
+4. **Tag/Release** : Complete release with all executables
 
-## 🔧 Configuration
+## Configuration
 
-### Variables d'Environnement
-- `PYTHON_VERSION: '3.11'` - Version de Python utilisée
-- `APP_NAME: 'NMEA-Tracker-Server'` - Nom de l'application
+### Environment Variables
+- `PYTHON_VERSION` - Python version used
+- `APP_NAME` - Application name
 
-### Secrets Requis
-- `GITHUB_TOKEN` - Token automatique pour les releases (fourni par GitHub)
+### Required Secrets
+- `GITHUB_TOKEN` - Automatic token for releases (provided by GitHub)
 
-### Dépendances
-- `requirements_enhanced.txt` - Dépendances Python complètes
-- Certificats SSL générés automatiquement pour chaque build
+### Dependencies
+- `requirements.txt` - Python dependencies
+- SSL certificates generated automatically for each build
 
-## 📦 Artifacts et Releases
+## Artifacts and Releases
 
-### Structure des Artifacts
+### Artifacts Structure
 ```
 nmea-tracker-tray-windows/
 ├── nmea_tracker_tray.exe
@@ -105,56 +106,56 @@ nmea-tracker-tray-windows/
 └── RELEASE_NOTES.md
 ```
 
-### Structure du Package de Release
+### Release Package Structure
 ```
 nmea-tracker-server-v1.2.0-windows.zip
-├── nmea_tracker_tray.exe              # Version recommandée
-├── nmea_tracker_server_console.exe    # Version console
-├── nmea_tracker_service.exe           # Version service
-├── README.md                          # Documentation principale
-├── CHANGELOG.md                       # Historique des changements
-├── WINDOWS_VERSIONS_GUIDE.md          # Guide des versions Windows
-├── QUICK_START.md                     # Guide de démarrage rapide
-└── VERSION.txt                        # Informations de version
+├── nmea_tracker_tray.exe              # Recommended version
+├── nmea_tracker_server_console.exe    # Console version
+├── nmea_tracker_service.exe           # Service version
+├── README.md                          # Main documentation
+├── CHANGELOG.md                       # Change history
+├── WINDOWS_VERSIONS_GUIDE.md          # Windows versions guide
+├── QUICK_START.md                     # Quick start guide
+└── VERSION.txt                        # Version information
 ```
 
-## 🚨 Dépannage
+## Troubleshooting
 
-### Build qui échoue
-1. Vérifier les logs dans l'onglet "Actions"
-2. Contrôler que `requirements_enhanced.txt` est à jour
-3. Vérifier la compatibilité des dépendances Python
+### Build failures
+1. Check logs in the "Actions" tab
+2. Verify that `requirements.txt` is up to date
+3. Check Python dependencies compatibility
 
-### Certificats SSL
-Les certificats sont générés automatiquement pour chaque build. Si des problèmes persistent :
-- Vérifier que le module `cryptography` est bien installé
-- Contrôler les permissions de fichier
+### SSL Certificates
+Certificates are generated automatically for each build. If problems persist:
+- Verify that the `cryptography` module is installed
+- Check file permissions
 
 ### Permissions
-- Les workflows utilisent `GITHUB_TOKEN` automatique
-- Pas de configuration supplémentaire nécessaire
+- Workflows use automatic `GITHUB_TOKEN`
+- No additional configuration needed
 
-## 📈 Monitoring
+## Monitoring
 
-### Statut des Builds
-- Badge automatique dans le README principal
-- Notifications par email en cas d'échec (configurable)
+### Build Status
+- Automatic badge in main README
+- Email notifications on failure (configurable)
 
-### Métriques
-- Temps de build moyen : ~5-10 minutes
-- Taille typique des artifacts : ~50-80 MB
-- Rétention des artifacts : 30 jours
+### Metrics
+- Average build time: ~5-10 minutes
+- Typical artifact size: ~50-80 MB
+- Artifact retention: 30 days
 
-## 🔄 Maintenance
+## Maintenance
 
-### Mise à jour des Workflows
-1. Modifier les fichiers `.yml` dans `.github/workflows/`
-2. Tester avec un push sur une branche de test
-3. Merger vers `main` après validation
+### Updating Workflows
+1. Modify `.yml` files in `.github/workflows/`
+2. Test with a push on a test branch
+3. Merge to `main` after validation
 
-### Mise à jour des Dépendances
-1. Modifier `requirements_enhanced.txt`
-2. Tester localement avec `build_enhanced.bat`
-3. Valider via un workflow de test
+### Updating Dependencies
+1. Modify `requirements.txt`
+2. Test locally
+3. Validate via test workflow
 
-Cette configuration assure une intégration continue robuste pour le projet NMEA Tracker Server ! 🎯
+This configuration ensures robust continuous integration for the NMEA Tracker Server project!

@@ -1,118 +1,119 @@
-# 🤖 GitHub Actions Workflows
 
-Ce projet utilise GitHub Actions pour automatiser les builds cross-platform et les tests.
+# GitHub Actions Workflows
 
-## 📋 Workflows disponibles
+This project uses GitHub Actions to automate cross-platform builds and tests.
 
-### 1. 🏗️ `build.yml` - Build Cross-Platform Executables
+## Available Workflows
 
-**Déclenché par :**
+### 1. `build.yml` - Build Cross-Platform Executables
 
-- Tags `v*` (exemple: `v1.0.0`)
-- Déclenchement manuel (workflow_dispatch)
+**Triggers :**
 
-**Plateformes supportées :**
+- Tags `v*` (example: `v1.0.0`)
+- Manual trigger (workflow_dispatch)
 
-- ✅ Ubuntu Linux (x86_64)
-- ✅ Windows (x86_64)
-- ✅ macOS (ARM64 + Intel)
+**Supported platforms :**
 
-**Artefacts générés :**
+- Ubuntu Linux (x86_64)
+- Windows (x86_64)
+- macOS (ARM64 + Intel)
+
+**Generated artifacts :**
 
 - `nmea_tracker_server_linux` (Linux executable)
 - `nmea_tracker_server_windows.exe` (Windows executable)
 - `nmea_tracker_server_macos` (macOS ARM64)
 - `nmea_tracker_server_macos-intel` (macOS Intel)
 
-### 2. 🐍 `test-python.yml` - Test Python Distribution
+### 2. `test-python.yml` - Test Python Distribution
 
-**Déclenché par :**
+**Triggers :**
 
-- Push sur `main` ou `develop`
+- Push on `main` or `develop`
 - Pull requests
-- Déclenchement manuel
+- Manual trigger
 
-**Tests effectués :**
+**Tests performed :**
 
-- ✅ Test d'import Python sur multiples versions (3.8, 3.11)
-- ✅ Test cross-platform (Linux, Windows, macOS)
-- ✅ Création de distribution Python portable
-- ✅ Vérification des templates
+- Python import test on multiple versions (3.8, 3.11)
+- Cross-platform test (Linux, Windows, macOS)
+- Portable Python distribution creation
+- Template verification
 
-**Artefacts générés :**
+**Generated artifacts :**
 
 - `nmea_tracker_server_python_portable.zip`
 - `nmea_tracker_server_python_portable.tar.gz`
 
-## 🚀 Comment déclencher un build
+## How to trigger a build
 
-### Method 1: Tag Git (Recommandé)
+### Method 1: Git Tag (Recommended)
 
 ```bash
-# Créer et pousser un tag
+# Create and push a tag
 git tag v1.0.0
 git push --tags
 ```
 
-### Method 2: Déclenchement manuel
+### Method 2: Manual trigger
 
-1. Aller sur GitHub → Actions
-2. Sélectionner le workflow
-3. Cliquer "Run workflow"
+1. Go to GitHub → Actions
+2. Select the workflow
+3. Click "Run workflow"
 
-## 🔧 Résolution des problèmes
+## Troubleshooting
 
-### ❌ "The strategy configuration was canceled"
+### "The strategy configuration was canceled"
 
-**Cause :** Un job de la matrice a échoué, annulant les autres.
+**Cause:** A matrix job failed, canceling others.
 
-**Solution :** Le workflow est maintenant configuré avec `fail-fast: false` pour éviter ce problème.
+**Solution:** The workflow is now configured with `fail-fast: false` to avoid this problem.
 
-### ❌ Fichiers cert.pem/key.pem manquants
+### Missing cert.pem/key.pem files
 
-**Solution :** Le workflow créé automatiquement des fichiers temporaires si nécessaire.
+**Solution:** The workflow automatically creates temporary files if needed.
 
-### ❌ Build PyInstaller échoue
+### PyInstaller build fails
 
-**Solutions possibles :**
+**Possible solutions:**
 
-1. Vérifier les dépendances dans `requirements.txt`
-2. Vérifier le fichier `nmea_server.spec`
-3. Regarder les logs de build détaillés
+1. Check dependencies in `requirements.txt`
+2. Check the `nmea_server.spec` file
+3. Look at detailed build logs
 
-## 📦 Récupération des artefacts
+## Artifact Retrieval
 
-1. Aller sur GitHub → Actions
-2. Cliquer sur le workflow terminé
-3. Télécharger les artefacts dans la section "Artifacts"
+1. Go to GitHub → Actions
+2. Click on the completed workflow
+3. Download artifacts in the "Artifacts" section
 
-## 🐛 Debug local
+## Local Debug
 
-Avant de pousser sur GitHub, testez localement :
+Before pushing to GitHub, test locally :
 
 ```bash
-# Test de structure et import
+# Structure and import test
 ./scripts/common/test_workflow.sh
 
-# Test de distribution Python
+# Python distribution test
 ./scripts/common/create_python_distribution.sh
 
-# Test de build PyInstaller (optionnel)
+# PyInstaller build test (optional)
 pyinstaller nmea_server.spec
 ```
 
-## 🔍 Monitoring
+## Monitoring
 
-Les workflows incluent des vérifications détaillées :
+The workflows include detailed checks :
 
-- Structure de projet
-- Imports Python
-- Taille des fichiers générés
-- Compatibilité multi-OS
+- Project structure
+- Python imports
+- Generated file sizes
+- Multi-OS compatibility
 
-## 💡 Tips
+## Tips
 
-1. **Pour des releases :** Utilisez les tags sémantiques (`v1.0.0`, `v1.1.0`)
-2. **Pour les tests :** Le workflow Python se déclenche automatiquement
-3. **Distribution :** Privilégiez la distribution Python portable (plus compatible)
-4. **Debugging :** Regardez les logs détaillés dans Actions
+1. **For releases:** Use semantic tags (`v1.0.0`, `v1.1.0`)
+2. **For tests:** The Python workflow triggers automatically
+3. **Distribution:** Prefer portable Python distribution (more compatible)
+4. **Debugging:** Look at detailed logs in Actions
