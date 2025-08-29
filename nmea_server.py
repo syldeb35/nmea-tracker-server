@@ -110,6 +110,26 @@ last_emit_time = 0
 emit_counter = 0
 emit_rate_limit = 1000  # Max 1000 messages per second (increased for maritime systems)
 
+# === MARINETRAFFIC $AIVDO UDP FORWARDER ===
+MARINETRAFFIC_IP = os.getenv("MARINETRAFFIC_IP", "127.0.0.1")
+MARINETRAFFIC_PORT = int(os.getenv("MARINETRAFFIC_PORT", "12345"))
+MARINETRAFFIC_ID = os.getenv("MARINETRAFFIC_ID", "")
+
+def send_aivdo_to_marine_traffic(aivdo_sentence):
+    """Send $AIVDO sentence to MarineTraffic server as required."""
+    try:
+        # MarineTraffic expects: <ID>$AIVDO....\r\n
+        if not aivdo_sentence.startswith("$AIVDO"):
+            return
+        # Compose message: prepend ID, append CRLF
+        msg = f"{MARINETRAFFIC_ID}{aivdo_sentence}\r\n"
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(msg.encode("ascii", errors="ignore"), (MARINETRAFFIC_IP, MARINETRAFFIC_PORT))
+        sock.close()
+        network_logger.info(f"Sent $AIVDO to MarineTraffic: {msg.strip()}")
+    except Exception as e:
+        error_logger.error(f"Failed to send $AIVDO to MarineTraffic: {e}")
+
 # === NMEA DATA EMISSION FUNCTION ===
 # Emit NMEA data via WebSocket and store it in buffer
 
@@ -144,22 +164,27 @@ def emit_nmea_data(source, message):
             debug_logger.debug(f"Invalid message ignored: '{message}'")
             return
         
+
         # Add timestamp
         timestamp = time.strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}][{source}] {message}"
-        
+
         # Add to buffer
         last_nmea_data.append(formatted_message)
         if len(last_nmea_data) > max_nmea_buffer:
             last_nmea_data.pop(0)
-        
-        # 🆕 LOG NMEA to file instead of console
-        #nmea_logger.info(f"{source}: {message}")
-        
-        # 🆕 DEBUG only if enabled AND in verbose mode
-        """ if DEBUG:
-            debug_logger.debug(f"EMIT {source}: {message[:50]}...") """
-            
+
+        # LOG NMEA to file instead of console
+        # nmea_logger.info(f"{source}: {message}")
+
+        # Forward $AIVDO sentences to MarineTraffic
+        if message.startswith("$AIVDO"):
+            send_aivdo_to_marine_traffic(message)
+
+        # DEBUG only if enabled AND in verbose mode
+        # if DEBUG:
+        #     debug_logger.debug(f"EMIT {source}: {message[:50]}...")
+
         # Emit for Windy Plugin (pure NMEA string) - NON-BLOCKING with circuit breaker
         try:
             # Only emit if we have connected clients and circuit breaker allows it
@@ -188,7 +213,7 @@ def emit_nmea_data(source, message):
             # Only log errors in debug mode to prevent log spam
             if DEBUG:
                 error_logger.error(f"Windy emission error: {windy_error}")
-        
+
         # Emit for web interface with source information - NON-BLOCKING with circuit breaker
         try:
             # Only emit if we have connected clients and circuit breaker allows it
@@ -201,7 +226,6 @@ def emit_nmea_data(source, message):
                 
                 def emit_web():
                     try:
-                        # Remove timeout parameter that causes errors
                         socketio.emit('nmea_data_web', web_data)
                         socketio_circuit_breaker.record_success()
                     except Exception as web_emit_error:
@@ -216,7 +240,7 @@ def emit_nmea_data(source, message):
             # Only log errors in debug mode to prevent log spam
             if DEBUG:
                 error_logger.error(f"WebSocket emission error: {ws_error}")
-                
+
     except Exception as e:
         error_logger.error(f"Error during NMEA emission: {e}")
 
