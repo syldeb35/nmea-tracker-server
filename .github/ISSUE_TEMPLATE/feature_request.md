@@ -1,46 +1,47 @@
+
 ---
-name: ✨ Demande de fonctionnalité
-about: Suggérer une idée pour NMEA Tracker Server
+name: ✨ Feature Request
+about: Suggest an idea for NMEA Tracker Server
 title: "[FEATURE] "
 labels: enhancement
 assignees: ''
 
 ---
 
-## 🎯 Votre demande de fonctionnalité est-elle liée à un problème ?
+## 🎯 Is your feature request related to a problem?
 
-Une description claire de ce qui vous pose problème. Ex: Je suis toujours frustré quand [...]
+A clear description of what the problem is. Example: I'm always frustrated when [...]
 
-## 💡 Décrivez la solution que vous aimeriez
+## 💡 Describe the solution you'd like
 
-Une description claire et concise de ce que vous voulez qui se passe.
+A clear and concise description of what you want to happen.
 
-## 🔄 Décrivez les alternatives que vous avez considérées
+## 🔄 Describe alternatives you've considered
 
-Une description claire et concise de toute solution ou fonctionnalité alternative que vous avez considérée.
+A clear and concise description of any alternative solutions or features you've considered.
 
-## 🎨 Mockups/Exemples (optionnel)
+## 🎨 Mockups/Examples (optional)
 
-Si vous avez des idées visuelles, des liens vers des exemples similaires, ou des mockups.
+If you have visual ideas, links to similar examples, or mockups.
 
-## 📊 Priorité
+## 📊 Priority
 
-- [ ] 🔥 Critique (bloque l'utilisation)
-- [ ] 🚀 Haute (amélioration significative)
-- [ ] 📈 Moyenne (amélioration utile)
-- [ ] 🎨 Basse (nice to have)
+- [ ] 🔥 Critical (blocks usage)
+- [ ] 🚀 High (major improvement)
+- [ ] 📈 Medium (useful improvement)
+- [ ] 🎨 Low (nice to have)
 
-## 🏷️ Catégorie
+## 🏷️ Category
 
-- [ ] 🧭 Interface utilisateur
-- [ ] 📡 Connectivité (Série/UDP/TCP)
-- [ ] 🗺️ Cartographie
-- [ ] 📊 Données NMEA
+- [ ] �‍💻 User Interface
+- [ ] 📡 Connectivity (Serial/UDP/TCP)
+- [ ] 🗺️ Mapping
+- [ ] 📊 NMEA Data
 - [ ] 🔧 Configuration
 - [ ] 📦 Distribution/Build
-- [ ] 🔒 Sécurité
+- [ ] 🔒 Security
 - [ ] 📚 Documentation
 
-## ➕ Contexte additionnel
+## ➕ Additional Context
 
-Ajoutez tout autre contexte ou captures d'écran sur la demande de fonctionnalité ici.
+Add any other context or screenshots about the feature request here.

@@ -1,217 +1,232 @@
-# 🤝 Guide de Contribution
 
-Merci de votre intérêt pour contribuer au **NMEA Tracker Server** ! Ce guide vous aidera à comprendre comment participer au développement du projet.
+# 🤝 Contribution Guide
 
-## 🌟 Types de contributions
+Thank you for your interest in contributing to **NMEA Tracker Server**! This guide will help you understand how to participate in the development of the project.
 
-Nous accueillons tous types de contributions :
 
-- 🐛 **Rapports de bugs** et corrections
-- ✨ **Nouvelles fonctionnalités** et améliorations
-- 📚 **Documentation** et traductions
-- 🧪 **Tests** et validation
-- 🎨 **Interface utilisateur** et design
-- 🔧 **Optimisations** et refactoring
+## 🌟 Types of Contributions
 
-## 🚀 Démarrage rapide
+We welcome all types of contributions:
 
-### 1. Fork et clone
+- 🐛 **Bug reports** and fixes
+- ✨ **New features** and improvements
+- 📚 **Documentation** and translations
+- 🧪 **Tests** and validation
+- 🎨 **User interface** and design
+- 🔧 **Optimizations** and refactoring
+
+
+## 🚀 Quick Start
+
+### 1. Fork and Clone
 
 ```bash
-# Fork le repository sur GitHub puis :
-git clone https://github.com/VOTRE_USERNAME/nmea-tracker-server.git
+# Fork the repository on GitHub then:
+git clone https://github.com/YOUR_USERNAME/nmea-tracker-server.git
 cd nmea-tracker-server
 ```
 
-### 2. Configuration de l'environnement
+### 2. Set Up the Environment
 
 ```bash
-# Créer un environnement virtuel
+# Create a virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
-# ou
+# or
 .venv\Scripts\activate     # Windows
 
-# Installer les dépendances
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Tester que tout fonctionne
+### 3. Test Everything Works
 
 ```bash
 python nmea_server.py
-# Ouvrir https://localhost:5000/config.html
+# Open https://localhost:5000/config.html
 ```
 
-## 📋 Processus de contribution
 
-### 1. Créer une issue (recommandé)
+## 📋 Contribution Process
 
-Avant de commencer, [créez une issue](https://github.com/VOTRE_USERNAME/nmea-tracker-server/issues/new) pour :
+### 1. Create an Issue (Recommended)
 
-- 🐛 Signaler un bug
-- 💡 Proposer une fonctionnalité
-- 🤔 Poser une question
+Before starting, [create an issue](https://github.com/YOUR_USERNAME/nmea-tracker-server/issues/new) to:
 
-### 2. Créer une branche
+- 🐛 Report a bug
+- 💡 Propose a feature
+- 🤔 Ask a question
+
+### 2. Create a Branch
 
 ```bash
-git checkout -b feature/nom-de-votre-fonctionnalité
-# ou
-git checkout -b fix/description-du-bug
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/bug-description
 ```
 
-### 3. Développer
 
-- ✅ Écrivez du code propre et documenté
-- ✅ Suivez les conventions Python (PEP 8)
-- ✅ Ajoutez des tests si possible
-- ✅ Mettez à jour la documentation
+### 3. Develop
 
-### 4. Tester
+- ✅ Write clean, documented code
+- ✅ Follow Python conventions (PEP 8)
+- ✅ Add tests if possible
+- ✅ Update documentation
+
+
+### 4. Test
 
 ```bash
-# Tester manuellement
+# Manual testing
 python nmea_server.py
 
-# Compiler l'exécutable
-./build_unix.sh  # ou build_windows.bat
+# Build the executable
+./build_unix.sh  # or build_windows.bat
 ./test_executable.sh
 ```
 
-### 5. Commit et push
+
+### 5. Commit and Push
 
 ```bash
 git add .
-git commit -m "✨ Ajouter nouvelle fonctionnalité XYZ
+git commit -m "✨ Add new feature XYZ
 
-- Description de ce qui a été ajouté
-- Pourquoi c'était nécessaire
-- Comment cela fonctionne"
+- Description of what was added
+- Why it was needed
+- How it works"
 
-git push origin feature/nom-de-votre-fonctionnalite
+git push origin feature/your-feature-name
 ```
+
 
 ### 6. Pull Request
 
-1. Allez sur GitHub et créez une **Pull Request**
-2. Décrivez clairement vos changements
-3. Liez l'issue correspondante si applicable
-4. Attendez la review et les commentaires
+1. Go to GitHub and create a **Pull Request**
+2. Clearly describe your changes
+3. Link the corresponding issue if applicable
+4. Wait for review and comments
 
-## 📝 Standards de code
+
+## 📝 Code Standards
 
 ### Python
 
 ```python
-# Utiliser des docstrings
-def ma_fonction(param: str) -> bool:
+# Use docstrings
+def my_function(param: str) -> bool:
     """
-    Description de la fonction.
+    Function description.
     
     Args:
-        param: Description du paramètre
-        
+        param: Description of the parameter
     Returns:
-        Description du retour
+        Description of the return value
     """
     return True
 
-# Noms descriptifs
+# Descriptive names
 enable_serial = True  # ✅
 es = True            # ❌
 ```
 
-### Messages de commit
+### Commit Messages
 
-Utilisez des **emojis** et soyez descriptifs :
+Use **emojis** and be descriptive:
 
 ```bash
-✨ Ajouter support du protocole AIS
-🐛 Corriger erreur de décodage NMEA
-📚 Améliorer documentation API
-🎨 Refactorer interface web
-🔧 Optimiser performance UDP
-♻️ Refactorer code série
+✨ Add AIS protocol support
+🐛 Fix NMEA decoding error
+📚 Improve API documentation
+🎨 Refactor web interface
+🔧 Optimize UDP performance
+♻️ Refactor serial code
 ```
 
-### Structure des fichiers
+### File Structure
 
 ```bash
 nmea-tracker-server/
-├── nmea_server.py          # 🚫 NE PAS toucher structure principale
-├── templates/              # ✅ Améliorations UI autorisées
-├── requirements.txt        # ✅ Nouvelles dépendances OK
-├── docs/                   # ✅ Documentation supplémentaire
-└── tests/                  # ✅ Tests encouragés
+├── nmea_server.py          # 🚫 DO NOT touch main structure
+├── templates/              # ✅ UI improvements allowed
+├── requirements.txt        # ✅ New dependencies OK
+├── docs/                   # ✅ Additional documentation
+└── tests/                  # ✅ Tests encouraged
 ```
+
 
 ## 🧪 Tests
 
-### Tests manuels
+### Manual Tests
 
-1. **Fonctionnalité de base** : Serveur démarre et interface accessible
-2. **Connexions** : UDP, TCP, Série fonctionnent
-3. **Interface** : Configuration et visualisation opérationnelles
-4. **Build** : Exécutable se compile et fonctionne
+1. **Basic functionality**: Server starts and interface is accessible
+2. **Connections**: UDP, TCP, Serial work
+3. **Interface**: Configuration and visualization operational
+4. **Build**: Executable compiles and works
 
-### Tests automatisés (à venir)
+### Automated Tests (coming soon)
 
-Nous planifions d'ajouter :
+We plan to add:
 
-- Tests unitaires pour le décodage NMEA
-- Tests d'intégration pour les connexions réseau
-- Tests de performance
+- Unit tests for NMEA decoding
+- Integration tests for network connections
+- Performance tests
 
-## 🚫 Ce qu'il faut éviter
 
-- ❌ Modifier les certificats SSL sans raison
-- ❌ Changer la structure principale sans discussion
-- ❌ Ajouter des dépendances lourdes inutiles
-- ❌ Casser la compatibilité existante
-- ❌ Code non documenté ou non testé
+## 🚫 What to Avoid
 
-## 🎯 Idées de contributions
+- ❌ Modifying SSL certificates without reason
+- ❌ Changing the main structure without discussion
+- ❌ Adding heavy unnecessary dependencies
+- ❌ Breaking existing compatibility
+- ❌ Undocumented or untested code
 
-### 🥇 Priorité haute
 
-- 🔐 Interface d'authentification web
-- 📊 Graphiques historiques des données GPS
-- 🌍 Support multi-langues (EN, ES, DE)
-- 📱 Interface mobile responsive améliorée
+## 🎯 Contribution Ideas
 
-### 🥈 Priorité moyenne
+### 🥇 High Priority
 
-- 🧪 Suite de tests automatisés
-- 📦 Package Docker
-- ⚙️ API REST pour intégrations
-- 🔄 Synchronisation cloud des données
+- 🔐 Web authentication interface
+- 📊 Historical GPS data charts
+- 🌍 Multi-language support (EN, ES, DE)
+- 📱 Improved responsive mobile interface
 
-### 🥉 Idées futures
+### 🥈 Medium Priority
 
-- 🤖 Interface en ligne de commande
-- 🎨 Thèmes d'interface personnalisables
-- 📈 Métriques de performance en temps réel
-- 🔌 Système de plugins
+- 🧪 Automated test suite
+- 📦 Docker package
+- ⚙️ REST API for integrations
+- 🔄 Cloud data synchronization
+
+### 🥉 Future Ideas
+
+- 🤖 Command-line interface
+- 🎨 Customizable interface themes
+- 📈 Real-time performance metrics
+- 🔌 Plugin system
+
 
 ## 💬 Communication
 
-- 🐛 **Bugs** : [GitHub Issues](https://github.com/VOTRE_USERNAME/nmea-tracker-server/issues)
-- 💡 **Discussions** : [GitHub Discussions](https://github.com/VOTRE_USERNAME/nmea-tracker-server/discussions)
-<!-- - 📧 **Contact direct** : votre.email@example.com -->
+- 🐛 **Bugs**: [GitHub Issues](https://github.com/YOUR_USERNAME/nmea-tracker-server/issues)
+- 💡 **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/nmea-tracker-server/discussions)
+<!-- - 📧 **Direct contact**: your.email@example.com -->
 
-## 🏆 Reconnaissance
 
-Tous les contributeurs seront :
+## 🏆 Recognition
 
-- ✨ Mentionnés dans le **CHANGELOG.md**
-- 🎖️ Ajoutés à la section **Contributors** du README
-- 💝 Remerciés personnellement
+All contributors will be:
+
+- ✨ Mentioned in the **CHANGELOG.md**
+- 🎖️ Added to the **Contributors** section of the README
+- 💝 Thanked personally
+
 
 ## 📄 License
 
-En contribuant, vous acceptez que vos contributions soient sous licence **MIT** comme le reste du projet.
+By contributing, you agree that your contributions will be licensed under the **MIT** license like the rest of the project.
+
 
 ---
 
-## Merci de faire de NMEA Tracker Server un meilleur outil pour la communauté maritime ! ⚓🧭
+## Thank you for making NMEA Tracker Server a better tool for the maritime community! ⚓🧭

@@ -1,84 +1,84 @@
 @echo off
 echo ========================================
-echo  NMEA Server - Build avec System Tray
+echo  NMEA Server - Build with System Tray
 echo ========================================
 echo.
 
-REM Vérifier si Python est installé
+REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ERREUR: Python n'est pas installé ou n'est pas dans le PATH
+    echo ERROR: Python is not installed or not in the PATH
     pause
     exit /b 1
 )
 
-echo [1/5] Installation des dépendances pour le serveur principal...
+echo [1/5] Installing dependencies for the main server...
 pip install gevent flask flask-socketio flask-cors pyserial python-dotenv cryptography
 
 echo.
-echo [2/5] Installation des dépendances pour le system tray...
+echo [2/5] Installing dependencies for the system tray...
 pip install pillow pystray psutil
 
 echo.
-echo [3/5] Installation de PyInstaller...
+echo [3/5] Installing PyInstaller...
 pip install pyinstaller
 
 echo.
-echo [4/5] Compilation du serveur NMEA principal...
+echo [4/5] Compiling the main NMEA server...
 if exist "build\nmea_server" rmdir /s /q "build\nmea_server"
 if exist "dist\nmea_tracker_server.exe" del "dist\nmea_tracker_server.exe"
 
 pyinstaller nmea_server.spec
 if errorlevel 1 (
-    echo ERREUR: Échec de la compilation du serveur principal
+    echo ERROR: Failed to compile the main server
     pause
     exit /b 1
 )
 
-REM Copier l'exécutable dans le répertoire principal pour que le tray le trouve
+REM Copy the executable to the main directory so the tray can find it
 if exist "dist\nmea_tracker_server.exe" (
     copy "dist\nmea_tracker_server.exe" "nmea_tracker_server.exe"
-    echo ✓ Serveur principal compilé avec succès
+    echo ✓ Main server compiled successfully
 ) else (
-    echo ERREUR: L'exécutable du serveur principal n'a pas été généré
+    echo ERROR: The main server executable was not generated
     pause
     exit /b 1
 )
 
 echo.
-echo [5/5] Compilation de l'application System Tray...
+echo [5/5] Compiling the System Tray application...
 if exist "build\nmea_server_tray" rmdir /s /q "build\nmea_server_tray"
 if exist "dist\nmea_server_tray.exe" del "dist\nmea_server_tray.exe"
 
 pyinstaller nmea_server_tray.spec
 if errorlevel 1 (
-    echo ERREUR: Échec de la compilation de l'application tray
+    echo ERROR: Failed to compile the tray application
     pause
     exit /b 1
 )
 
 if exist "dist\nmea_server_tray.exe" (
     copy "dist\nmea_server_tray.exe" "nmea_server_tray.exe"
-    echo ✓ Application System Tray compilée avec succès
+    echo ✓ System Tray application compiled successfully
 ) else (
-    echo ERREUR: L'exécutable du system tray n'a pas été généré
+    echo ERROR: The system tray executable was not generated
     pause
     exit /b 1
 )
 
 echo.
 echo ========================================
-echo           COMPILATION TERMINÉE
+echo           BUILD COMPLETE
 echo ========================================
 echo.
-echo Fichiers générés:
-echo - nmea_tracker_server.exe (serveur principal)
-echo - nmea_server_tray.exe (gestionnaire system tray)
+echo Generated files:
+echo - nmea_tracker_server.exe (main server)
+echo - nmea_server_tray.exe (system tray manager)
 echo.
-echo Pour utiliser:
-echo 1. Lancez nmea_server_tray.exe
-echo 2. L'icône apparaîtra dans la barre système
-echo 3. Clic droit sur l'icône pour démarrer/arrêter le serveur
+echo How to use:
+echo 1. Launch nmea_server_tray.exe
+echo 2. The icon will appear in the system tray
+echo 3. Right-click the icon to start/stop the server
 echo.
-echo Appuyez sur une touche pour continuer...
+echo Press any key to continue...
 pause >nul

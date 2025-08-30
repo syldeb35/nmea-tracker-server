@@ -1,44 +1,45 @@
+
 ---
-name: 🐛 Rapport de bug
-about: Signaler un problème avec NMEA Tracker Server
+name: 🐛 Bug Report
+about: Report a problem with NMEA Tracker Server
 title: "[BUG] "
 labels: bug
 assignees: ''
 
 ---
 
-## 🐛 Description du bug
+## 🐛 Bug Description
 
-Une description claire et concise du problème.
+A clear and concise description of the problem.
 
-## 🔄 Étapes pour reproduire
+## 🔄 Steps to Reproduce
 
-1. Allez à '...'
-2. Cliquez sur '....'
-3. Faites défiler jusqu'à '....'
-4. Voir l'erreur
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See the error
 
-## ✅ Comportement attendu
+## ✅ Expected Behavior
 
-Une description claire de ce qui devrait se passer.
+A clear description of what you expected to happen.
 
-## 📸 Captures d'écran
+## 📸 Screenshots
 
-Si applicable, ajoutez des captures d'écran pour expliquer le problème.
+If applicable, add screenshots to help explain your problem.
 
-## 💻 Environnement
+## 💻 Environment
 
-- **OS :** [ex: Windows 10, Ubuntu 20.04, macOS Big Sur]
-- **Python :** [ex: 3.9.0]
-- **Version :** [ex: 1.0.0, exécutable, source]
-- **Type de connexion :** [ex: Série Bluetooth, UDP, TCP]
+- **OS:** [e.g. Windows 10, Ubuntu 20.04, macOS Big Sur]
+- **Python:** [e.g. 3.9.0]
+- **Version:** [e.g. 1.0.0, executable, source]
+- **Connection type:** [e.g. Bluetooth Serial, UDP, TCP]
 
 ## 📋 Logs
 
 ```plain
-Coller ici les messages d'erreur ou logs pertinents
+Paste any relevant error messages or logs here
 ```
 
-## ➕ Contexte additionnel
+## ➕ Additional Context
 
-Ajoutez tout autre contexte sur le problème ici.
+Add any other context about the problem here.
