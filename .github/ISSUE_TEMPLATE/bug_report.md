@@ -1,3 +1,4 @@
+# Bug Reports
 
 ---
 name: 🐛 Bug Report

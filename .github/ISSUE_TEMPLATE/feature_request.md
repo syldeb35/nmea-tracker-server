@@ -1,3 +1,4 @@
+# Feature Request
 
 ---
 name: ✨ Feature Request

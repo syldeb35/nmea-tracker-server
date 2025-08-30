@@ -3,7 +3,6 @@
 
 Thank you for your interest in contributing to **NMEA Tracker Server**! This guide will help you understand how to participate in the development of the project.
 
-
 ## 🌟 Types of Contributions
 
 We welcome all types of contributions:
@@ -14,7 +13,6 @@ We welcome all types of contributions:
 - 🧪 **Tests** and validation
 - 🎨 **User interface** and design
 - 🔧 **Optimizations** and refactoring
-
 
 ## 🚀 Quick Start
 
@@ -46,7 +44,6 @@ python nmea_server.py
 # Open https://localhost:5000/config.html
 ```
 
-
 ## 📋 Contribution Process
 
 ### 1. Create an Issue (Recommended)
@@ -65,14 +62,12 @@ git checkout -b feature/your-feature-name
 git checkout -b fix/bug-description
 ```
 
-
 ### 3. Develop
 
 - ✅ Write clean, documented code
 - ✅ Follow Python conventions (PEP 8)
 - ✅ Add tests if possible
 - ✅ Update documentation
-
 
 ### 4. Test
 
@@ -84,7 +79,6 @@ python nmea_server.py
 ./build_unix.sh  # or build_windows.bat
 ./test_executable.sh
 ```
-
 
 ### 5. Commit and Push
 
@@ -99,14 +93,12 @@ git commit -m "✨ Add new feature XYZ
 git push origin feature/your-feature-name
 ```
 
-
 ### 6. Pull Request
 
 1. Go to GitHub and create a **Pull Request**
 2. Clearly describe your changes
 3. Link the corresponding issue if applicable
 4. Wait for review and comments
-
 
 ## 📝 Code Standards
 
@@ -154,7 +146,6 @@ nmea-tracker-server/
 └── tests/                  # ✅ Tests encouraged
 ```
 
-
 ## 🧪 Tests
 
 ### Manual Tests
@@ -172,7 +163,6 @@ We plan to add:
 - Integration tests for network connections
 - Performance tests
 
-
 ## 🚫 What to Avoid
 
 - ❌ Modifying SSL certificates without reason
@@ -180,7 +170,6 @@ We plan to add:
 - ❌ Adding heavy unnecessary dependencies
 - ❌ Breaking existing compatibility
 - ❌ Undocumented or untested code
-
 
 ## 🎯 Contribution Ideas
 
@@ -205,13 +194,11 @@ We plan to add:
 - 📈 Real-time performance metrics
 - 🔌 Plugin system
 
-
 ## 💬 Communication
 
 - 🐛 **Bugs**: [GitHub Issues](https://github.com/YOUR_USERNAME/nmea-tracker-server/issues)
 - 💡 **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/nmea-tracker-server/discussions)
 <!-- - 📧 **Direct contact**: your.email@example.com -->
-
 
 ## 🏆 Recognition
 
@@ -221,11 +208,9 @@ All contributors will be:
 - 🎖️ Added to the **Contributors** section of the README
 - 💝 Thanked personally
 
-
 ## 📄 License
 
 By contributing, you agree that your contributions will be licensed under the **MIT** license like the rest of the project.
-
 
 ---
 

@@ -81,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Default UDP port**: 50110 (instead of 5005)
 - **TCP client mode** to external GPS devices
-- **Extended .env variables**: UDP_MODE, TCP_MODE, *_TARGET_IP, *_TARGET_PORT.
+- **Extended .env variables**: UDP_MODE, TCP_MODE, *_TARGET_IP, _TARGET_PORT.
 - **Automatic persistence** of parameters via web interface
 
 ## [1.0.0] - 2025-07-10
