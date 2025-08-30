@@ -110,23 +110,30 @@ last_emit_time = 0
 emit_counter = 0
 emit_rate_limit = 1000  # Max 1000 messages per second (increased for maritime systems)
 
-# === MARINETRAFFIC $AIVDO UDP FORWARDER ===
+# === MARINETRAFFIC !AIVDx UDP FORWARDER ===
 MARINETRAFFIC_IP = os.getenv("MARINETRAFFIC_IP", "127.0.0.1")
 MARINETRAFFIC_PORT = int(os.getenv("MARINETRAFFIC_PORT", "12345"))
-MARINETRAFFIC_ID = os.getenv("MARINETRAFFIC_ID", "")
+MARINETRAFFIC_ID = os.getenv("MARINETRAFFIC_ID", None)
 
-def send_aivdo_to_marine_traffic(aivdo_sentence):
-    """Send $AIVDO sentence to MarineTraffic server as required."""
+def send_ais_to_marine_traffic(ais_sentence):
+    """Send !AIVDx sentences to MarineTraffic server."""
+    if not MARINETRAFFIC_ID:
+        return
     try:
-        # MarineTraffic expects: <ID>$AIVDO....\r\n
-        if not aivdo_sentence.startswith("$AIVDO"):
+        # MarineTraffic expects: $AIVDO,xxxxxxxxxxx,day/month/year hh:mm:ss\r\n
+        if not ais_sentence.startswith("!AIVD"):
             return
-        # Compose message: prepend ID, append CRLF
-        msg = f"{MARINETRAFFIC_ID}{aivdo_sentence}\r\n"
+
+        # Get current date and time in required format
+        now = datetime.datetime.now()
+        date_str = now.strftime("%d/%m/%Y %H:%M:%S")
+
+        # Compose message: !AIVDO,1,1,,A,xxxxxxxxxxx,0*xx,day/month/year hh:mm:ss\r\n
+        msg = f"{ais_sentence},{date_str}\r\n"
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto(msg.encode("ascii", errors="ignore"), (MARINETRAFFIC_IP, MARINETRAFFIC_PORT))
         sock.close()
-        network_logger.info(f"Sent $AIVDO to MarineTraffic: {msg.strip()}")
+        network_logger.info(f"Sent !AIVDx to MarineTraffic: {msg.strip()}")
     except Exception as e:
         error_logger.error(f"Failed to send $AIVDO to MarineTraffic: {e}")
 
@@ -177,9 +184,9 @@ def emit_nmea_data(source, message):
         # LOG NMEA to file instead of console
         # nmea_logger.info(f"{source}: {message}")
 
-        # Forward $AIVDO sentences to MarineTraffic
-        if message.startswith("$AIVDO"):
-            send_aivdo_to_marine_traffic(message)
+        # Forward !AIVDO sentences to MarineTraffic
+        if message.startswith("!AIVD"):
+            send_ais_to_marine_traffic(message)
 
         # DEBUG only if enabled AND in verbose mode
         # if DEBUG:
@@ -1679,7 +1686,10 @@ def home():
         tcp_target_port=TCP_TARGET_PORT,
         serial_ports=serial_ports,
         serial_port=SERIAL_PORT,
-        serial_baudrate=SERIAL_BAUDRATE
+        serial_baudrate=SERIAL_BAUDRATE,
+        marinetraffic_ip=MARINETRAFFIC_IP,
+        marinetraffic_port=MARINETRAFFIC_PORT,
+        marinetraffic_id=MARINETRAFFIC_ID
     )
 
 @app.route('/select_connection', methods=['POST'])
@@ -2224,7 +2234,16 @@ def api_update_config():
         except (ValueError, TypeError):
             pass
         
-        # Save to .env file
+
+        # MarineTraffic config
+        global MARINETRAFFIC_IP, MARINETRAFFIC_PORT, MARINETRAFFIC_ID
+        MARINETRAFFIC_IP = request.form.get('marinetraffic_ip', os.getenv('MARINETRAFFIC_IP', '5.9.207.224'))
+        try:
+            MARINETRAFFIC_PORT = int(request.form.get('marinetraffic_port', os.getenv('MARINETRAFFIC_PORT', 12435)))
+        except (ValueError, TypeError):
+            MARINETRAFFIC_PORT = 12435
+        MARINETRAFFIC_ID = request.form.get('marinetraffic_id', os.getenv('MARINETRAFFIC_ID', '7115'))
+
         config_lines = [
             f'ENABLE_SERIAL={"true" if ENABLE_SERIAL else "false"}',
             f'ENABLE_UDP={"true" if ENABLE_UDP else "false"}',
@@ -2241,9 +2260,12 @@ def api_update_config():
             f'TCP_TARGET_IP={TCP_TARGET_IP}',
             f'TCP_TARGET_PORT={TCP_TARGET_PORT}',
             f'SERIAL_PORT={SERIAL_PORT}',
-            f'SERIAL_BAUDRATE={SERIAL_BAUDRATE}'
+            f'SERIAL_BAUDRATE={SERIAL_BAUDRATE}',
+            f'MARINETRAFFIC_IP={MARINETRAFFIC_IP}',
+            f'MARINETRAFFIC_PORT={MARINETRAFFIC_PORT}',
+            f'MARINETRAFFIC_ID={MARINETRAFFIC_ID}'
         ]
-        
+
         with open('.env', 'w') as f:
             f.write('\n'.join(config_lines))
         

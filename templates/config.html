@@ -14,12 +14,22 @@
                 padding: 0;
             }
             .container {
-                max-width: 480px;
+                max-width: 1100px;
                 margin: 40px auto;
                 background: #fff;
                 border-radius: 12px;
                 box-shadow: 0 2px 12px #0001;
                 padding: 32px 28px 24px 28px;
+            }
+            .config-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+            }
+            @media (max-width: 900px) {
+                .config-grid {
+                    grid-template-columns: 1fr;
+                }
             }
             h2 {
                 color: #1976d2;
@@ -112,75 +122,119 @@
         </style>
     </head>
     <body>
+
         <div class="container">
             <h2>NMEA / AIS Connection</h2>
-            <!-- Modify form to have correct ID -->
             <form id="configForm" method="POST" action="/select_connection">
-                <div class="section-title">Connection type:</div>
-                <p>Choose the connection(s) type(s) you want to enable:</p>
-                <label><input type="checkbox" name="enable_serial" {% if enable_serial %}checked{% endif %}>Serial</label>
-                <label><input type="checkbox" name="enable_udp" {% if enable_udp %}checked{% endif %}>UDP</label>
-                <label><input type="checkbox" name="enable_tcp" {% if enable_tcp %}checked{% endif %}>TCP</label>
-                <label><input type="checkbox" name="enable_debug" {% if enable_debug %}checked{% endif %}>Enable logging (DEBUG)</label>
-                <hr>
-                <div class="section-title">Network settings:</div>
-                <p>Configure the network settings for the connection:</p>
-
-                <!-- UDP Configuration -->
-                <div style="background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px;">
-                    <h4>📡 UDP Configuration</h4>
-                    
-                    <label><input type="radio" name="udp_mode" value="server" {% if udp_mode == "server" %}checked{% endif %}> 
-                        📥 Server Mode (listen on a port)
-                    </label>
-                    <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'server' %}display:none;{% endif %}">
-                        <label>UDP listening port:
-                            <input type="number" name="udp_port" value="{{ udp_port }}" placeholder="50110">
+                <div class="config-grid">
+                    <div style="flex: 1 1 260px; min-width: 240px;">
+                        <div class="section-title">Connection type:</div>
+                        <p>Choose the connection(s) type(s) you want to enable:</p>
+                        <label><input type="checkbox" name="enable_serial" {% if enable_serial %}checked{% endif %}>Serial</label>
+                        <label><input type="checkbox" name="enable_udp" {% if enable_udp %}checked{% endif %}>UDP</label>
+                        <label><input type="checkbox" name="enable_tcp" {% if enable_tcp %}checked{% endif %}>TCP</label>
+                        <label><input type="checkbox" name="enable_debug" {% if enable_debug %}checked{% endif %}>Enable logging (DEBUG)</label>
+                        <hr>
+                        <div class="section-title">Serial settings:</div>
+                        <p>Configure the serial settings for the connection:</p>
+                        <label>Serial port:
+                            <select name="serial_port">
+                                <option value="AUTO" {% if serial_port == "AUTO" %}selected{% endif %}>
+                                    AUTO - Bluetooth GPS Auto-Discovery (Linux only)
+                                </option>
+                                {% for port, desc in serial_ports %}
+                                    <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
+                                        {{ port }}{% if desc %} ({{ desc }}){% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
                         </label>
-                        <small>The server listens on this port to receive NMEA data</small>
+                        <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; font-size: 0.9em;">
+                            <strong>🔵 AUTO Mode (Linux):</strong> Automatically scans for Bluetooth GPS devices every minute.
+                            <br>• Automatically discovers GPS devices via Bluetooth scan
+                            <br>• Creates rfcomm connection automatically (requires sudo permissions)
+                            <br>• Reconnects automatically if connection is lost
+                            <br>• No manual sdptool/rfcomm commands needed
+                        </div>
+                        <label>Baud rate:
+                            <select name="serial_baudrate">
+                                {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}
+                                    <option value="{{ br }}" {% if br == serial_baudrate %}selected{% endif %}>{{ br }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
                     </div>
-                    
-                    <label><input type="radio" name="udp_mode" value="client" {% if udp_mode == "client" %}checked{% endif %}> 
-                        📤 Mode Client (se connecte à un GPS)
-                    </label>
-                    <div id="udp-client-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'client' %}display:none;{% endif %}">
-                        <label>IP du GPS:
-                            <input type="text" name="udp_target_ip" value="{{ udp_target_ip }}" placeholder="192.168.1.100">
-                        </label>
-                        <label>Port du GPS:
-                            <input type="number" name="udp_target_port" value="{{ udp_target_port }}" placeholder="50110">
-                        </label>
-                        <small>Connects directly to GPS to receive data</small>
+                    <div style="flex: 1 1 260px; min-width: 240px;">
+                        <div class="section-title">Network settings:</div>
+                        <p>Configure the network settings for the connection:</p>
+                        <!-- UDP Configuration -->
+                        <div style="background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                            <h4>📡 UDP Configuration</h4>
+                            <label><input type="radio" name="udp_mode" value="server" {% if udp_mode == "server" %}checked{% endif %}> 
+                                📥 Server Mode (listen on a port)
+                            </label>
+                            <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'server' %}display:none;{% endif %}">
+                                <label>UDP listening port:
+                                    <input type="number" name="udp_port" value="{{ udp_port }}" placeholder="50110">
+                                </label>
+                                <small>The server listens on this port to receive NMEA data</small>
+                            </div>
+                            <label><input type="radio" name="udp_mode" value="client" {% if udp_mode == "client" %}checked{% endif %}> 
+                                📤 Mode Client (se connecte à un GPS)
+                            </label>
+                            <div id="udp-client-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'client' %}display:none;{% endif %}">
+                                <label>IP du GPS:
+                                    <input type="text" name="udp_target_ip" value="{{ udp_target_ip }}" placeholder="192.168.1.100">
+                                </label>
+                                <label>Port du GPS:
+                                    <input type="number" name="udp_target_port" value="{{ udp_target_port }}" placeholder="50110">
+                                </label>
+                                <small>Connects directly to GPS to receive data</small>
+                            </div>
+                        </div>
+                        <!-- TCP Configuration -->
+                        <div style="background: #fff0f0; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                            <h4>🔗 TCP Configuration</h4>
+                            <label><input type="radio" name="tcp_mode" value="server" {% if tcp_mode == "server" %}checked{% endif %}> 
+                                📥 Server Mode (listen on a port)
+                            </label>
+                            <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'server' %}display:none;{% endif %}">
+                                <label>TCP listening port:
+                                    <input type="number" name="tcp_port" value="{{ tcp_port }}" placeholder="7777">
+                                </label>
+                                <small>The server listens on this port to receive connections</small>
+                            </div>
+                            <label><input type="radio" name="tcp_mode" value="client" {% if tcp_mode == "client" %}checked{% endif %}> 
+                                📤 Mode Client (se connecte à un GPS)
+                            </label>
+                            <div id="tcp-client-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'client' %}display:none;{% endif %}">
+                                <label>IP du GPS:
+                                    <input type="text" name="tcp_target_ip" value="{{ tcp_target_ip }}" placeholder="192.168.1.100">
+                                </label>
+                                <label>Port du GPS:
+                                    <input type="number" name="tcp_target_port" value="{{ tcp_target_port }}" placeholder="50110">
+                                </label>
+                                <small>Se connecte directement au GPS via TCP</small>
+                            </div>
+                        </div>
+                        <!-- MarineTraffic Configuration -->
+                        <div style="background: #f8fff0; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                            <h4>🌊 MarineTraffic Forwarding</h4>
+                            <label>MarineTraffic IP:
+                                <input type="text" name="marinetraffic__ip" value="{{ marinetraffic__ip }}" placeholder="5.9.207.224">
+                            </label>
+                            <label>MarineTraffic Port:
+                                <input type="number" name="marinetraffic_port" value="{{ marinetraffic_port }}" placeholder="12435">
+                            </label>
+                            <label>MarineTraffic ID:
+                                <input type="text" name="marinetraffic_id" value="{{ marinetraffic_id }}" placeholder="Leave blank to not forward to MarineTraffic">
+                            </label>
+                            <small>Configure the MarineTraffic account for AIS forwarding.</small>
+                        </div>
                     </div>
                 </div>
-
-                <!-- TCP Configuration -->
-                <div style="background: #fff0f0; padding: 15px; margin: 10px 0; border-radius: 5px;">
-                    <h4>🔗 TCP Configuration</h4>
-                    
-                    <label><input type="radio" name="tcp_mode" value="server" {% if tcp_mode == "server" %}checked{% endif %}> 
-                        📥 Server Mode (listen on a port)
-                    </label>
-                    <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'server' %}display:none;{% endif %}">
-                        <label>TCP listening port:
-                            <input type="number" name="tcp_port" value="{{ tcp_port }}" placeholder="7777">
-                        </label>
-                        <small>The server listens on this port to receive connections</small>
-                    </div>
-                    
-                    <label><input type="radio" name="tcp_mode" value="client" {% if tcp_mode == "client" %}checked{% endif %}> 
-                        📤 Mode Client (se connecte à un GPS)
-                    </label>
-                    <div id="tcp-client-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'client' %}display:none;{% endif %}">
-                        <label>IP du GPS:
-                            <input type="text" name="tcp_target_ip" value="{{ tcp_target_ip }}" placeholder="192.168.1.100">
-                        </label>
-                        <label>Port du GPS:
-                            <input type="number" name="tcp_target_port" value="{{ tcp_target_port }}" placeholder="50110">
-                        </label>
-                        <small>Se connecte directement au GPS via TCP</small>
-                    </div>
-                </div>
+                <button type="submit" onclick="event.preventDefault(); applyConfig();">Apply</button>
+            </form>
 
                 <script>
                     // Manage configuration display according to mode
@@ -200,37 +254,6 @@
                         });
                     });
                 </script>
-
-                <hr>
-                <div class="section-title">Serial settings:</div>
-                <p>Configure the serial settings for the connection:</p>
-                <label>Serial port:
-                    <select name="serial_port">
-                        <option value="AUTO" {% if serial_port == "AUTO" %}selected{% endif %}>
-                            AUTO - Bluetooth GPS Auto-Discovery (Linux only)
-                        </option>
-                        {% for port, desc in serial_ports %}
-                            <option value="{{ port }}" {% if port == serial_port %}selected{% endif %}>
-                                {{ port }}{% if desc %} ({{ desc }}){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; font-size: 0.9em;">
-                    <strong>🔵 AUTO Mode (Linux):</strong> Automatically scans for Bluetooth GPS devices every minute.
-                    <br>• Automatically discovers GPS devices via Bluetooth scan
-                    <br>• Creates rfcomm connection automatically (requires sudo permissions)
-                    <br>• Reconnects automatically if connection is lost
-                    <br>• No manual sdptool/rfcomm commands needed
-                </div>
-                <label>Baud rate:
-                    <select name="serial_baudrate">
-                        {% for br in [4800, 9600, 19200, 38400, 57600, 115200] %}
-                            <option value="{{ br }}" {% if br == serial_baudrate %}selected{% endif %}>{{ br }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <button type="submit" onclick="event.preventDefault(); applyConfig();">Apply</button>
             </form>
             <hr>
             <div class="row mt-4">
@@ -362,10 +385,10 @@
         // Update on input changes
         document.querySelectorAll('input[name="udp_mode"], input[name="tcp_mode"], input[name="udp_port"], input[name="tcp_port"], input[name="udp_target_ip"], input[name="udp_target_port"], input[name="tcp_target_ip"], input[name="tcp_target_port"]').forEach(el => {
             el.addEventListener('change', function() {
-                // Pas besoin de updateConnectionInfo car on a supprimé cette section
+                // Handle change event
             });
             el.addEventListener('input', function() {
-                // Pas besoin de updateConnectionInfo car on a supprimé cette section
+                // Optionally, you can add live validation or feedback here
             });
         });
 
@@ -460,7 +483,7 @@
             }, 1000);
         });
 
-        // Ajouter ces fonctions manquantes
+        // 
         async function checkServerStatus() {
             try {
                 const response = await fetch('/api/status');
