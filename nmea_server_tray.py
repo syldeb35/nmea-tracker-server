@@ -49,8 +49,10 @@ class NMEAServerTray:
         
         # Create the logs folder if it doesn't exist
         os.makedirs('logs', exist_ok=True)
-        
+
         self.setup_icon()
+        # Automatically start the server after tray icon setup
+        self.start_server()
         
     def create_icon_image(self, is_running=False):
         """Creates a colored icon according to the server status"""
