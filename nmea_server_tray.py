@@ -89,13 +89,13 @@ class NMEAServerTray:
         # Create the initial icon (server stopped = red)
         image = self.create_icon_image(is_running=False)
         
-        # Create the context menu
+        # Create the context menu. MenuItem.enabled expects a bool, not a callback.
         menu = pystray.Menu(
-            item('Start server', self.start_server, enabled=lambda item: not self.server_running),
-            item('Stop server', self.stop_server, enabled=lambda item: self.server_running),
+            item('Start server', self.start_server, enabled=not self.server_running),
+            item('Stop server', self.stop_server, enabled=self.server_running),
             pystray.Menu.SEPARATOR,
-            item('Open web interface', self.open_web_interface, enabled=lambda item: self.server_running),
-            item('Open configuration page', self.open_config_interface, enabled=lambda item: self.server_running),
+            item('Open web interface', self.open_web_interface, enabled=self.server_running),
+            item('Open configuration page', self.open_config_interface, enabled=self.server_running),
             item('View logs', self.view_logs),
             pystray.Menu.SEPARATOR,
             item('About', self.show_about),
@@ -116,6 +116,17 @@ class NMEAServerTray:
             if self.icon:
                 new_image = self.create_icon_image(is_running)
                 self.icon.icon = new_image
+                self.icon.menu = pystray.Menu(
+                    item('Start server', self.start_server, enabled=not is_running),
+                    item('Stop server', self.stop_server, enabled=is_running),
+                    pystray.Menu.SEPARATOR,
+                    item('Open web interface', self.open_web_interface, enabled=is_running),
+                    item('Open configuration page', self.open_config_interface, enabled=is_running),
+                    item('View logs', self.view_logs),
+                    pystray.Menu.SEPARATOR,
+                    item('About', self.show_about),
+                    item('Quit', self.quit_application)
+                )
                 # Also update the tooltip
                 status_text = "Running" if is_running else "Stopped"
                 self.icon.title = f"NMEA Tracker Server - {status_text}"
