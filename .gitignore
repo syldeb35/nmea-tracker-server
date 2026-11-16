@@ -29,8 +29,8 @@ logs/
 
 # NMEA Tracker specific
 # Uncomment if you want to exclude SSL certificates
-# cert.pem
-# key.pem
+cert.pem
+key.pem
 
 # Development files
 CleanUpSources.sh
