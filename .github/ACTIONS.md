@@ -1,7 +1,7 @@
 
 # GitHub Actions Workflows
 
-This project uses GitHub Actions to automate cross-platform builds and tests.
+This project uses GitHub Actions for manually triggered builds and tests.
 
 ## Available Workflows
 
@@ -9,8 +9,7 @@ This project uses GitHub Actions to automate cross-platform builds and tests.
 
 **Triggers :**
 
-- Tags `v*` (example: `v1.0.0`)
-- Manual trigger (workflow_dispatch)
+- Manual trigger (`workflow_dispatch`)
 
 **Supported platforms :**
 
@@ -25,41 +24,25 @@ This project uses GitHub Actions to automate cross-platform builds and tests.
 - `nmea_tracker_server_macos` (macOS ARM64)
 - `nmea_tracker_server_macos-intel` (macOS Intel)
 
-### 2. `test-python.yml` - Test Python Distribution
+### 2. `build-system-tray.yml` - Build System Tray
 
-**Triggers :**
+Manually builds the system tray application. When launched on a tag, it can also create a GitHub release.
 
-- Push on `main` or `develop`
-- Pull requests
-- Manual trigger
+### 3. `test-build.yml` - Test Builds
 
-**Tests performed :**
+Manually validates builds of the Windows components.
 
-- Python import test on multiple versions (3.8, 3.11)
-- Cross-platform test (Linux, Windows, macOS)
-- Portable Python distribution creation
-- Template verification
+### 4. `release.yml` - Build Release Package
 
-**Generated artifacts :**
-
-- `nmea_tracker_server_python_portable.zip`
-- `nmea_tracker_server_python_portable.tar.gz`
+Manually builds a Windows release package and uploads it as an Actions artifact.
 
 ## How to trigger a build
 
-### Method 1: Git Tag (Recommended)
-
-```bash
-# Create and push a tag
-git tag v1.0.0
-git push --tags
-```
-
-### Method 2: Manual trigger
-
 1. Go to GitHub → Actions
-2. Select the workflow
-3. Click "Run workflow"
+2. Select the workflow and click "Run workflow"
+3. Choose a branch or tag and any requested options
+
+Pushes, pull requests, tags, and published releases do not start a build automatically.
 
 ## Troubleshooting
 
@@ -114,6 +97,6 @@ The workflows include detailed checks :
 ## Tips
 
 1. **For releases:** Use semantic tags (`v1.0.0`, `v1.1.0`)
-2. **For tests:** The Python workflow triggers automatically
+2. **For tests:** Run the test build workflow manually
 3. **Distribution:** Prefer portable Python distribution (more compatible)
 4. **Debugging:** Look at detailed logs in Actions

@@ -3,12 +3,6 @@
 name: 🏗️ Build NMEA Tracker Server
 
 on:
-  push:
-    tags:
-      - 'v*'
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       build_target:

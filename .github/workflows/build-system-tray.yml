@@ -1,11 +1,6 @@
 name: Build NMEA Tracker Server - System Tray
 
 on:
-  push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       build_version:
@@ -294,7 +289,7 @@ jobs:
   build-all-versions:
     name: 🎯 Build All Versions
     runs-on: windows-latest
-    if: github.event.inputs.build_version == 'all' || startsWith(github.ref, 'refs/tags/')
+    if: github.event.inputs.build_version == 'all-components' || startsWith(github.ref, 'refs/tags/')
     
     strategy:
       matrix:

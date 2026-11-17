@@ -1,20 +1,20 @@
 
 # GitHub Actions - NMEA Tracker Server
 
-This directory contains GitHub Actions workflows to automate the build, testing, and release of the NMEA server.
+This directory contains GitHub Actions workflows for manually triggered builds and tests of the NMEA server.
 
 ## Available Workflows
 
 ### 1. Build System Tray (`build-system-tray.yml`)
 
-**Triggers** : Push on `main`/`develop`, Tags `v*`, PR to `main`
+**Trigger** : Manual (`workflow_dispatch`)
 
 **Features** :
 
-- Automatic build of System Tray version
+- Build of System Tray version
 - Test of generated executable
 - Upload artifacts (30 days retention)
-- Automatic release creation for tags
+- Release creation when manually launched on a tag
 
 **Produced artifacts** :
 
@@ -25,14 +25,13 @@ This directory contains GitHub Actions workflows to automate the build, testing,
 
 ### 2. Release (`release.yml`)
 
-**Triggered by** : Release creation, Manual
+**Triggered by** : Manual (`workflow_dispatch`)
 
 **Features** :
 
 - Build all versions (Console, System Tray, Service)
 - Create complete package with documentation
-- Automatic upload to GitHub release
-- Generate release notes
+- Upload the package as Actions artifacts
 
 **Products** :
 
@@ -44,13 +43,13 @@ This directory contains GitHub Actions workflows to automate the build, testing,
 
 ### 3. Test & Build PR (`test-build.yml`)
 
-**Triggered by** : PR to `main`/`develop`, Push on `develop`
+**Triggered by** : Manual (`workflow_dispatch`)
 
 **Features** :
 
-- Build validation on PRs
+- Build validation
 - Quick functionality test
-- Automatic feedback on PRs
+- Results available in GitHub Actions
 
 ## Usage
 
@@ -85,14 +84,12 @@ Actions → Release NMEA Tracker Server → Run workflow
    - Go to "Releases"
    - Click "Create a new release"
    - Choose the tag `v1.2.0`
-   - The workflow triggers automatically
+   - Run the desired workflow manually; publishing a release does not trigger a build
+   - `release.yml` uploads Actions artifacts; download them and attach the desired files to the release manually
 
 ### Workflow for Developers
 
-   1. **Development** : Pushes on `develop` trigger tests
-   2. **Pull Request** : Automatic build validation
-   3. **Merge to main** : Build and artifacts generated
-   4. **Tag/Release** : Complete release with all executables
+   Run the desired test or build workflow from the Actions tab. Pushes, pull requests, tags and published releases do not trigger builds automatically.
 
 ## Configuration
 
@@ -174,7 +171,7 @@ Certificates are generated automatically for each build. If problems persist:
 ### Updating Workflows
 
 1. Modify `.yml` files in `.github/workflows/`
-2. Test with a push on a test branch
+2. Run the workflow manually on a test branch
 3. Merge to `main` after validation
 
 ### Updating Dependencies

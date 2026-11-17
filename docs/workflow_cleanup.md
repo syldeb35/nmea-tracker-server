@@ -46,8 +46,7 @@
 
 ### 🚀 Déclencheurs
 
-- Tags `v*` (pour releases)
-- Déclenchement manuel (`workflow_dispatch`)
+- Déclenchement manuel uniquement (`workflow_dispatch`)
 
 ## 📊 Bénéfices du Nettoyage
 
