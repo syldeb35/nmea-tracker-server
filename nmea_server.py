@@ -42,7 +42,7 @@ def setup_service_mode_io():
         # Check if we're running without a console (PyInstaller with console=False)
         import ctypes
         if IS_WINDOWS:
-            kernel32 = ctypes.windll.kernel32
+            kernel32 = getattr(ctypes, "windll").kernel32
             if kernel32.GetConsoleWindow() == 0:
                 # No console window - redirect all I/O to files
                 os.makedirs("logs", exist_ok=True)
@@ -210,7 +210,6 @@ def emit_nmea_data(source, message):
                         pass  # Silent fail to prevent server freeze
                 
                 # Run emission in background thread with daemon=True and timeout
-                import threading
                 emit_thread = threading.Thread(target=emit_windy, daemon=True)
                 emit_thread.start()
                 # Don't wait for thread - let it run in background
@@ -255,11 +254,8 @@ def emit_nmea_data(source, message):
 # === PYINSTALLER RESOURCE PATH HELPER ===
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+    # PyInstaller stores bundled resources in a temporary extraction directory.
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
     return os.path.join(base_path, relative_path)
 
 # === ENVIRONMENT CONFIG LOADING ADAPTED TO SYSTEM ===
@@ -361,7 +357,7 @@ try:
     if hasattr(urllib3.exceptions, 'InsecureRequestWarning'):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     if hasattr(urllib3.exceptions, 'SNIMissingWarning'):
-        urllib3.disable_warnings(urllib3.exceptions.SNIMissingWarning)
+        urllib3.disable_warnings(getattr(urllib3.exceptions, 'SNIMissingWarning'))
     if hasattr(urllib3.exceptions, 'InsecurePlatformWarning'):
         urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
 except ImportError:
@@ -485,7 +481,8 @@ socketio = SocketIO(
     engineio_logger=False,     # Disable EngineIO logs to prevent spam
     logger=False,              # Disable SocketIO logs to prevent spam
     allow_upgrades=True,       # Allow protocol upgrades
-    transports=['websocket', 'polling'],  # Support both websocket and polling
+    # Engine.IO supports this option; Pylance's inferred kwargs omit it.
+    transports=['websocket', 'polling'],  # pyright: ignore[reportCallIssue]
     always_connect=False       # Don't automatically connect - let client decide
 )
 CORS(app)  # Allow all origins (wildcard origin *)
@@ -559,7 +556,7 @@ def detect_bluetooth_serial_port():
     """
     global bluetooth_manager
     # On Linux, use automatic Bluetooth manager
-    if IS_LINUX:
+    if IS_LINUX and bluetooth_manager is not None:
         debug_logger.debug("Using automatic Bluetooth manager...")
         auto_port = bluetooth_manager.maintain_connection()
         if auto_port:
@@ -829,6 +826,7 @@ def tcp_client(stop_event):
     max_backoff = 30  # Maximum 30 seconds backoff
     
     while not stop_event.is_set() and not shutdown_event.is_set():
+        sock = None
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5.0)
@@ -898,10 +896,11 @@ def tcp_client(stop_event):
             error_logger.error(f"TCP client error: {e}")
         
         finally:
-            try:
-                sock.close()
-            except:
-                pass
+            if sock is not None:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
         
         # Exponential backoff: start at 5 seconds, double each failure, max 30 seconds
         backoff_time = min(5 * (2 ** min(consecutive_failures - 1, 3)), max_backoff)
@@ -1367,10 +1366,11 @@ def run_flask_app():
             # Temporarily redirect stdout to suppress HTTP logs
             class NullWriter:
                 def write(self, text): pass
+                def writelines(self, lines): pass
                 def flush(self): pass
             
             # 🆕 WSGIServer configuration WITHOUT logs
-            http_server = WSGIServer(
+            server = WSGIServer(
                 ('0.0.0.0', HTTPS_PORT), 
                 app, 
                 keyfile=key_path, 
@@ -1378,6 +1378,7 @@ def run_flask_app():
                 log=NullWriter(),  # Remove access logs
                 error_log=NullWriter()  # Remove error logs
             )
+            http_server = server
             
             # 🚫 Ne PAS utiliser http_server.set_spawn() qui cause le TypeError
 
@@ -1392,7 +1393,7 @@ def run_flask_app():
             try:
                 def run_https_server():
                     try:
-                        http_server.serve_forever()
+                        server.serve_forever()
                     except Exception as https_error:
                         if not shutdown_event.is_set():
                             error_logger.error(f"HTTPS server error: {https_error}")
@@ -1535,7 +1536,6 @@ def test_ports_separately():
             tcp_sock.close()
         except Exception as e:
             main_logger.warning(f"TCP port {TCP_PORT} unavailable: {e}")
-        main_logger.info(f"[TEST] ERROR TCP port {TCP_PORT} problem: {e}")
 
 # Call this function in main_thread() before manage_threads()
 
@@ -1968,11 +1968,11 @@ class BluetoothGPSManager:
             
             # Tester si c'est un GPS fonctionnel
             if self.test_gps_connection(rfcomm_path):
-                main_logger.info(f"[BLUETOOTH] OK GPS fonctionnel detecte sur {rfcomm_path}")
+                main_logger.info(f"[BLUETOOTH] OK GPS fonctionnel détecté sur {rfcomm_path}")
                 self.is_connected = True
                 return rfcomm_path
             else:
-                main_logger.info(f"[BLUETOOTH] ERROR {rfcomm_path} ne repond pas comme un GPS")
+                main_logger.info(f"[BLUETOOTH] ERROR {rfcomm_path} ne répond pas comme un GPS")
         
         return None
     
@@ -2010,7 +2010,7 @@ class BluetoothGPSManager:
         # Si connecté, vérifier l'état moins fréquemment
         if self.is_connected:
             if self.check_connection_status():
-                # Connexion OK, pas besoin de rescanner
+                # Connexion OK, pas besoin de re-scanner
                 return f"/dev/rfcomm{self.rfcomm_device}"
             else:
                 main_logger.info("[BLUETOOTH] Reconnexion nécessaire")
@@ -2392,7 +2392,7 @@ def cleanup_dead_connections():
             for client_id in connected_clients.copy():
                 try:
                     # Quick check - if this fails, client is likely dead - remove timeout parameter
-                    socketio.emit('ping', room=client_id)
+                    socketio.emit('ping', to=client_id)
                 except:
                     dead_clients.add(client_id)
             
@@ -2482,8 +2482,9 @@ def handle_connect():
     """Gérer les nouvelles connexions WebSocket avec tracking"""
     global connected_clients  # Fix variable scope issue
     try:
-        connected_clients.add(request.sid)
-        main_logger.info(f"[WEBSOCKET] Client connecté: {request.sid} (total: {len(connected_clients)})")
+        sid = getattr(request, 'sid', None)
+        connected_clients.add(sid)
+        main_logger.info(f"[WEBSOCKET] Client connecté: {sid} (total: {len(connected_clients)})")
         
         # Reset circuit breaker when new clients connect
         if socketio_circuit_breaker.state == 'OPEN':
@@ -2501,10 +2502,12 @@ def handle_connect():
                     nmea_message = formatted_data
                 
                 # Envoyer la trame NMEA pure pour le plugin Windy - remove timeout parameter
-                socketio.emit('nmea_data', nmea_message, room=request.sid)
+                client_sid = getattr(request, 'sid', None)
+                if client_sid is not None:
+                    socketio.emit('nmea_data', nmea_message, to=client_sid)
         except Exception as history_error:
             if DEBUG:
-                debug_logger.debug(f"Error sending history to {request.sid}: {history_error}")
+                debug_logger.debug(f"Error sending history to {getattr(request, 'sid', None)}: {history_error}")
     except Exception as e:
         error_logger.error(f"[WEBSOCKET] Error handling connect: {e}")
 
@@ -2513,8 +2516,10 @@ def handle_disconnect():
     """Gérer les déconnexions WebSocket avec cleanup"""
     global connected_clients  # Fix variable scope issue
     try:
-        connected_clients.discard(request.sid)  # Remove from tracking set
-        main_logger.info(f"[WEBSOCKET] Client déconnecté: {request.sid} (remaining: {len(connected_clients)})")
+        client_sid = getattr(request, 'sid', None)
+        if client_sid is not None:
+            connected_clients.discard(client_sid)  # Remove from tracking set
+        main_logger.info(f"[WEBSOCKET] Client déconnecté: {client_sid} (remaining: {len(connected_clients)})")
     except Exception as e:
         if DEBUG:
             debug_logger.debug(f"[WEBSOCKET] Error handling disconnect: {e}")

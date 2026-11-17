@@ -178,7 +178,6 @@ def emit_nmea_data(source, message):
                         pass  # Silent fail to prevent server freeze
                 
                 # Run emission in background thread with daemon=True and timeout
-                import threading
                 emit_thread = threading.Thread(target=emit_windy, daemon=True)
                 emit_thread.start()
                 # Don't wait for thread - let it run in background
@@ -454,7 +453,8 @@ socketio = SocketIO(
     engineio_logger=False,     # Disable EngineIO logs to prevent spam
     logger=False,              # Disable SocketIO logs to prevent spam
     allow_upgrades=True,       # Allow protocol upgrades
-    transports=['websocket', 'polling'],  # Support both websocket and polling
+    # Engine.IO supports this option; Pylance's inferred kwargs omit it.
+    transports=['websocket', 'polling'],  # pyright: ignore[reportCallIssue]
     always_connect=False       # Don't automatically connect - let client decide
 )
 CORS(app)  # Allow all origins (wildcard origin *)

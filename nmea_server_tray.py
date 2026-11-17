@@ -326,6 +326,8 @@ class NMEAServerTray:
         """Runs the system tray application"""
         logging.info("Starting NMEA Server Tray application")
         try:
+            if self.icon is None:
+                raise RuntimeError("The system tray icon is not initialized")
             self.icon.run()
         except KeyboardInterrupt:
             self.quit_application()
