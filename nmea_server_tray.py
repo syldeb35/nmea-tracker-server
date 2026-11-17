@@ -29,6 +29,35 @@ logging.basicConfig(
     ]
 )
 
+
+class AppIndicatorTrayIcon(pystray.Icon):
+    """Keep old indicator images available for asynchronous desktop reads."""
+
+    def __init__(self, *args, **kwargs):
+        self._retired_icon_paths = set()
+        super().__init__(*args, **kwargs)
+
+    def _remove_fs_icon(self):
+        if self._icon_path:
+            self._retired_icon_paths.add(self._icon_path)
+            self._icon_path = None
+        self._icon_valid = False
+
+    def _finalize(self):
+        try:
+            # The dynamically selected AppIndicator backend defines _finalize.
+            super()._finalize()  # pyright: ignore[reportAttributeAccessIssue]
+        finally:
+            for path in self._retired_icon_paths:
+                try:
+                    os.unlink(path)
+                except FileNotFoundError:
+                    pass
+                except OSError as e:
+                    logging.warning("Unable to remove temporary tray icon %s: %s", path, e)
+            self._retired_icon_paths.clear()
+
+
 class NMEAServerTray:
     def __init__(self):
         self.server_process = None
@@ -103,7 +132,8 @@ class NMEAServerTray:
         )
         
         # Create the system icon
-        self.icon = pystray.Icon(
+        icon_class = AppIndicatorTrayIcon if pystray.Icon.__module__ == 'pystray._appindicator' else pystray.Icon
+        self.icon = icon_class(
             "NMEA Server",
             image,
             "NMEA Tracker Server",

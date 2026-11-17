@@ -263,6 +263,8 @@ def get_resource_path(relative_path):
 DEFAULT_SERIAL_PORT = "COM5" if IS_WINDOWS else "AUTO"
 SERIAL_PORT = os.getenv("SERIAL_PORT", DEFAULT_SERIAL_PORT).strip()
 SERIAL_BAUDRATE = int(os.getenv("SERIAL_BAUDRATE", 4800))
+BLUETOOTH_TARGET_MAC = os.getenv("BLUETOOTH_TARGET_MAC", "").strip().upper()
+BLUETOOTH_MAC_PATTERN = re.compile(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}")
 ENABLE_SERIAL = os.getenv("ENABLE_SERIAL", "True").lower() == "true"
 ENABLE_UDP = os.getenv("ENABLE_UDP", "True").lower() == "true"
 ENABLE_TCP = os.getenv("ENABLE_TCP", "True").lower() == "true"
@@ -622,6 +624,7 @@ serial_stop = threading.Event()
 udp_stop = threading.Event()
 tcp_stop = threading.Event()
 bluetooth_monitor_stop = threading.Event()
+bluetooth_config_changed = threading.Event()
 
 # Stop events for daemon threads to prevent hanging
 test_data_stop = threading.Event()
@@ -1081,7 +1084,7 @@ def bluetooth_monitor(stop_event):
     """
     Bluetooth monitoring thread that maintains GPS connection automatically
     """
-    global bluetooth_manager, serial_thread
+    global bluetooth_manager, serial_thread, SERIAL_PORT
     main_logger.info("[BLUETOOTH-MONITOR] Starting Bluetooth monitoring...")
     
     # Ensure bluetooth_manager is initialized
@@ -1090,24 +1093,32 @@ def bluetooth_monitor(stop_event):
         return
     
     check_counter = 0
+    active_port = None
     while not stop_event.is_set() and not shutdown_event.is_set():
         try:
-            if ENABLE_SERIAL and IS_LINUX:
+            if ENABLE_SERIAL and IS_LINUX and SERIAL_PORT == "AUTO":
                 check_counter += 1
                 
                 # Periodic log to show monitoring is active
                 if check_counter % 10 == 1:  # Every 10 cycles (10 minutes)
                     main_logger.info(f"[BLUETOOTH-MONITOR] Cycle {check_counter} - connection check...")
-                
+
+                if (bluetooth_manager.configured_mac != BLUETOOTH_TARGET_MAC
+                        and BLUETOOTH_TARGET_MAC and serial_thread and serial_thread.is_alive()):
+                    serial_stop.set()
+                    serial_thread.join(timeout=2)
+                    active_port = None
+
                 # Check and maintain Bluetooth connection
                 port = bluetooth_manager.maintain_connection()
+                if stop_event.is_set() or not ENABLE_SERIAL or SERIAL_PORT != "AUTO":
+                    break
                 if port:
                     # Update global serial port if necessary
-                    global SERIAL_PORT
                     current_port = SERIAL_PORT if SERIAL_PORT != "AUTO" else None
                     
                     # In AUTO mode, always check if serial thread is running
-                    if SERIAL_PORT == "AUTO" or current_port != port:
+                    if active_port != port or (SERIAL_PORT != "AUTO" and current_port != port):
                         main_logger.info(f"Bluetooth GPS connected: {port}")
                         
                         # Stop existing serial thread if there is one
@@ -1119,12 +1130,15 @@ def bluetooth_monitor(stop_event):
                         # Wait a bit to ensure port is released
                         debug_logger.debug("Waiting for port release...")
                         time.sleep(5)
+                        if stop_event.is_set() or not ENABLE_SERIAL or SERIAL_PORT != "AUTO":
+                            break
                         
                         # Start new serial thread
                         debug_logger.debug(f"Starting serial thread on {port}...")
                         serial_stop.clear()
                         serial_thread = threading.Thread(target=serial_listener, args=(port, SERIAL_BAUDRATE, serial_stop), daemon=True)
                         serial_thread.start()
+                        active_port = port
                         
                         # Update global variable for web interface (only if not in AUTO mode)
                         if SERIAL_PORT != "AUTO":
@@ -1141,12 +1155,13 @@ def bluetooth_monitor(stop_event):
                         debug_logger.debug("No GPS connection - stopping serial thread")
                         serial_stop.set()
                         serial_thread.join(timeout=2)
+                    active_port = None
             
             # Wait 60 seconds before next check
             for _ in range(600):  # 60 seconds in 0.1s increments
-                if stop_event.is_set():
+                if stop_event.is_set() or bluetooth_config_changed.wait(0.1):
+                    bluetooth_config_changed.clear()
                     break
-                time.sleep(0.1)
                 
         except Exception as e:
             main_logger.info(f"[BLUETOOTH-MONITOR] Error: {e}")
@@ -1155,6 +1170,7 @@ def bluetooth_monitor(stop_event):
     # Clean up rfcomm connection on exit
     if IS_LINUX:
         bluetooth_manager.cleanup_rfcomm()
+        bluetooth_manager.is_connected = False
     
     main_logger.info("[BLUETOOTH-MONITOR] Bluetooth monitoring stopped.")
 
@@ -1224,6 +1240,17 @@ def manage_threads():
             tcp_thread = None
 
     # SERIAL - only if not AUTO or if AUTO is resolved
+    if ENABLE_SERIAL and IS_LINUX and SERIAL_PORT == "AUTO":
+        if bluetooth_monitor_thread is None or not bluetooth_monitor_thread.is_alive():
+            bluetooth_monitor_stop.clear()
+            bluetooth_monitor_thread = threading.Thread(
+                target=bluetooth_monitor, args=(bluetooth_monitor_stop,), daemon=True
+            )
+            bluetooth_monitor_thread.start()
+    elif bluetooth_monitor_thread and bluetooth_monitor_thread.is_alive():
+        bluetooth_monitor_stop.set()
+        bluetooth_config_changed.set()
+
     if ENABLE_SERIAL:
         actual_port = SERIAL_PORT
         
@@ -1584,24 +1611,17 @@ def main_thread():
     
     if not SERVICE_MODE:
         main_logger.info("Press Ctrl+C to stop the server")
-    
-    # Auto-detection of serial port if necessary
-    if ENABLE_SERIAL and (not SERIAL_PORT or SERIAL_PORT == "AUTO"):
+
+    # Linux AUTO mode is handled by the Bluetooth monitor, including retries.
+    if not IS_LINUX and ENABLE_SERIAL and (not SERIAL_PORT or SERIAL_PORT == "AUTO"):
         detected_port = detect_bluetooth_serial_port()
         if detected_port:
             SERIAL_PORT = detected_port
             main_logger.info(f"Serial port detected: {SERIAL_PORT}")
-            
-            # Start serial thread immediately if a port is detected
-            if serial_thread is None or not serial_thread.is_alive():
-                debug_logger.debug(f"Starting serial thread on port: {SERIAL_PORT}")
-                serial_stop.clear()
-                serial_thread = threading.Thread(target=serial_listener, args=(SERIAL_PORT, SERIAL_BAUDRATE, serial_stop), daemon=True)
-                serial_thread.start()
         else:
             main_logger.warning("No serial port detected - serial disabled")
             ENABLE_SERIAL = False
-    
+
     # Test ports separately if enabled
     test_ports_separately()
 
@@ -1687,6 +1707,7 @@ def home():
         serial_ports=serial_ports,
         serial_port=SERIAL_PORT,
         serial_baudrate=SERIAL_BAUDRATE,
+        bluetooth_target_mac=BLUETOOTH_TARGET_MAC,
         marinetraffic_ip=MARINETRAFFIC_IP,
         marinetraffic_port=MARINETRAFFIC_PORT,
         marinetraffic_id=MARINETRAFFIC_ID
@@ -1732,6 +1753,8 @@ class BluetoothGPSManager:
     """
     Automatic manager for Bluetooth GPS with auto-discovery and connection
     """
+    HELPER_PATH = "/usr/local/sbin/nmea-bluetooth-helper"
+
     def __init__(self):
         self.target_mac = None  # Adresse MAC du GPS trouvé
         self.target_channel = None  # Canal SPP trouvé
@@ -1740,6 +1763,7 @@ class BluetoothGPSManager:
         self.last_scan_time = 0
         self.scan_interval = 60  # Scan toutes les minutes
         self.connection_timeout = 10  # Connection timeout
+        self.configured_mac = None
         
     def run_command(self, cmd, timeout=10):
         """Exécute une commande shell avec timeout"""
@@ -1753,33 +1777,56 @@ class BluetoothGPSManager:
         except Exception as e:
             main_logger.info(f"[BLUETOOTH] Command error: {e}")
             return False, "", str(e)
+
+    def run_privileged_command(self, *args, timeout=10):
+        """Run an allowlisted Bluetooth operation through the installed helper."""
+        command = ["sudo", "-n", self.HELPER_PATH, *args]
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+            return result.returncode == 0, result.stdout, result.stderr
+        except subprocess.TimeoutExpired:
+            main_logger.warning(f"[BLUETOOTH] Privileged command timed out: {' '.join(command)}")
+            return False, "", "Timeout"
+        except OSError as e:
+            main_logger.error(f"[BLUETOOTH] Unable to run privileged helper: {e}")
+            return False, "", str(e)
     
-    def scan_bluetooth_devices(self):
-        """Scan des appareils Bluetooth à proximité"""
-        main_logger.info("[BLUETOOTH] Scan des appareils Bluetooth...")
-        
+    def prepare_bluetooth_adapter(self):
+        """Check and enable the Bluetooth adapter before discovery."""
         # Check that Bluetooth is available
         success, stdout, stderr = self.run_command("which hciconfig", 5)
         if not success:
             main_logger.info("[BLUETOOTH] hciconfig non trouvé - Bluetooth non supporté")
-            return []
+            return False
         
         # Check and enable Bluetooth
         success, stdout, stderr = self.run_command("hciconfig", 5)
         if not success:
             main_logger.info("[BLUETOOTH] Bluetooth non disponible")
-            return []
+            return False
         
         # Essayer d'activer l'interface Bluetooth
-        success, stdout, stderr = self.run_command("sudo hciconfig hci0 up", 5)
+        success, stdout, stderr = self.run_privileged_command("adapter-up", timeout=5)
         if not success:
             main_logger.info(f"[BLUETOOTH] Impossible d'activer Bluetooth: {stderr}")
             # Essayer sans sudo
             success, stdout, stderr = self.run_command("hciconfig hci0 up", 5)
             if not success:
                 main_logger.info("[BLUETOOTH] Bluetooth non accessible - vérifiez les permissions")
-                return []
-        
+                return False
+        return True
+
+    def scan_bluetooth_devices(self):
+        """Scan des appareils Bluetooth à proximité"""
+        main_logger.info("[BLUETOOTH] Scan des appareils Bluetooth...")
+        if not self.prepare_bluetooth_adapter():
+            return []
+
         # Scan des appareils avec timeout plus long
         main_logger.info("[BLUETOOTH] Scan en cours... (peut prendre 10-15 secondes)")
         success, stdout, stderr = self.run_command("hcitool scan", 20)
@@ -1803,6 +1850,9 @@ class BluetoothGPSManager:
     
     def find_spp_channel(self, mac_address):
         """Trouve le canal SPP pour un appareil donné"""
+        if not BLUETOOTH_MAC_PATTERN.fullmatch(mac_address):
+            main_logger.error("[BLUETOOTH] Invalid MAC address: %s", mac_address)
+            return None
         main_logger.info(f"[BLUETOOTH] Searching SPP channel for {mac_address}...")
         
         success, stdout, stderr = self.run_command(f"sdptool browse {mac_address}", 10)
@@ -1810,23 +1860,29 @@ class BluetoothGPSManager:
             main_logger.info(f"[BLUETOOTH] Échec browse: {stderr}")
             return None
         
-        # Chercher le canal SPP dans la sortie
-        lines = stdout.split('\n')
-        in_spp_service = False
-        
-        for i, line in enumerate(lines):
-            if 'Serial Port' in line or 'SPP' in line:
-                in_spp_service = True
-                main_logger.info(f"[BLUETOOTH] Service Serial Port trouvé")
-            elif in_spp_service and 'Channel:' in line:
-                try:
-                    channel = int(line.split('Channel:')[1].strip())
+        records = re.split(r'(?m)^(?=Service (?:Name|RecHandle):)', stdout)
+        for record in records:
+            class_list = re.search(
+                r'(?m)^Service Class ID List:[ \t]*\r?\n((?:[ \t]+[^\r\n]*\r?\n?)*)',
+                record
+            )
+            if not class_list or not re.search(r'\b0x1101\b', class_list.group(1), re.IGNORECASE):
+                continue
+            protocols = re.search(
+                r'(?m)^Protocol Descriptor List:[ \t]*\r?\n((?:[ \t]+[^\r\n]*\r?\n?)*)',
+                record
+            )
+            if not protocols:
+                continue
+            channel_match = re.search(
+                r'(?im)^[ \t]*"RFCOMM"[^\r\n]*\r?\n[ \t]*Channel:[ \t]*(\d+)[ \t]*\r?$',
+                protocols.group(1)
+            )
+            if channel_match:
+                channel = int(channel_match.group(1))
+                if 1 <= channel <= 30:
                     main_logger.info(f"[BLUETOOTH] Canal SPP trouvé: {channel}")
                     return channel
-                except (ValueError, IndexError):
-                    continue
-            elif in_spp_service and line.strip() == "":
-                in_spp_service = False
         
         main_logger.info("[BLUETOOTH] Aucun canal SPP trouvé")
         return None
@@ -1839,8 +1895,9 @@ class BluetoothGPSManager:
         self.cleanup_rfcomm()
         
         # Create new connection
-        cmd = f"sudo rfcomm bind {self.rfcomm_device} {mac_address} {channel}"
-        success, stdout, stderr = self.run_command(cmd, 10)
+        success, stdout, stderr = self.run_privileged_command(
+            "bind", str(self.rfcomm_device), mac_address, str(channel), timeout=10
+        )
         
         if success:
             # Wait for device to be created and stabilized
@@ -1861,8 +1918,9 @@ class BluetoothGPSManager:
     
     def cleanup_rfcomm(self):
         """Clean rfcomm connection"""
-        cmd = f"sudo rfcomm release {self.rfcomm_device}"
-        success, stdout, stderr = self.run_command(cmd, 5)
+        success, stdout, stderr = self.run_privileged_command(
+            "release", str(self.rfcomm_device), timeout=5
+        )
         if success:
             main_logger.info(f"[BLUETOOTH] rfcomm{self.rfcomm_device} libéré")
         
@@ -1923,8 +1981,15 @@ class BluetoothGPSManager:
             
         main_logger.info("[BLUETOOTH] === DÉCOUVERTE AUTOMATIQUE GPS ===")
         
-        # Scan des appareils
-        devices = self.scan_bluetooth_devices()
+        if BLUETOOTH_TARGET_MAC:
+            if not BLUETOOTH_MAC_PATTERN.fullmatch(BLUETOOTH_TARGET_MAC):
+                main_logger.error("[BLUETOOTH] Invalid configured MAC address: %s", BLUETOOTH_TARGET_MAC)
+                return None
+            if not self.prepare_bluetooth_adapter():
+                return None
+            devices = [(BLUETOOTH_TARGET_MAC, "Configured device")]
+        else:
+            devices = self.scan_bluetooth_devices()
         if not devices:
             main_logger.info("[BLUETOOTH] Aucun appareil trouvé")
             return None
@@ -2006,6 +2071,12 @@ class BluetoothGPSManager:
     def maintain_connection(self):
         """Maintient la connexion GPS (appelé périodiquement)"""
         current_time = time.time()
+        if self.configured_mac != BLUETOOTH_TARGET_MAC:
+            self.configured_mac = BLUETOOTH_TARGET_MAC
+            self.last_scan_time = 0
+            if self.is_connected and BLUETOOTH_TARGET_MAC and self.target_mac != BLUETOOTH_TARGET_MAC:
+                self.cleanup_rfcomm()
+                self.is_connected = False
         
         # Si connecté, vérifier l'état moins fréquemment
         if self.is_connected:
@@ -2020,7 +2091,7 @@ class BluetoothGPSManager:
         time.sleep(5)
         
         # First check if there's an existing rfcomm connection
-        existing_connection = self.detect_existing_rfcomm()
+        existing_connection = self.detect_existing_rfcomm() if not BLUETOOTH_TARGET_MAC else None
         if existing_connection:
             return existing_connection
         
@@ -2069,6 +2140,7 @@ def reload_configuration():
     global ENABLE_SERIAL, ENABLE_UDP, ENABLE_TCP, DEBUG
     global UDP_IP, UDP_PORT, TCP_IP, TCP_PORT, SERIAL_PORT, SERIAL_BAUDRATE
     global UDP_MODE, TCP_MODE, UDP_TARGET_IP, UDP_TARGET_PORT, TCP_TARGET_IP, TCP_TARGET_PORT
+    global BLUETOOTH_TARGET_MAC
     
     try:
         main_logger.info("[CONFIG] Reloading configuration...")
@@ -2105,6 +2177,8 @@ def reload_configuration():
         
         SERIAL_PORT = os.getenv("SERIAL_PORT", DEFAULT_SERIAL_PORT).strip()
         SERIAL_BAUDRATE = int(os.getenv("SERIAL_BAUDRATE", 4800))
+        BLUETOOTH_TARGET_MAC = os.getenv("BLUETOOTH_TARGET_MAC", "").strip().upper()
+        bluetooth_config_changed.set()
         
         main_logger.info(f"[CONFIG] New configuration loaded:")
         main_logger.info(f"  - Serial: {ENABLE_SERIAL} (Port: {SERIAL_PORT})")
@@ -2188,8 +2262,13 @@ def api_update_config():
     global ENABLE_SERIAL, ENABLE_UDP, ENABLE_TCP, DEBUG
     global UDP_IP, UDP_PORT, TCP_IP, TCP_PORT, SERIAL_PORT, SERIAL_BAUDRATE
     global UDP_MODE, TCP_MODE, UDP_TARGET_IP, UDP_TARGET_PORT, TCP_TARGET_IP, TCP_TARGET_PORT
+    global BLUETOOTH_TARGET_MAC
     
     try:
+        target_mac = request.form.get('bluetooth_target_mac', BLUETOOTH_TARGET_MAC).strip().upper()
+        if target_mac and not BLUETOOTH_MAC_PATTERN.fullmatch(target_mac):
+            return jsonify({'success': False, 'error': 'Invalid Bluetooth MAC address; use XX:XX:XX:XX:XX:XX'}), 400
+
         # Update global variables immediately
         ENABLE_SERIAL = 'enable_serial' in request.form
         ENABLE_UDP = 'enable_udp' in request.form
@@ -2229,6 +2308,9 @@ def api_update_config():
                 pass
 
         SERIAL_PORT = request.form.get('serial_port', SERIAL_PORT)
+        if target_mac != BLUETOOTH_TARGET_MAC:
+            BLUETOOTH_TARGET_MAC = target_mac
+            bluetooth_config_changed.set()
         try:
             SERIAL_BAUDRATE = int(request.form.get('serial_baudrate', SERIAL_BAUDRATE))
         except (ValueError, TypeError):
@@ -2261,6 +2343,7 @@ def api_update_config():
             f'TCP_TARGET_PORT={TCP_TARGET_PORT}',
             f'SERIAL_PORT={SERIAL_PORT}',
             f'SERIAL_BAUDRATE={SERIAL_BAUDRATE}',
+            f'BLUETOOTH_TARGET_MAC={BLUETOOTH_TARGET_MAC}',
             f'MARINETRAFFIC_IP={MARINETRAFFIC_IP}',
             f'MARINETRAFFIC_PORT={MARINETRAFFIC_PORT}',
             f'MARINETRAFFIC_ID={MARINETRAFFIC_ID}'

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NMEA Tracker Server (Tray)
+Comment=Manage the NMEA server from the system tray
+Exec=/usr/bin/python3 /home/sylvain/Projets/Windy_Plugin/nmea-tracker-server/nmea_server_tray.py
+Path=/home/sylvain/Projets/Windy_Plugin/nmea-tracker-server
+Icon=/home/sylvain/Projets/Windy_Plugin/nmea-tracker-server/icon.png
+Terminal=false
+StartupNotify=false
+Categories=Network;

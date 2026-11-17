@@ -125,7 +125,7 @@
 
         <div class="container">
             <h2>NMEA / AIS Connection</h2>
-            <form id="configForm" method="POST" action="/select_connection">
+            <form id="configForm" method="POST" action="/api/config">
                 <div class="config-grid">
                     <div style="flex: 1 1 260px; min-width: 240px;">
                         <div class="section-title">Connection type:</div>
@@ -149,9 +149,13 @@
                                 {% endfor %}
                             </select>
                         </label>
+                        <label>Bluetooth MAC address (optional):
+                            <input type="text" name="bluetooth_target_mac" value="{{ bluetooth_target_mac }}"
+                                   placeholder="XX:XX:XX:XX:XX:XX" pattern="([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}">
+                        </label>
+                        <small>In AUTO mode, use this device directly without scanning. Leave blank for discovery.</small>
                         <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; font-size: 0.9em;">
-                            <strong>🔵 AUTO Mode (Linux):</strong> Automatically scans for Bluetooth GPS devices every minute.
-                            <br>• Automatically discovers GPS devices via Bluetooth scan
+                            <strong>🔵 AUTO Mode (Linux):</strong> Automatically reconnects to a configured Bluetooth address or scans for GPS devices.
                             <br>• Creates rfcomm connection automatically (requires sudo permissions)
                             <br>• Reconnects automatically if connection is lost
                             <br>• No manual sdptool/rfcomm commands needed

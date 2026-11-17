@@ -25,7 +25,7 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11 # Créer le port rfcomm0
 ### Découverte Automatique
 
 - **Scan Bluetooth** : Recherche tous les appareils à proximité
-- **Détection SPP** : Utilise `sdptool` pour identifier les canaux Serial Port Profile
+- **Détection SPP** : Utilise `sdptool` pour identifier le canal RFCOMM d'un service de classe Serial Port (`0x1101`), sans confondre les autres services dont le nom contient « SPP »
 - **Test GPS** : Vérifie que l'appareil envoie bien des trames NMEA
 - **Connexion** : Configure automatiquement `rfcomm` si un GPS est trouvé
 
@@ -38,26 +38,33 @@ sudo rfcomm bind 0 40:DE:24:A6:F6:11 11 # Créer le port rfcomm0
 ### Commandes Automatisées
 
 ```bash
-# Le serveur exécute automatiquement:
-hciconfig hci0 up                           # Active Bluetooth
-hcitool scan                               # Scan des appareils
-sdptool browse XX:XX:XX:XX:XX:XX          # Trouve le canal SPP
-sudo rfcomm bind 0 XX:XX:XX:XX:XX:XX CANAL # Crée la connexion
+# Le serveur exécute automatiquement :
+sudo -n /usr/local/sbin/nmea-bluetooth-helper adapter-up
+hcitool scan  # Uniquement si aucune adresse cible n'est configurée
+sdptool browse XX:XX:XX:XX:XX:XX
+sudo -n /usr/local/sbin/nmea-bluetooth-helper bind 0 XX:XX:XX:XX:XX:XX CANAL
 ```
 
 ## Configuration
 
 ### 1. Dans l'interface web
 
-- Aller sur `http://votre-serveur:5000/config`
+- Aller sur `https://votre-serveur:5000/config.html`
 - Sélectionner **"AUTO - Bluetooth GPS Auto-Discovery (Linux only)"**
+- Facultatif : renseigner **Bluetooth MAC address** au format `XX:XX:XX:XX:XX:XX` pour contacter directement cet appareil, même s'il n'apparaît pas au scan. Le canal SPP est découvert par `sdptool`.
+- Laisser l'adresse vide pour conserver le scan automatique.
 - Appliquer la configuration
+
+Le paramètre correspondant dans `.env` est `BLUETOOTH_TARGET_MAC`. L'appareil doit être accessible et exposer un service SPP; son adresse configurée doit être celle utilisée par Bluetooth classique.
 
 ### 2. Prérequis système (Linux)
 
 ```bash
 # Installation des outils Bluetooth
 sudo apt-get install bluez bluez-utils
+
+# Installer le helper privilégié limité au Bluetooth
+sudo bash scripts/linux/install_bluetooth_helper.sh
 
 # Permissions utilisateur
 sudo usermod -a -G dialout $USER
@@ -119,9 +126,17 @@ sudo usermod -a -G dialout $USER
 
 ### Permissions requises
 
-- **rfcomm** : Nécessite `sudo` pour bind/release
+- **Helper Bluetooth** : l'application reste lancée comme utilisateur normal. L'installateur place un helper root-owned dans `/usr/local/sbin` et ajoute une règle `sudoers` sans mot de passe limitée à ce helper.
+- **Opérations autorisées** : activation de `hci0`, bind et release du seul `/dev/rfcomm0`; le helper valide l'adresse MAC et le canal SPP, et n'exécute aucune commande via un shell.
 - **hcitool/sdptool** : Accès Bluetooth système
 - **Groupe dialout** : Accès aux ports série
+
+Pour désinstaller le helper et sa règle :
+
+```bash
+sudo rm /etc/sudoers.d/nmea-bluetooth-helper
+sudo rm /usr/local/sbin/nmea-bluetooth-helper
+```
 
 ### Considérations
 
