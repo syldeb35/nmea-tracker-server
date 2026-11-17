@@ -177,7 +177,7 @@
                             <label><input type="radio" name="udp_mode" value="server" {% if udp_mode == "server" %}checked{% endif %}> 
                                 📥 Server Mode (listen on a port)
                             </label>
-                            <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'server' %}display:none;{% endif %}">
+                            <div id="udp-server-config" style="margin-left: 20px; margin: 10px 0;" {% if udp_mode != 'server' %}hidden{% endif %}>
                                 <label>UDP listening port:
                                     <input type="number" name="udp_port" value="{{ udp_port }}" placeholder="50110">
                                 </label>
@@ -186,7 +186,7 @@
                             <label><input type="radio" name="udp_mode" value="client" {% if udp_mode == "client" %}checked{% endif %}> 
                                 📤 Mode Client (se connecte à un GPS)
                             </label>
-                            <div id="udp-client-config" style="margin-left: 20px; margin: 10px 0; {% if udp_mode != 'client' %}display:none;{% endif %}">
+                            <div id="udp-client-config" style="margin-left: 20px; margin: 10px 0;" {% if udp_mode != 'client' %}hidden{% endif %}>
                                 <label>IP du GPS:
                                     <input type="text" name="udp_target_ip" value="{{ udp_target_ip }}" placeholder="192.168.1.100">
                                 </label>
@@ -202,7 +202,7 @@
                             <label><input type="radio" name="tcp_mode" value="server" {% if tcp_mode == "server" %}checked{% endif %}> 
                                 📥 Server Mode (listen on a port)
                             </label>
-                            <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'server' %}display:none;{% endif %}">
+                            <div id="tcp-server-config" style="margin-left: 20px; margin: 10px 0;" {% if tcp_mode != 'server' %}hidden{% endif %}>
                                 <label>TCP listening port:
                                     <input type="number" name="tcp_port" value="{{ tcp_port }}" placeholder="7777">
                                 </label>
@@ -211,7 +211,7 @@
                             <label><input type="radio" name="tcp_mode" value="client" {% if tcp_mode == "client" %}checked{% endif %}> 
                                 📤 Mode Client (se connecte à un GPS)
                             </label>
-                            <div id="tcp-client-config" style="margin-left: 20px; margin: 10px 0; {% if tcp_mode != 'client' %}display:none;{% endif %}">
+                            <div id="tcp-client-config" style="margin-left: 20px; margin: 10px 0;" {% if tcp_mode != 'client' %}hidden{% endif %}>
                                 <label>IP du GPS:
                                     <input type="text" name="tcp_target_ip" value="{{ tcp_target_ip }}" placeholder="192.168.1.100">
                                 </label>
