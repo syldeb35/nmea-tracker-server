@@ -194,7 +194,7 @@ jobs:
         files: |
           *.zip
           release_package/QUICK_START.md
-        name: "NMEA Tracker Server ${{ github.event.release.tag_name }}"
+        name: "NMEA Tracker Server ${{ inputs.version }}"
         body: |
           ## 🎯 NMEA Tracker Server Release
           
